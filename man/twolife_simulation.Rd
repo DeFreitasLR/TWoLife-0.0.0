@@ -16,7 +16,7 @@ twolife_simulation(
 )
 }
 \arguments{
-\item{landscape_params}{List containing landscape parameters}
+\item{landscape_params}{List containing landscape parameters including habitat matrix}
 
 \item{individual_params}{List containing individual parameters}
 

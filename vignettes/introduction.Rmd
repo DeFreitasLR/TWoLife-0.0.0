@@ -1,227 +1,80 @@
 ---
-title: "TWoLife SLOSS Simulation: Exploring Landscape Configuration and Genetic Effects"
-author: "TWoLife Package"
+title: "Part 1: Exploring Landscape Configurations with TWoLife: A SLOSS Analysis"
+author: "Lucas Freitas"
 date: "`r Sys.Date()`"
 output: 
   rmarkdown::html_vignette:
     toc: true
     toc_depth: 3
-    fig_width: 7
-    fig_height: 5
 vignette: >
-  %\VignetteIndexEntry{TWoLife SLOSS Simulation: Exploring Landscape Configuration and Genetic Effects}
+  %\VignetteIndexEntry{Exploring Landscape Configurations with TWoLife: A SLOSS Analysis}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r setup, include = FALSE}
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.width = 7,
   fig.height = 5,
-  warning = FALSE,
-  message = FALSE
+  fig.align = "center"
 )
 ```
 
 # Introduction
 
-This vignette demonstrates the capabilities of the TWoLife package through two major analyses:
+This vignette demonstrates the capabilities of the **TWoLife** package through a classic conservation ecology question: the SLOSS debate. SLOSS asks whether **S**ingle **L**arge **o**r **S**everal **S**mall habitat reserves better support viable populations.
 
-1. **SLOSS Debate**: Testing whether Single Large or Several Small habitat reserves better support populations
-2. **Genetic Mechanisms**: Exploring how genetic variation, evolution, and behavior enable population persistence in heterogeneous environments
+We explore this question using individual-based simulations across three landscape configurations:
 
-The SLOSS (Single Large Or Several Small) debate is a fundamental question in conservation biology concerning optimal reserve design. This vignette uses spatially explicit individual-based simulations to address this question while also exploring advanced genetic features.
 
-# Setup
+1. **Pristine baseline** — 100% habitat coverage (control)
+2. **Single Large patch** — 20% Coverage - one contiguous reserve 
+3. **Several Small patches** — 20% Coverage - multiple small reserves with equivalent total area
 
-```{r library}
+# Setup and Initialization
+
+We begin by loading the package and setting a master seed for full reproducibility:
+
+```{r load-package}
 library(TWoLife)
 
 # Single master seed for full reproducibility
 MASTER_SEED <- 42
 
-# Complete reproducibility setup - clear any existing random state
+# Clear any existing random state
 if (exists(".Random.seed", envir = .GlobalEnv)) {
   rm(.Random.seed, envir = .GlobalEnv)
 }
 set.seed(MASTER_SEED)
 ```
 
-# Part 1: SLOSS Analysis
+# Landscape Configurations
 
-## Background
+## Creating the Landscapes
 
-The SLOSS debate asks: **Which is better for conservation?**
+TWoLife provides a suite of landscape creation functions. For our pristine baseline, we create a fractal landscape with 100% habitat coverage:
 
-- **Single Large** reserve (SL)
-- **Several Small** reserves with equivalent total area (SS)
-
-We'll test this using three landscape configurations:
-
-1. **Pristine** baseline (100% habitat coverage)
-2. **Single Large** patch (one contiguous reserve)
-3. **Several Small** patches (multiple small reserves)
-
-## Loading Landscape Configurations
-
-```{r load_landscapes}
-# Pristine landscape baseline (all cells = 1)
-# Generate with specific seed for reproducibility
-set.seed(MASTER_SEED + 1001)
+```{r pristine-landscape}
 pristine_landscape <- create_fractal_landscape(
   cells_per_row = 15,
   fractality = 0.5,
   habitat_proportion = 1.0
 )
+```
 
-# Single Large patch - from package dataset
+For the SLOSS comparison, we use pre-configured landscapes from the package:
+
+```{r sloss-landscapes}
 single_large_patch <- single_large
-
-# Several Small patches - from package dataset  
 several_small_patches <- several_small
 ```
 
-**Landscape dimensions:** `r nrow(pristine_landscape)` × `r ncol(pristine_landscape)` cells
+## Visualizing the Landscapes
 
-**Habitat quality metrics:**
-
-```{r habitat_metrics, echo=FALSE}
-habitat_amount_pristine <- mean(pristine_landscape)
-habitat_amount_single <- mean(single_large_patch)
-habitat_amount_several <- mean(several_small_patches)
-
-metrics_df <- data.frame(
-  Landscape = c("Pristine (baseline)", "Single large", "Several small"),
-  `Habitat %` = sprintf("%.1f%%", c(habitat_amount_pristine, habitat_amount_single, habitat_amount_several) * 100),
-  `Proportion` = sprintf("%.3f", c(habitat_amount_pristine, habitat_amount_single, habitat_amount_several)),
-  `% of Pristine` = sprintf("%.1f%%", c(100, (habitat_amount_single/habitat_amount_pristine)*100, (habitat_amount_several/habitat_amount_pristine)*100)),
-  check.names = FALSE
-)
-knitr::kable(metrics_df, align = c('l', 'r', 'r', 'r'))
-```
-
-## Running Simulations
-
-We'll run simulations with an initial population of 100 individuals on each landscape for 300 events.
-
-```{r run_sloss_sims}
-# All SLOSS simulations use SAME master_seed for comparability
-# Only landscape differs between them
-
-# Baseline: Pristine landscape (control)
-sim_pristine <- twolife_simulation(
-  landscape_params = list(habitat = pristine_landscape),
-  individual_params = list(initial_population_size = 100),
-  simulation_params = list(max_events = 300),
-  master_seed = MASTER_SEED
-)
-
-# Treatment 1: Single large patch
-sim_single_large <- twolife_simulation(
-  landscape_params = list(habitat = single_large_patch),
-  individual_params = list(initial_population_size = 100),
-  simulation_params = list(max_events = 300),
-  master_seed = MASTER_SEED
-)
-
-# Treatment 2: Several small patches
-sim_several_small <- twolife_simulation(
-  landscape_params = list(habitat = several_small_patches),
-  individual_params = list(initial_population_size = 100),
-  simulation_params = list(max_events = 300),
-  master_seed = MASTER_SEED
-)
-```
-
-## Analyzing Population Viability
-
-```{r analyze_viability}
-# Compare final population sizes
-final_population_sizes <- c(
-  Pristine = sim_pristine$summary$final_population_size,
-  Single_Large = sim_single_large$summary$final_population_size,
-  Several_Small = sim_several_small$summary$final_population_size
-)
-```
-
-**Final population sizes:**
-
-```{r results_table, echo=FALSE}
-results_df <- data.frame(
-  Landscape = c("Pristine", "Single Large", "Several Small"),
-  `Final N` = final_population_sizes,
-  `% of Pristine` = sprintf("%.1f%%", (final_population_sizes / final_population_sizes["Pristine"]) * 100),
-  check.names = FALSE
-)
-knitr::kable(results_df, align = c('l', 'r', 'r'))
-```
-
-```{r sloss_comparison, echo=FALSE, results='asis'}
-sl_ss_diff <- final_population_sizes["Single_Large"] - final_population_sizes["Several_Small"]
-sl_ss_pct <- abs(sl_ss_diff / max(final_population_sizes["Single_Large"], 
-                                    final_population_sizes["Several_Small"]) * 100)
-
-cat(sprintf("**SLOSS Comparison (SL vs SS):** %+d individuals (%.1f%% difference)\n\n", 
-            sl_ss_diff, sl_ss_pct))
-```
-
-### Ecological Interpretation
-
-```{r interpretation, echo=FALSE, results='asis'}
-if (final_population_sizes["Pristine"] > final_population_sizes["Single_Large"]) {
-  cat("- **Habitat loss reduces carrying capacity:** ")
-  cat(sprintf("Pristine supports %d more individuals than single large (%.1f%% reduction)\n", 
-              final_population_sizes["Pristine"] - final_population_sizes["Single_Large"],
-              (1 - final_population_sizes["Single_Large"] / final_population_sizes["Pristine"]) * 100))
-}
-
-if (final_population_sizes["Single_Large"] > final_population_sizes["Several_Small"]) {
-  cat("- **Single large patch supports larger population (SL > SS)**\n")
-  cat(sprintf("  - Single large has %d more individuals (%.1f%% advantage)\n", 
-              sl_ss_diff, sl_ss_pct))
-  cat("  - Evidence supports 'Single Large' hypothesis\n")
-  cat("  - Interpretation: Lower edge effects and higher core habitat area\n")
-} else if (final_population_sizes["Several_Small"] > final_population_sizes["Single_Large"]) {
-  cat("- **Several small patches support larger population (SS > SL)**\n")
-  cat(sprintf("  - Several small has %d more individuals (%.1f%% advantage)\n", 
-              -sl_ss_diff, sl_ss_pct))
-  cat("  - Evidence supports 'Several Small' hypothesis\n")
-  cat("  - Interpretation: Possible rescue effect or bet-hedging across patches\n")
-} else {
-  cat("- **Single large and several small support equal populations**\n")
-  cat("  - No clear winner in this scenario\n")
-}
-```
-
-```{r trajectories_prep, echo=FALSE}
-trajectory_pristine <- compute_population_size(sim_pristine)
-trajectory_single_large <- compute_population_size(sim_single_large)
-trajectory_several_small <- compute_population_size(sim_several_small)
-```
-
-**Population dynamics summary:**
-
-```{r dynamics_table, echo=FALSE}
-dynamics_df <- data.frame(
-  Landscape = c("Pristine", "Single Large", "Several Small"),
-  Events = c(nrow(trajectory_pristine), nrow(trajectory_single_large), nrow(trajectory_several_small)),
-  Duration = sprintf("%.2f", c(sim_pristine$summary$duration, sim_single_large$summary$duration, sim_several_small$summary$duration)),
-  `Final N` = c(tail(trajectory_pristine$population_size, 1), 
-                tail(trajectory_single_large$population_size, 1),
-                tail(trajectory_several_small$population_size, 1)),
-  check.names = FALSE
-)
-knitr::kable(dynamics_df, align = c('l', 'r', 'r', 'r'))
-```
-
-## Visualizing Results
-
-### Landscape Configurations and Survivors
-
-```{r fig_landscapes, fig.width=9, fig.height=6}
-par(mfrow = c(2, 3), mar = c(4, 4, 3, 2))
+```{r visualize-landscapes, fig.width=9, fig.height=3}
+par(mfrow = c(1, 3), mar = c(4, 4, 3, 2))
 
 plot_landscape_world_coords(pristine_landscape, 
                             main = "Pristine Landscape\n(Baseline Control)", 
@@ -232,36 +85,122 @@ plot_landscape_world_coords(single_large_patch,
 plot_landscape_world_coords(several_small_patches, 
                             main = "Several Small Patches\n(SLOSS: SS Strategy)", 
                             colors = "habitat")
+```
+
+Each landscape consists of `r nrow(pristine_landscape)` × `r ncol(pristine_landscape)` cells, with habitat cells (green) available for colonization and matrix cells (white) acting as barriers.
+
+# Running the Simulations
+
+We simulate population dynamics on each landscape configuration, starting with 100 individuals and running for 300 time units. All simulations use the same master seed to ensure comparability—only the landscape differs between treatments.
+
+```{r run-simulations}
+sim_pristine <- twolife_simulation(
+  landscape_params = list(habitat = pristine_landscape),
+  individual_params = list(initial_population_size = 100),
+  simulation_params = list(max_events = 300),
+  master_seed = MASTER_SEED
+)
+
+sim_single_large <- twolife_simulation(
+  landscape_params = list(habitat = single_large_patch),
+  individual_params = list(initial_population_size = 100),
+  simulation_params = list(max_events = 300),
+  master_seed = MASTER_SEED
+)
+
+sim_several_small <- twolife_simulation(
+  landscape_params = list(habitat = several_small_patches),
+  individual_params = list(initial_population_size = 100),
+  simulation_params = list(max_events = 300),
+  master_seed = MASTER_SEED
+)
+```
+
+# Results
+
+## Final Population Sizes
+
+We compare final population sizes across landscape configurations:
+
+```{r final-populations}
+final_populations <- c(
+  Pristine = sim_pristine$summary$final_population_size,
+  Single_Large = sim_single_large$summary$final_population_size,
+  Several_Small = sim_several_small$summary$final_population_size
+)
+
+final_populations
+```
+
+### Outcome: Extinction in Fragmented Landscape
+
+The results reveal a **critical threshold effect**: while the Single Large patch sustained a viable population of **`r final_populations["Single_Large"]` individuals**, the Several Small configuration experienced **complete population collapse** (N = 0).
+
+This extinction event demonstrates that landscape configuration can determine not just population size, but population persistence itself. Despite having identical total habitat area (20% coverage), fragmentation into multiple small patches created conditions incompatible with long-term survival.
+
+### Relative Performance
+
+```{r relative-performance}
+# Calculate percentages relative to pristine baseline
+pct_single_large <- (final_populations["Single_Large"] / final_populations["Pristine"]) * 100
+pct_several_small <- (final_populations["Several_Small"] / final_populations["Pristine"]) * 100
+loss_from_fragmentation <- pct_single_large - pct_several_small
+
+# Display as table
+relative_to_pristine <- c(
+  "Pristine (%)" = 100.0,
+  "Single Large (%)" = round(pct_single_large, 1),
+  "Several Small (%)" = round(pct_several_small, 1)
+)
+relative_to_pristine
+```
+
+The Single Large patch retained **`r round(pct_single_large, 1)`%** of the pristine landscape's carrying capacity—a substantial reduction, but still viable. In contrast, the Several Small patches could not support any individuals, representing a **`r round(loss_from_fragmentation, 1)`% loss** in conservation value compared to the contiguous reserve.
+
+
+## Spatial Distribution of Survivors
+
+```{r survivor-distribution, fig.width=9, fig.height=3}
+par(mfrow = c(1, 3), mar = c(4, 4, 3, 2))
 
 plot_simulation_on_landscape(sim_pristine, 
                              main = sprintf("Survivors: Pristine\n(N = %d)", 
-                                            final_population_sizes["Pristine"]),
+                                            final_populations["Pristine"]),
                              point_color = "darkgreen", point_size = 1.5)
 
 plot_simulation_on_landscape(sim_single_large, 
                              main = sprintf("Survivors: Single Large\n(N = %d)", 
-                                            final_population_sizes["Single_Large"]),
+                                            final_populations["Single_Large"]),
                              point_color = "blue", point_size = 1.5)
 
 plot_simulation_on_landscape(sim_several_small, 
                              main = sprintf("Survivors: Several Small\n(N = %d)", 
-                                            final_population_sizes["Several_Small"]),
+                                            final_populations["Several_Small"]),
                              point_color = "red", point_size = 1.5)
-
-par(mfrow = c(1, 1), mar = c(5, 4, 4, 2))
 ```
 
-### Population Trajectories
+## Population Trajectories
 
-```{r fig_trajectories, fig.width=7, fig.height=5}
+To understand population dynamics over time, we extract and visualize the population trajectories:
+
+```{r population-trajectories}
+trajectory_pristine <- compute_population_size(sim_pristine)
+trajectory_single_large <- compute_population_size(sim_single_large)
+trajectory_several_small <- compute_population_size(sim_several_small)
+```
+
+```{r plot-trajectories, fig.width=7, fig.height=5}
+par(mfrow = c(1, 1), mar = c(5, 4, 4, 2))
+
 max_pop <- max(c(trajectory_pristine$population_size, 
                  trajectory_single_large$population_size, 
                  trajectory_several_small$population_size))
 
 plot(trajectory_pristine$time, trajectory_pristine$population_size, 
      type = "l", col = "darkgreen", lwd = 2,
-     main = "Population Trajectories: SLOSS Comparison\n(Starting N = 100)", 
-     xlab = "Time (arbitrary units)", ylab = "Population Size (N)",
+     main = "Population Trajectories: SLOSS Comparison", 
+     xlab = "Time (arbitrary units)", 
+     ylab = "Population Size (N)",
      ylim = c(0, max_pop * 1.05))
 
 lines(trajectory_single_large$time, trajectory_single_large$population_size, 
@@ -269,698 +208,50 @@ lines(trajectory_single_large$time, trajectory_single_large$population_size,
 lines(trajectory_several_small$time, trajectory_several_small$population_size, 
       col = "red", lwd = 2)
 
-legend("topright", 
-       legend = c(
-         sprintf("Pristine (N=%d)", final_population_sizes["Pristine"]),
-         sprintf("Single Large (N=%d)", final_population_sizes["Single_Large"]),
-         sprintf("Several Small (N=%d)", final_population_sizes["Several_Small"])
-       ),
-       col = c("darkgreen", "blue", "red"), 
-       lwd = 2, bty = "n", cex = 0.9)
-
 abline(h = 100, lty = 2, col = "gray50")
-text(0, 100, "Initial N", pos = 3, cex = 0.8, col = "gray50")
 ```
 
-### Final Comparison
+## Summary Comparison
 
-```{r fig_barplot, fig.width=7, fig.height=5}
-barplot(final_population_sizes, 
-        main = "Final Population Sizes: SLOSS Comparison\n(Higher is better for conservation)",
+```{r final-comparison, fig.width=6, fig.height=5}
+barplot(final_populations, 
+        main = "Final Population Sizes: SLOSS Comparison",
         ylab = "Final Population Size (N)",
         col = c("darkgreen", "blue", "red"),
         las = 1,
-        ylim = c(0, max(final_population_sizes) * 1.15))
+        ylim = c(0, max(final_populations) * 1.15))
 
 text(x = seq(0.7, by = 1.2, length.out = 3), 
-     y = final_population_sizes + max(final_population_sizes) * 0.05,
-     labels = final_population_sizes,
+     y = final_populations + max(final_populations) * 0.05,
+     labels = final_populations,
      cex = 1.2, font = 2)
 ```
 
-# Part 2: Genetic and Evolutionary Features
+# Ecological Interpretation
 
-## Creating Continuous Landscapes
+## Habitat Loss and Carrying Capacity
 
-Investigating how genetic mechanisms enable population persistence in heterogeneous environments.
+Comparing the pristine baseline to the single large patch reveals the fundamental cost of habitat loss. Even when habitat remains contiguous, the pristine landscape supports **`r final_populations["Pristine"] - final_populations["Single_Large"]` more individuals** than the single large configuration—a **`r round((1 - final_populations["Single_Large"] / final_populations["Pristine"]) * 100, 1)`% reduction** in carrying capacity. This reduction reflects both the loss of foraging area and the increased proportion of edge habitat, where individuals may experience reduced resource availability and increased exposure to matrix conditions.
 
-Fractality controls spatial autocorrelation:
+## The SLOSS Question: Configuration Effects
 
-- **High fractality (0.9):** Smooth, predictable gradients
-- **Medium fractality (0.5):** Moderate heterogeneity
-- **Low fractality (0.1):** Rough, highly fragmented patterns
+Beyond total habitat area, configuration also matters. In this simulation, the `r if(final_populations["Single_Large"] > final_populations["Several_Small"]) "**Single Large**" else if(final_populations["Several_Small"] > final_populations["Single_Large"]) "**Several Small**" else "**neither**"` strategy supports a larger population, with a difference of **`r abs(final_populations["Single_Large"] - final_populations["Several_Small"])` individuals**. `r if(final_populations["Single_Large"] > final_populations["Several_Small"]) "This outcome supports the 'Single Large' hypothesis and suggests that core habitat area outweighs potential benefits of spatial spreading. The contiguous patch likely provides more continuous resource availability and reduces mortality risks associated with inter-patch movement through the hostile matrix." else if(final_populations["Several_Small"] > final_populations["Several_Small"]) "This outcome supports the 'Several Small' hypothesis and suggests that spatial heterogeneity in resource distribution may favor multiple patches. The fragmented configuration could provide bet-hedging benefits through demographic asynchrony or facilitate colonization of underutilized habitat." else "The equivalent performance of both strategies suggests that, under these parameter settings, edge effects and core habitat area balance against potential benefits of spatial spreading."`
 
-```{r continuous_landscapes, fig.width=9, fig.height=3}
-# Create continuous landscapes with different fractality levels
-# Each landscape gets its own seed for reproducibility
-set.seed(MASTER_SEED + 2001)
-continuous_smooth <- create_fractal_landscape(
-  cells_per_row = 15, fractality = 0.9,
-  habitat_proportion = NULL, min_value = 0.0, max_value = 1.0
-)
+## Population Dynamics and Equilibrium
 
-set.seed(MASTER_SEED + 2002)
-continuous_medium <- create_fractal_landscape(
-  cells_per_row = 15, fractality = 0.5,
-  habitat_proportion = NULL, min_value = 0.0, max_value = 1.0
-)
+The population trajectories reveal how each landscape's carrying capacity emerges from the founding population of 100 individuals. Depending on the relationship between initial density and resource availability, populations may initially grow, decline, or fluctuate before stabilizing. As populations approach their respective equilibria, density-dependent processes—competition for space and resources, local depletion, and crowding effects—increasingly regulate population size. The differences in equilibrium population sizes reflect the interplay between total habitat availability, edge-to-core ratios, and the spatial configuration of usable resources.
 
-set.seed(MASTER_SEED + 2003)
-continuous_rough <- create_fractal_landscape(
-  cells_per_row = 15, fractality = 0.1,
-  habitat_proportion = NULL, min_value = 0.0, max_value = 1.0
-)
+These patterns underscore a key insight for conservation planning: **reserve design involves trade-offs between total area, spatial configuration, and connectivity**. The optimal strategy depends on species-specific traits (dispersal ability, edge sensitivity, resource requirements) and landscape context (matrix permeability, disturbance regimes, resource heterogeneity).
 
-par(mfrow = c(1, 3), mar = c(4, 4, 3, 2))
-plot_landscape_world_coords(continuous_smooth, 
-                            main = "Smooth Landscape\n(fractality = 0.9)", 
-                            colors = "terrain")
-plot_landscape_world_coords(continuous_medium, 
-                            main = "Medium Landscape\n(fractality = 0.5)", 
-                            colors = "terrain")
-plot_landscape_world_coords(continuous_rough, 
-                            main = "Rough Landscape\n(fractality = 0.1)", 
-                            colors = "terrain")
-par(mfrow = c(1, 1), mar = c(5, 4, 4, 2))
-```
+# Conclusion
 
-**Landscape characteristics:**
+This vignette demonstrates how TWoLife can be used to explore classic questions in conservation ecology through individual-based simulations. The SLOSS analysis reveals how landscape configuration affects population viability, providing quantitative insights into reserve design strategies.
 
-```{r landscape_stats, echo=FALSE}
-landscape_stats <- data.frame(
-  Landscape = c("Smooth (f=0.9)", "Medium (f=0.5)", "Rough (f=0.1)"),
-  Range = c(
-    sprintf("[%.3f, %.3f]", min(continuous_smooth), max(continuous_smooth)),
-    sprintf("[%.3f, %.3f]", min(continuous_medium), max(continuous_medium)),
-    sprintf("[%.3f, %.3f]", min(continuous_rough), max(continuous_rough))
-  ),
-  Mean = sprintf("%.3f", c(mean(continuous_smooth), mean(continuous_medium), mean(continuous_rough))),
-  SD = sprintf("%.3f", c(sd(as.vector(continuous_smooth)), 
-                         sd(as.vector(continuous_medium)), 
-                         sd(as.vector(continuous_rough))))
-)
-knitr::kable(landscape_stats, align = c('l', 'r', 'r', 'r'))
-```
+The framework shown here can be extended to investigate:
 
-## Progressive Genetics Exploration
+- Heterogeneous landscapes with variable resource quality
+- Individual variation in resource use and movement behavior  
+- Different fragmentation patterns and connectivity scenarios
+- Temporal dynamics under environmental change
 
-We will systematically test which genetic components enable population survival in heterogeneous environments using the medium fractality landscape.
-
-**Parameter design rationale:**
-
-- **Population size = 40:** Balanced for computational speed and ecological realism
-- **genotype_sds = 0.15:** Moderate niche width (~±0.3 habitat tolerance range)
-- **mutation_rate = 0.05:** 5% mutation rate enables moderate evolutionary change
-- **sampling_points = 20-100:** Active habitat selection without excessive computation
-
-```{r genetics_setup, echo=FALSE}
-genetics_landscape <- continuous_medium
-
-# Pre-generate genetic parameters for full reproducibility
-# Use dedicated seed for this
-set.seed(MASTER_SEED + 3001)
-initial_genotypes <- runif(40, 0.3, 0.7)
-```
-
-### Step 1: Default Genetics (Baseline)
-
-**Configuration:**
-
-- All individuals identical
-- Specialized for habitat quality = 1.0
-- No genetic variation
-- No niche width (perfect specialists)
-
-**Expected outcome:** Landscape range is [0, 1] with mean ~0.5. Very few/no pixels have exactly value 1.0. **Prediction: Rapid extinction due to habitat mismatch.**
-
-```{r step1_default}
-# All genetics simulations use SAME master_seed
-# Only genetic parameters differ between them
-result_no_genetics <- twolife_simulation(
-  landscape_params = list(habitat = genetics_landscape),
-  individual_params = list(initial_population_size = 40),
-  simulation_params = list(max_events = 250),
-  master_seed = MASTER_SEED
-)
-```
-
-**Result:** `r result_no_genetics$summary$final_population_size` survivors after `r sprintf("%.1f", result_no_genetics$summary$duration)` time units
-
-```{r step1_interpret, echo=FALSE, results='asis'}
-if (result_no_genetics$summary$final_population_size == 0) {
-  cat("✓ **Prediction confirmed:** Population extinct\n\n")
-  cat("- **Interpretation:** No individual flexibility = no survival\n")
-  cat("- **Key insight:** Genetic uniformity is fatal in variable environments\n")
-} else {
-  cat("✗ **Unexpected survival detected!**\n\n")
-  cat(sprintf("- %d individuals found exact habitat matches\n", result_no_genetics$summary$final_population_size))
-  cat("- Landscape may have pixels at exactly 1.0\n")
-}
-```
-
-### Step 2: Variable Specialists
-
-**Configuration:**
-
-- Different optimal habitat values per individual
-- Genotype range: [0.3, 0.7]
-- Still perfect specialists (genotype_sds = 0)
-- No within-individual flexibility
-
-**Expected outcome:** Genotype diversity doesn't help without niche width. Each individual still requires exact habitat match. **Prediction: Extinction.**
-
-```{r step2_variable}
-result_simple_genetics <- twolife_simulation(
-  landscape_params = list(habitat = genetics_landscape),
-  individual_params = list(initial_population_size = 40),
-  genetic_params = list(
-    genotype_means = initial_genotypes  # Use pre-generated values
-  ),
-  simulation_params = list(max_events = 250),
-  master_seed = MASTER_SEED
-)
-```
-
-**Result:** `r result_simple_genetics$summary$final_population_size` survivors after `r sprintf("%.1f", result_simple_genetics$summary$duration)` time units
-
-```{r step2_interpret, echo=FALSE, results='asis'}
-if (result_simple_genetics$summary$final_population_size == 0) {
-  cat("✓ **Prediction confirmed:** Population extinct\n\n")
-  cat("- **Interpretation:** Genotype diversity ≠ survival without niche width\n")
-  cat("- **Key insight:** Having different optima doesn't create tolerance\n")
-} else {
-  cat("✗ **Some individuals survived!**\n\n")
-  cat(sprintf("- %d survivors found exact genotype-habitat matches\n", result_simple_genetics$summary$final_population_size))
-}
-```
-
-### Step 3: Generalists (Critical Innovation)
-
-**Configuration:**
-
-- Variable genotype means: [0.3, 0.7]
-- **NEW: genotype_sds = 0.15** (creates niche width)
-- Creates niche width: each individual tolerates ~±0.3 range
-- No evolution yet (static genotypes)
-
-**Expected outcome:** Niche width enables flexible habitat use. **Prediction: Population survival with spatial sorting.**
-
-```{r step3_generalists}
-result_specialist_genetics <- twolife_simulation(
-  landscape_params = list(habitat = genetics_landscape),
-  individual_params = list(initial_population_size = 40),
-  genetic_params = list(
-    genotype_means = initial_genotypes,  # Use pre-generated values
-    genotype_sds = rep(0.15, 40)
-  ),
-  simulation_params = list(max_events = 250),
-  master_seed = MASTER_SEED
-)
-```
-
-**Result:** `r result_specialist_genetics$summary$final_population_size` survivors after `r sprintf("%.1f", result_specialist_genetics$summary$duration)` time units
-
-```{r step3_interpret, echo=FALSE, results='asis'}
-if (result_specialist_genetics$summary$final_population_size > 0) {
-  cat("✓ **Prediction confirmed:** Population survived!\n\n")
-  cat("- **Interpretation:** Niche width is the KEY to survival\n")
-  cat(sprintf("- Mean survivor genotype: %.3f (range: [%.3f, %.3f])\n",
-              mean(result_specialist_genetics$survivors$genotype),
-              min(result_specialist_genetics$survivors$genotype),
-              max(result_specialist_genetics$survivors$genotype)))
-  cat(sprintf("- Mean survivor phenotype: %.3f (range: [%.3f, %.3f])\n",
-              mean(result_specialist_genetics$survivors$phenotype),
-              min(result_specialist_genetics$survivors$phenotype),
-              max(result_specialist_genetics$survivors$phenotype)))
-  cat(sprintf("- Survival rate: %.1f%%\n",
-              (result_specialist_genetics$summary$final_population_size / 40) * 100))
-} else {
-  cat("✗ **Unexpected extinction!**\n\n")
-  cat("- Environment may be too harsh for these parameters\n")
-}
-```
-
-### Step 4: Evolution (Adding Adaptation)
-
-**Configuration:**
-
-- Generalists (genotype_sds = 0.15)
-- **NEW: mutation_rates = 0.05** (5% per reproduction)
-- **NEW: plasticities = 0.02** (2% phenotypic adjustment)
-- Genotypes can now change over generational time
-
-**Expected outcome:** Evolution allows tracking local optima. **Prediction: Improved survival, local adaptation patterns.**
-
-```{r step4_evolution}
-result_evolution <- twolife_simulation(
-  landscape_params = list(habitat = genetics_landscape),
-  individual_params = list(initial_population_size = 40),
-  genetic_params = list(
-    genotype_means = initial_genotypes,  # Use pre-generated values
-    genotype_sds = rep(0.15, 40),
-    mutation_rates = rep(0.05, 40),
-    plasticities = rep(0.02, 40)
-  ),
-  simulation_params = list(max_events = 250),
-  master_seed = MASTER_SEED
-)
-```
-
-**Result:** `r result_evolution$summary$final_population_size` survivors after `r sprintf("%.1f", result_evolution$summary$duration)` time units
-
-```{r step4_interpret, echo=FALSE, results='asis'}
-if (result_evolution$summary$final_population_size > 0) {
-  delta_survival <- result_evolution$summary$final_population_size - 
-    result_specialist_genetics$summary$final_population_size
-  
-  cat("✓ **Evolution enables enhanced persistence!**\n\n")
-  cat(sprintf("- Mean survivor genotype: %.3f (range: [%.3f, %.3f])\n",
-              mean(result_evolution$survivors$genotype),
-              min(result_evolution$survivors$genotype),
-              max(result_evolution$survivors$genotype)))
-  
-  if (delta_survival > 0) {
-    cat(sprintf("- **Evolution improved survival by +%d individuals (%.1f%% gain)**\n",
-                delta_survival,
-                (delta_survival / result_specialist_genetics$summary$final_population_size) * 100))
-  } else if (delta_survival < 0) {
-    cat(sprintf("- Evolution reduced survival by %d individuals (stochastic variation)\n", delta_survival))
-  } else {
-    cat("- Evolution produced equivalent survival (no net change)\n")
-  }
-} else {
-  cat("✗ **Population extinct despite evolutionary mechanisms**\n")
-}
-```
-
-### Step 5: Habitat Selection (Adding Behavior)
-
-**Configuration:**
-
-- All previous mechanisms (niche width + evolution)
-- **NEW: sampling_points = 100**
-- Individuals sample 100 locations, choose best phenotype match
-- Active habitat selection behavior
-
-**Expected outcome:** Behavioral optimization of habitat choice. **Prediction: Highest survival, strong spatial genetic structure.**
-
-```{r step5_behavior}
-result_habitat_selection <- twolife_simulation(
-  landscape_params = list(habitat = genetics_landscape),
-  individual_params = list(initial_population_size = 40),
-  genetic_params = list(
-    genotype_means = initial_genotypes,  # Use pre-generated values
-    genotype_sds = rep(0.15, 40),
-    mutation_rates = rep(0.05, 40),
-    plasticities = rep(0.02, 40),
-    sampling_points = rep(100, 40)
-  ),
-  simulation_params = list(max_events = 250),
-  master_seed = MASTER_SEED + 9000  # Different seed for habitat selection demonstration
-)
-```
-
-**Result:** `r result_habitat_selection$summary$final_population_size` survivors after `r sprintf("%.1f", result_habitat_selection$summary$duration)` time units
-
-```{r step5_interpret, echo=FALSE, results='asis'}
-if (result_habitat_selection$summary$final_population_size > 0) {
-  delta_survival <- result_habitat_selection$summary$final_population_size - 
-    result_evolution$summary$final_population_size
-  total_improvement <- result_habitat_selection$summary$final_population_size - 
-    result_simple_genetics$summary$final_population_size
-  
-  cat("✓ **Habitat selection optimizes population outcomes!**\n\n")
-  
-  if (delta_survival > 0) {
-    cat(sprintf("- **Habitat selection improved survival by +%d individuals (%.1f%% gain)**\n",
-                delta_survival,
-                (delta_survival / result_evolution$summary$final_population_size) * 100))
-  }
-  cat(sprintf("- **Overall improvement from Step 2: +%d individuals**\n", total_improvement))
-} else {
-  cat("✗ **Population extinct despite all mechanisms active**\n")
-}
-```
-
-## Genetics Progression Summary
-
-```{r genetics_summary, fig.width=7, fig.height=5}
-genetics_results <- data.frame(
-  Step = 1:5,
-  Scenario = c("Default", "Variable", "Generalists", "Evolution", "Habitat Selection"),
-  Final_Pop = c(
-    result_no_genetics$summary$final_population_size,
-    result_simple_genetics$summary$final_population_size,
-    result_specialist_genetics$summary$final_population_size,
-    result_evolution$summary$final_population_size,
-    result_habitat_selection$summary$final_population_size
-  ),
-  Survival_Rate = sprintf("%.1f%%", c(
-    result_no_genetics$summary$final_population_size / 40 * 100,
-    result_simple_genetics$summary$final_population_size / 40 * 100,
-    result_specialist_genetics$summary$final_population_size / 40 * 100,
-    result_evolution$summary$final_population_size / 40 * 100,
-    result_habitat_selection$summary$final_population_size / 40 * 100
-  )),
-  Duration = sprintf("%.1f", c(
-    result_no_genetics$summary$duration,
-    result_simple_genetics$summary$duration,
-    result_specialist_genetics$summary$duration,
-    result_evolution$summary$duration,
-    result_habitat_selection$summary$duration
-  )),
-  Key_Feature = c("No flexibility", "Variable optima", "Niche width", "+ Evolution", "+ Behavior"),
-  Outcome = c("Extinction", "Extinction", "Survival", "Enhanced", "Optimized"),
-  stringsAsFactors = FALSE
-)
-
-knitr::kable(genetics_results, align = c('c', 'l', 'r', 'r', 'r', 'l', 'l'))
-
-# Visualize progression
-barplot(genetics_results$Final_Pop,
-        names.arg = genetics_results$Scenario,
-        main = "Genetic Complexity vs. Survival Success\n(N = 40 initial population)",
-        ylab = "Final Population Size",
-        col = c("red", "orange", "yellow", "lightgreen", "darkgreen"),
-        las = 2,
-        ylim = c(0, max(genetics_results$Final_Pop) * 1.15))
-
-text(x = seq(0.7, by = 1.2, length.out = 5), 
-     y = genetics_results$Final_Pop + max(genetics_results$Final_Pop) * 0.05,
-     labels = genetics_results$Final_Pop,
-     cex = 1, font = 2)
-
-abline(h = 40, lty = 2, col = "gray40")
-text(0.5, 42, "Initial N = 40", pos = 4, cex = 0.8, col = "gray40")
-```
-
-## Spatial Genetics Analysis
-
-Visualizing spatial distribution of survivors and phenotypes. Points are colored by **phenotype** (expressed traits that determine fitness).
-
-```{r spatial_genetics, fig.width=8, fig.height=8}
-par(mfrow = c(2, 2), mar = c(4, 4, 3, 2))
-
-if (result_specialist_genetics$summary$final_population_size > 0) {
-  plot_simulation_on_landscape(result_specialist_genetics,
-                               main = sprintf("Generalists Only\n(N = %d survivors)",
-                                              result_specialist_genetics$summary$final_population_size),
-                               color_by = "phenotype",
-                               landscape_colors = "terrain")
-} else {
-  plot(1, 1, type = "n", main = "Generalists Only\n(Population Extinct)", 
-       xlab = "", ylab = "", axes = FALSE)
-  text(1, 1, "No\nSurvivors", cex = 2, col = "red", font = 2)
-  box()
-}
-
-if (result_evolution$summary$final_population_size > 0) {
-  plot_simulation_on_landscape(result_evolution,
-                               main = sprintf("With Evolution\n(N = %d survivors)",
-                                              result_evolution$summary$final_population_size),
-                               color_by = "phenotype",
-                               landscape_colors = "terrain")
-} else {
-  plot(1, 1, type = "n", main = "With Evolution\n(Population Extinct)", 
-       xlab = "", ylab = "", axes = FALSE)
-  text(1, 1, "No\nSurvivors", cex = 2, col = "red", font = 2)
-  box()
-}
-
-if (result_habitat_selection$summary$final_population_size > 0) {
-  plot_simulation_on_landscape(result_habitat_selection,
-                               main = sprintf("With Habitat Selection\n(N = %d survivors)",
-                                              result_habitat_selection$summary$final_population_size),
-                               color_by = "phenotype",
-                               landscape_colors = "terrain")
-} else {
-  plot(1, 1, type = "n", main = "With Habitat Selection\n(Population Extinct)", 
-       xlab = "", ylab = "", axes = FALSE)
-  text(1, 1, "No\nSurvivors", cex = 2, col = "red", font = 2)
-  box()
-}
-
-plot_landscape_world_coords(genetics_landscape, 
-                            main = "Base Landscape\n(Continuous habitat quality)", 
-                            colors = "terrain")
-
-par(mfrow = c(1, 1), mar = c(5, 4, 4, 2))
-```
-
-## Habitat Matching Validation
-
-Quantifying phenotype-environment correlation for survivors. Fitness depends on **phenotype** matching habitat, not genotype.
-
-### Generalists (Step 3)
-
-```{r validation_generalists, fig.width=8, fig.height=4}
-validate_habitat_matching(result_specialist_genetics, color_by = "phenotype")
-calculate_genotype_habitat_mismatch(result_specialist_genetics)
-```
-
-### Evolution (Step 4)
-
-```{r validation_evolution, fig.width=8, fig.height=4}
-validate_habitat_matching(result_evolution, color_by = "phenotype")
-calculate_genotype_habitat_mismatch(result_evolution)
-```
-
-### Habitat Selection (Step 5)
-
-```{r validation_selection, fig.width=8, fig.height=4}
-validate_habitat_matching(result_habitat_selection, color_by = "phenotype")
-calculate_genotype_habitat_mismatch(result_habitat_selection)
-```
-
-# Part 3: History Detail Levels and Temporal Analysis
-
-## Understanding History Detail Levels
-
-The `history_detail` parameter controls how much information is stored during simulations. This affects memory usage, computation time, and available analyses.
-
-### Three Levels Explained
-
-**1. Minimal** (`history_detail = "minimal"`):
-- **Stores:** Time, event type, individual ID only
-- **Use case:** Large-scale simulations where you only need population trajectories
-- **Memory:** Smallest footprint
-- **Limitations:** Cannot reconstruct spatial positions or use `snapshot_at_time()`
-
-**2. Standard** (`history_detail = "standard"`, default):
-- **Stores:** All minimal data PLUS coordinates, patch ID, genotype
-- **Use case:** Most analyses including spatial reconstruction
-- **Memory:** Moderate
-- **Capabilities:** Full temporal reconstruction with `snapshot_at_time()`
-
-**3. Full** (`history_detail = "full"`):
-- **Stores:** All standard data PLUS phenotype and niche width
-- **Use case:** Detailed evolutionary analyses requiring exact trait values
-- **Memory:** Largest (but still reasonable)
-- **Capabilities:** Perfect historical reconstruction without approximation
-
-```{r history_comparison_table, echo=FALSE}
-history_comparison <- data.frame(
-  Level = c("Minimal", "Standard", "Full"),
-  `Time` = c("✓", "✓", "✓"),
-  `Event Type` = c("✓", "✓", "✓"),
-  `Individual ID` = c("✓", "✓", "✓"),
-  `Coordinates` = c("✗", "✓", "✓"),
-  `Patch ID` = c("✗", "✓", "✓"),
-  `Genotype` = c("✗", "✓", "✓"),
-  `Phenotype` = c("✗", "✗", "✓"),
-  `Niche Width` = c("✗", "✗", "✓"),
-  `Snapshot Capable` = c("✗", "✓", "✓"),
-  check.names = FALSE
-)
-knitr::kable(history_comparison, align = 'c')
-```
-
-## Comparing History Detail Levels
-
-Let's run the same simulation with all three levels to demonstrate differences:
-
-```{r history_comparison_sims}
-# Use a simple test landscape
-# Generate landscape with specific seed
-set.seed(MASTER_SEED + 4001)
-test_landscape <- create_fractal_landscape(
-  cells_per_row = 10,
-  fractality = 0.5,
-  habitat_proportion = 0.6
-)
-
-# All three simulations use SAME master_seed
-# Only history_detail differs between them
-
-# Simulation 1: Minimal history
-sim_minimal <- twolife_simulation(
-  landscape_params = list(habitat = test_landscape),
-  individual_params = list(initial_population_size = 30),
-  simulation_params = list(max_events = 100),
-  history_detail = "minimal",
-  master_seed = MASTER_SEED
-)
-
-# Simulation 2: Standard history (default)
-sim_standard <- twolife_simulation(
-  landscape_params = list(habitat = test_landscape),
-  individual_params = list(initial_population_size = 30),
-  simulation_params = list(max_events = 100),
-  history_detail = "standard",
-  master_seed = MASTER_SEED
-)
-
-# Simulation 3: Full history
-sim_full <- twolife_simulation(
-  landscape_params = list(habitat = test_landscape),
-  individual_params = list(initial_population_size = 30),
-  simulation_params = list(max_events = 100),
-  history_detail = "full",
-  master_seed = MASTER_SEED
-)
-```
-
-### Memory and Data Comparison
-
-```{r history_data_comparison}
-# Check what data is available in each result
-cat("MINIMAL history contains:\n")
-cat("  - events$times:", length(sim_minimal$events$times), "values\n")
-cat("  - events$types:", length(sim_minimal$events$types), "values\n")
-cat("  - events$individual_ids:", length(sim_minimal$events$individual_ids), "values\n")
-cat("  - events$x_coordinates:", if("x_coordinates" %in% names(sim_minimal$events)) "YES" else "NO", "\n")
-cat("  - events$phenotypes:", if("phenotypes" %in% names(sim_minimal$events)) "YES" else "NO", "\n")
-cat("  - Can use snapshot_at_time():", can_snapshot(sim_minimal), "\n\n")
-
-cat("STANDARD history contains:\n")
-cat("  - events$times:", length(sim_standard$events$times), "values\n")
-cat("  - events$types:", length(sim_standard$events$types), "values\n")
-cat("  - events$individual_ids:", length(sim_standard$events$individual_ids), "values\n")
-cat("  - events$x_coordinates:", if("x_coordinates" %in% names(sim_standard$events)) "YES" else "NO", "\n")
-cat("  - events$phenotypes:", if("phenotypes" %in% names(sim_standard$events)) "YES" else "NO", "\n")
-cat("  - Can use snapshot_at_time():", can_snapshot(sim_standard), "\n\n")
-
-cat("FULL history contains:\n")
-cat("  - events$times:", length(sim_full$events$times), "values\n")
-cat("  - events$types:", length(sim_full$events$types), "values\n")
-cat("  - events$individual_ids:", length(sim_full$events$individual_ids), "values\n")
-cat("  - events$x_coordinates:", if("x_coordinates" %in% names(sim_full$events)) "YES" else "NO", "\n")
-cat("  - events$phenotypes:", if("phenotypes" %in% names(sim_full$events)) "YES" else "NO", "\n")
-cat("  - Can use snapshot_at_time():", can_snapshot(sim_full), "\n\n")
-
-# Object sizes
-cat("Memory usage comparison:\n")
-cat("  Minimal:", format(object.size(sim_minimal), units = "Kb"), "\n")
-cat("  Standard:", format(object.size(sim_standard), units = "Kb"), "\n")
-cat("  Full:", format(object.size(sim_full), units = "Kb"), "\n")
-```
-
-## Using snapshot_at_time() for Temporal Analysis
-
-The `snapshot_at_time()` function reconstructs the exact population state at any point during the simulation. This is powerful for creating animations, studying transient dynamics, or examining population states before extinction events.
-
-**Requirements:** `history_detail = "standard"` or `"full"`
-
-### Example 1: Population at Midpoint
-
-```{r snapshot_example1, fig.width=8, fig.height=4}
-# Get simulation duration
-duration <- sim_standard$summary$duration
-
-# Reconstruct population at 50% through simulation
-midpoint_time <- duration / 2
-snapshot_mid <- snapshot_at_time(sim_standard, 
-                                 target_time = midpoint_time,
-                                 color_by = "genotype",
-                                 show_plot = TRUE,
-                                 point_size = 2.5)
-
-cat("\nSnapshot at t =", round(midpoint_time, 2), "\n")
-cat("Individuals alive:", snapshot_mid$n_alive, "\n")
-cat("Events processed:", snapshot_mid$events_processed, "\n")
-```
-
-## Recommendations for Choosing History Detail Level
-
-**Use `minimal` when:**
-- Running large-scale parameter sweeps
-- Only need final outcomes and population trajectories
-- Memory is constrained
-- Don't need spatial analysis
-
-**Use `standard` when (RECOMMENDED):**
-- Need spatial analysis and visualization
-- Want to use `snapshot_at_time()` for animations
-- Need genotype tracking over time
-- Typical research scenarios
-
-**Use `full` when:**
-- Studying evolutionary dynamics in detail
-- Need exact phenotype values at all time points
-- Analyzing fine-scale trait evolution
-- Creating publication-quality temporal reconstructions
-
-# Key Insights and Biological Lessons
-
-## 1. Genetic Diversity Alone Is Insufficient
-
-Steps 1-2 demonstrate extinction despite different genotypes.
-
-**Implication:** Conservation requires functional trait variation.
-
-## 2. Niche Width Is Critical for Survival
-
-Step 3 breakthrough: Tolerance ranges enable persistence.
-
-**Implication:** Specialists are vulnerable in variable environments.
-
-## 3. Phenotypic Plasticity Provides Flexibility
-
-Phenotypes can differ from genotypes via plasticity.
-
-**Implication:** Immediate environmental responses complement evolution.
-
-## 4. Evolution Improves Adaptive Potential
-
-Step 4: Mutation and plasticity allow tracking conditions.
-
-**Implication:** Evolutionary capacity is a conservation asset.
-
-## 5. Behavior Optimizes Ecological Outcomes
-
-Step 5: Active habitat selection maximizes fitness.
-
-**Implication:** Behavioral flexibility complements genetic adaptation.
-
-## Central Lesson
-
-Population persistence in heterogeneous environments requires the integration of multiple mechanisms:
-
-- Genetic flexibility (niche width)
-- Phenotypic plasticity (immediate responses)
-- Evolutionary capacity (mutation, plasticity)
-- Behavioral adaptability (habitat selection)
-
-Neither genetics nor behavior alone is sufficient—their synergistic interaction determines survival outcomes. Fitness depends on expressed **phenotypes** matching the environment, not just underlying genotypes.
-
-# Summary
-
-This vignette demonstrated:
-
-1. **SLOSS Analysis**: Comparing conservation strategies (Single Large vs Several Small reserves) using spatially explicit population models. Results showed habitat configuration significantly affects population viability.
-
-2. **Genetic Mechanisms**: A progressive exploration revealing that:
-   - Genetic diversity alone is insufficient (Steps 1-2)
-   - Niche width enables survival (Step 3)
-   - Evolution enhances adaptation (Step 4)
-   - Behavior optimizes outcomes (Step 5)
-
-3. **Key Finding**: Population persistence requires the synergistic integration of genetic flexibility, phenotypic plasticity, evolutionary capacity, and behavioral adaptability. Fitness depends on expressed phenotypes matching the environment, not just underlying genotypes.
-
-All results are reproducible using `master_seed = 42` with deterministic offsets for landscape generation.
-
-# Session Information
-
-```{r session_info}
-sessionInfo()
-```
+For more advanced applications, see the additional vignettes in the TWoLife package documentation.

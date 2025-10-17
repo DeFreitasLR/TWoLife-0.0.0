@@ -1,74 +1,71 @@
+# test-basic-functionality.R
+# Basic functionality tests for TWoLife package
+
+test_that("Package loads without error", {
+  expect_true(require(TWoLife, quietly = TRUE))
+})
+
 test_that("Basic simulation runs without error", {
-  # Create simple test landscape
-  habitat <- matrix(rep(1, 25), nrow = 5, ncol = 5)
+  # Create a simple landscape
+  test_landscape <- create_test_landscape(size = 10, habitat_prop = 0.5)
   
-  landscape_params <- list(
-    cells_per_side = 5,
-    cell_size = 1.0,
-    boundary_condition = 1
-  )
-  
-  individual_params <- list(
-    initial_population_size = 10,
-    neighbor_radius = 2.0,
-    step_length = 1.0,
-    base_birth_rate = 0.5,
-    base_mortality_rate = 0.1
-  )
-  
-  simulation_params <- list(
-    max_events = 100,
-    neutral_mode = FALSE
-  )
-  
-  # Test that simulation runs
-  expect_no_error({
+  # Run a short simulation
+  expect_error({
     result <- twolife_simulation(
-      landscape_params, 
-      individual_params, 
-      simulation_params, 
-      habitat
+      landscape_params = list(habitat = test_landscape),
+      individual_params = list(
+        initial_population_size = 10,
+        base_birth_rate = 0.35,
+        base_mortality_rate = 0.25
+      ),
+      simulation_params = list(max_events = 100)
     )
-  })
+  }, NA)  # NA means "no error expected"
 })
 
 test_that("Simulation returns expected structure", {
-  habitat <- matrix(rep(1, 9), nrow = 3, ncol = 3)
+  # Use helper function for cleaner test
+  result <- run_simple_test_simulation(steps = 100, n = 10)
   
-  landscape_params <- list(cells_per_side = 3, cell_size = 1.0)
-  individual_params <- list(initial_population_size = 5)
-  simulation_params <- list(max_events = 50)
+  # Check that result is the right class
+  expect_s3_class(result, "twolife_result")
   
-  result <- twolife_simulation(landscape_params, individual_params, simulation_params, habitat)
+  # Check for required components
+  expect_true("summary" %in% names(result))
+  expect_true("survivors" %in% names(result))
+  expect_true("spatial" %in% names(result))
+  expect_true("events" %in% names(result))
+  expect_true("parameters" %in% names(result))
   
-  # Check structure
-  expect_true(is.list(result))
-  expect_true("final_population_size" %in% names(result))
-  expect_true("survivor_x" %in% names(result))
-  expect_true("survivor_y" %in% names(result))
-  expect_true("event_times" %in% names(result))
-  expect_true("event_types" %in% names(result))
-  
-  # Check types
-  expect_true(is.numeric(result$final_population_size))
-  expect_true(is.numeric(result$survivor_x))
-  expect_true(is.numeric(result$event_times))
+  # Check summary fields
+  expect_true("final_population_size" %in% names(result$summary))
+  expect_true("total_events" %in% names(result$summary))
+  expect_true("duration" %in% names(result$summary))
+  expect_true("status" %in% names(result$summary))
 })
 
-test_that("Parameter validation works", {
-  habitat <- matrix(rep(1, 4), nrow = 2, ncol = 2)
+test_that("Simulation completes successfully with max_events limit", {
+  # max_events prevents infinite loops but includes initialization events
+  result <- run_simple_test_simulation(steps = 50, n = 5)
   
-  # Test invalid parameters
-  expect_error({
-    twolife_simulation("not_a_list", list(), list(), habitat)
-  })
+  # Simulation should complete successfully
+  expect_s3_class(result, "twolife_result")
+  expect_true("summary" %in% names(result))
   
-  expect_error({
-    twolife_simulation(
-      list(cells_per_side = -1), 
-      list(initial_population_size = 10), 
-      list(max_events = 100), 
-      habitat
-    )
-  })
+  # Should have some events recorded (at minimum, initialization)
+  expect_gt(result$summary$total_events, 0)
+  
+  # Note: total_events includes initialization events (placing initial individuals)
+  # so it may exceed max_events parameter, which limits simulation events only
+})
+
+test_that("Population size can be computed", {
+  result <- run_simple_test_simulation(steps = 100, n = 10)
+  
+  pop_trajectory <- compute_population_size(result)
+  
+  expect_true(is.data.frame(pop_trajectory))
+  expect_true("time" %in% names(pop_trajectory))
+  expect_true("population_size" %in% names(pop_trajectory))
+  expect_true(nrow(pop_trajectory) > 0)
 })

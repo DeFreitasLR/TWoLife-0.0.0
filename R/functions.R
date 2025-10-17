@@ -1,5 +1,12 @@
 # functions.R - Complete TWoLife R interface
-# UPDATED: Fixed NA handling in correlation comparisons
+# UPDATED: Added all missing @param documentation and proper imports
+# FIXED: Replaced non-ASCII characters with ASCII equivalents
+
+#' @importFrom grDevices colorRampPalette heat.colors terrain.colors
+#' @importFrom graphics abline grid image legend mtext par points
+#' @importFrom stats cor median quantile rnorm runif sd
+#' @importFrom utils modifyList
+NULL
 
 # ============================================================================
 # CORE SIMULATION FUNCTIONS
@@ -11,7 +18,7 @@
 #' genetic variation, and demographic processes. Supports rectangular landscapes
 #' and customizable habitat selection parameters.
 #' 
-#' @param landscape_params List containing landscape parameters
+#' @param landscape_params List containing landscape parameters including habitat matrix
 #' @param individual_params List containing individual parameters
 #' @param genetic_params List containing genetic parameters
 #' @param simulation_params List containing simulation control parameters
@@ -762,6 +769,10 @@ create_fractal_landscape <- function(cells_per_row,
 #' Internal function to generate fractal patterns for rectangular landscapes.
 #' Uses iterative smoothing with neighbor averaging.
 #' 
+#' @param rows Integer. Number of rows
+#' @param cols Integer. Number of columns
+#' @param fractality Numeric. Fractality parameter between 0 and 1
+#' 
 #' @keywords internal
 generate_rectangular_fractal <- function(rows, cols, fractality) {
   fractal <- matrix(runif(rows * cols), nrow = rows, ncol = cols)
@@ -881,6 +892,16 @@ create_corner_landscape <- function(cells_per_row,
 #' Visualizes landscape in world coordinate system with proper axis scaling.
 #' Works with both square and rectangular landscapes.
 #' 
+#' @param landscape_data Either a matrix or list with habitat component
+#' @param cell_size Numeric. Size of each cell (default: 1.0)
+#' @param filename Optional. File path to save plot
+#' @param main Character. Plot title
+#' @param colors Character. Color scheme: "habitat", "terrain", or "viridis"
+#' @param show_legend Logical. Show color legend (default: TRUE)
+#' @param add_grid Logical. Add grid lines (default: TRUE)
+#' 
+#' @return NULL (invisibly)
+#' 
 #' @export
 plot_landscape_world_coords <- function(landscape_data, 
                                         cell_size = 1.0,
@@ -960,6 +981,18 @@ plot_landscape_world_coords <- function(landscape_data,
 #' 
 #' Visualizes simulation results by overlaying survivor positions on the
 #' landscape. Points can be colored by genotype, phenotype, or a single color.
+#' 
+#' @param simulation_result A twolife_result object
+#' @param point_size Numeric. Size of points (default: 2)
+#' @param point_color Character. Color for points when color_by="none"
+#' @param point_shape Integer. Point shape (default: 16)
+#' @param color_by Character. Color points by: "none", "genotype", or "phenotype"
+#' @param landscape_colors Character. Landscape color scheme
+#' @param main Character. Plot title
+#' @param filename Optional. File path to save plot
+#' @param add_stats Logical. Add statistics to plot (default: TRUE)
+#' 
+#' @return simulation_result (invisibly)
 #' 
 #' @export
 plot_simulation_on_landscape <- function(simulation_result,
@@ -1067,6 +1100,13 @@ plot_simulation_on_landscape <- function(simulation_result,
 
 #' Quick Plot of Simulation Results
 #' 
+#' Convenience wrapper for plot_simulation_on_landscape().
+#' 
+#' @param simulation_result A twolife_result object
+#' @param ... Additional arguments passed to plot_simulation_on_landscape
+#' 
+#' @return simulation_result (invisibly)
+#' 
 #' @export
 quick_plot_result <- function(simulation_result, ...) {
   plot_simulation_on_landscape(simulation_result, ...)
@@ -1077,6 +1117,18 @@ quick_plot_result <- function(simulation_result, ...) {
 # ============================================================================
 
 #' Validate Habitat Matching for Simulation Results
+#' 
+#' Visualizes and validates whether individuals are positioned in habitat
+#' matching their genotype or phenotype values.
+#' 
+#' @param simulation_result A twolife_result object
+#' @param main Character. Plot title
+#' @param point_size Numeric. Size of points (default: 2)
+#' @param landscape_colors Character. Color scheme for landscape
+#' @param color_by Character. Color by "genotype" or "phenotype"
+#' @param show_stats Logical. Display statistics (default: TRUE)
+#' 
+#' @return Validation data frame (invisibly)
 #' 
 #' @export
 validate_habitat_matching <- function(simulation_result,
@@ -1154,7 +1206,6 @@ validate_habitat_matching <- function(simulation_result,
     if (n_survivors > 1) {
       correlation <- cor(trait_values, habitat_at_survivors)
       cat("\n", trait_name, "-Habitat correlation:", round(correlation, 3), "\n", sep="")
-      # FIXED: Check for NA before comparing
       if (!is.na(correlation) && correlation > 0.3) {
         cat("  -> Positive match: individuals in habitat matching their", tolower(trait_name), "\n")
       }
@@ -1257,6 +1308,14 @@ validate_habitat_matching <- function(simulation_result,
 
 #' Batch Validate Multiple Simulations
 #' 
+#' Validate habitat matching across multiple simulation results.
+#' 
+#' @param result_list List of twolife_result objects
+#' @param point_size Numeric. Point size for plots (default: 1.5)
+#' @param landscape_colors Character. Color scheme
+#' 
+#' @return List of validation data frames (invisibly)
+#' 
 #' @export
 batch_validate_habitat_matching <- function(result_list, 
                                             point_size = 1.5,
@@ -1301,6 +1360,13 @@ batch_validate_habitat_matching <- function(result_list,
 }
 
 #' Calculate Genotype-Habitat Mismatch Statistics Using Fitness
+#' 
+#' Computes fitness-based habitat matching statistics for simulation survivors.
+#' 
+#' @param simulation_result A twolife_result object
+#' @param return_individuals Logical. Return individual-level data (default: FALSE)
+#' 
+#' @return List of class "genotype_habitat_mismatch" with statistics
 #' 
 #' @export
 calculate_genotype_habitat_mismatch <- function(simulation_result, 
@@ -1430,6 +1496,12 @@ calculate_genotype_habitat_mismatch <- function(simulation_result,
 
 #' Compare Mismatch Statistics Across Multiple Simulations
 #' 
+#' Compare habitat matching statistics across multiple simulation results.
+#' 
+#' @param result_list List of twolife_result objects
+#' 
+#' @return List with comparison data frame and detailed statistics (invisibly)
+#' 
 #' @export
 compare_mismatch_statistics <- function(result_list) {
   
@@ -1492,6 +1564,11 @@ compare_mismatch_statistics <- function(result_list) {
 
 #' Print Method for TWoLife Results
 #' 
+#' @param x A twolife_result object
+#' @param ... Additional arguments (ignored)
+#' 
+#' @return x (invisibly)
+#' 
 #' @export
 print.twolife_result <- function(x, ...) {
   cat("TWoLife Simulation Result\n")
@@ -1532,6 +1609,11 @@ print.twolife_result <- function(x, ...) {
 
 #' Print Method for Mismatch Statistics
 #' 
+#' @param x A genotype_habitat_mismatch object
+#' @param ... Additional arguments (ignored)
+#' 
+#' @return x (invisibly)
+#' 
 #' @export
 print.genotype_habitat_mismatch <- function(x, ...) {
   cat("Genotype-Habitat Fitness Analysis\n")
@@ -1564,13 +1646,13 @@ print.genotype_habitat_mismatch <- function(x, ...) {
   cat("-------------------------------\n")
   cat("Correlation:", round(x$correlation, 4), "\n")
   cat("Mean genotype:", round(x$mean_genotype, 4), 
-      "± SD:", round(x$sd_genotype, 4), "\n")
+      "+/- SD:", round(x$sd_genotype, 4), "\n")
   cat("Mean phenotype:", round(x$mean_phenotype, 4), 
-      "± SD:", round(x$sd_phenotype, 4), "\n")
+      "+/- SD:", round(x$sd_phenotype, 4), "\n")
   cat("Mean habitat at survivors:", round(x$mean_habitat, 4), 
-      "± SD:", round(x$sd_habitat, 4), "\n")
+      "+/- SD:", round(x$sd_habitat, 4), "\n")
   cat("Mean niche width:", round(x$mean_niche_width, 4), 
-      "± SD:", round(x$sd_niche_width, 4), "\n")
+      "+/- SD:", round(x$sd_niche_width, 4), "\n")
   cat("Mean absolute mismatch:", round(x$mean_absolute_mismatch, 4), 
       "(for reference)\n\n")
   
@@ -1587,7 +1669,6 @@ print.genotype_habitat_mismatch <- function(x, ...) {
     cat("Poor fitness: Individuals poorly matched to habitat\n")
   }
   
-  # FIXED: Check for NA before comparing
   if (!is.na(x$correlation)) {
     if (x$correlation > 0.5) {
       cat("Strong positive correlation: Effective habitat selection\n")

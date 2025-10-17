@@ -13,6 +13,23 @@ validate_habitat_matching(
   show_stats = TRUE
 )
 }
+\arguments{
+\item{simulation_result}{A twolife_result object}
+
+\item{main}{Character. Plot title}
+
+\item{point_size}{Numeric. Size of points (default: 2)}
+
+\item{landscape_colors}{Character. Color scheme for landscape}
+
+\item{color_by}{Character. Color by "genotype" or "phenotype"}
+
+\item{show_stats}{Logical. Display statistics (default: TRUE)}
+}
+\value{
+Validation data frame (invisibly)
+}
 \description{
-Validate Habitat Matching for Simulation Results
+Visualizes and validates whether individuals are positioned in habitat
+matching their genotype or phenotype values.
 }

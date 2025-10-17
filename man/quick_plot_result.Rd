@@ -6,6 +6,14 @@
 \usage{
 quick_plot_result(simulation_result, ...)
 }
+\arguments{
+\item{simulation_result}{A twolife_result object}
+
+\item{...}{Additional arguments passed to plot_simulation_on_landscape}
+}
+\value{
+simulation_result (invisibly)
+}
 \description{
-Quick Plot of Simulation Results
+Convenience wrapper for plot_simulation_on_landscape().
 }

@@ -6,6 +6,12 @@
 \usage{
 compare_mismatch_statistics(result_list)
 }
+\arguments{
+\item{result_list}{List of twolife_result objects}
+}
+\value{
+List with comparison data frame and detailed statistics (invisibly)
+}
 \description{
-Compare Mismatch Statistics Across Multiple Simulations
+Compare habitat matching statistics across multiple simulation results.
 }

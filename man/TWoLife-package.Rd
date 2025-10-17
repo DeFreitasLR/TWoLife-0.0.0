@@ -61,6 +61,14 @@ and tutorials.
 }
 }
 
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/yourusername/TWoLife}
+  \item Report bugs at \url{https://github.com/yourusername/TWoLife/issues}
+}
+
+}
 \author{
 TWoLife Development Team
 }

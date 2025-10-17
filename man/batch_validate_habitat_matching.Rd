@@ -10,6 +10,16 @@ batch_validate_habitat_matching(
   landscape_colors = "terrain"
 )
 }
+\arguments{
+\item{result_list}{List of twolife_result objects}
+
+\item{point_size}{Numeric. Point size for plots (default: 1.5)}
+
+\item{landscape_colors}{Character. Color scheme}
+}
+\value{
+List of validation data frames (invisibly)
+}
 \description{
-Batch Validate Multiple Simulations
+Validate habitat matching across multiple simulation results.
 }

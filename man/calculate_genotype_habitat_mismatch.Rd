@@ -9,6 +9,14 @@ calculate_genotype_habitat_mismatch(
   return_individuals = FALSE
 )
 }
+\arguments{
+\item{simulation_result}{A twolife_result object}
+
+\item{return_individuals}{Logical. Return individual-level data (default: FALSE)}
+}
+\value{
+List of class "genotype_habitat_mismatch" with statistics
+}
 \description{
-Calculate Genotype-Habitat Mismatch Statistics Using Fitness
+Computes fitness-based habitat matching statistics for simulation survivors.
 }

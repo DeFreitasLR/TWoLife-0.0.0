@@ -1,6 +1,6 @@
-#include "landscape.hpp"
-#include "individual.hpp"
-#include "random_utils.hpp"
+#include "landscape.h"
+#include "individual.h"
+#include "random_utils.h"
 #include <stdexcept>
 #include <algorithm>
 #include <Rcpp.h>

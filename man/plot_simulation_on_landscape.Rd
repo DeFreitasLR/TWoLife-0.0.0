@@ -16,6 +16,28 @@ plot_simulation_on_landscape(
   add_stats = TRUE
 )
 }
+\arguments{
+\item{simulation_result}{A twolife_result object}
+
+\item{point_size}{Numeric. Size of points (default: 2)}
+
+\item{point_color}{Character. Color for points when color_by="none"}
+
+\item{point_shape}{Integer. Point shape (default: 16)}
+
+\item{color_by}{Character. Color points by: "none", "genotype", or "phenotype"}
+
+\item{landscape_colors}{Character. Landscape color scheme}
+
+\item{main}{Character. Plot title}
+
+\item{filename}{Optional. File path to save plot}
+
+\item{add_stats}{Logical. Add statistics to plot (default: TRUE)}
+}
+\value{
+simulation_result (invisibly)
+}
 \description{
 Visualizes simulation results by overlaying survivor positions on the
 landscape. Points can be colored by genotype, phenotype, or a single color.

@@ -14,6 +14,24 @@ plot_landscape_world_coords(
   add_grid = TRUE
 )
 }
+\arguments{
+\item{landscape_data}{Either a matrix or list with habitat component}
+
+\item{cell_size}{Numeric. Size of each cell (default: 1.0)}
+
+\item{filename}{Optional. File path to save plot}
+
+\item{main}{Character. Plot title}
+
+\item{colors}{Character. Color scheme: "habitat", "terrain", or "viridis"}
+
+\item{show_legend}{Logical. Show color legend (default: TRUE)}
+
+\item{add_grid}{Logical. Add grid lines (default: TRUE)}
+}
+\value{
+NULL (invisibly)
+}
 \description{
 Visualizes landscape in world coordinate system with proper axis scaling.
 Works with both square and rectangular landscapes.

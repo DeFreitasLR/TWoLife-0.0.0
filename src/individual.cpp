@@ -1,5 +1,5 @@
-#include "individual.hpp"
-#include "random_utils.hpp"
+#include "individual.h"
+#include "random_utils.h"
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
