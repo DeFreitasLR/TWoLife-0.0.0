@@ -7,7 +7,8 @@
 batch_validate_habitat_matching(
   result_list,
   point_size = 1.5,
-  landscape_colors = "terrain"
+  landscape_colors = "terrain",
+  show_legend = TRUE
 )
 }
 \arguments{
@@ -16,6 +17,8 @@ batch_validate_habitat_matching(
 \item{point_size}{Numeric. Point size for plots (default: 1.5)}
 
 \item{landscape_colors}{Character. Color scheme}
+
+\item{show_legend}{Logical. Display color legend on plots (default: TRUE)}
 }
 \value{
 List of validation data frames (invisibly)

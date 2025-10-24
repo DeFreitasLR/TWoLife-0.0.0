@@ -10,7 +10,8 @@ validate_habitat_matching(
   point_size = 2,
   landscape_colors = "terrain",
   color_by = "phenotype",
-  show_stats = TRUE
+  show_stats = TRUE,
+  show_legend = TRUE
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ validate_habitat_matching(
 \item{color_by}{Character. Color by "genotype" or "phenotype"}
 
 \item{show_stats}{Logical. Display statistics (default: TRUE)}
+
+\item{show_legend}{Logical. Display color legend on plot (default: TRUE)}
 }
 \value{
 Validation data frame (invisibly)

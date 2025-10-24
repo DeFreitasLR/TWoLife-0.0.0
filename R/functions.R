@@ -1,5 +1,6 @@
 # functions.R - Complete TWoLife R interface
 # UPDATED: Added all missing @param documentation and proper imports
+# UPDATED: Added show_legend parameter to validate_habitat_matching functions
 # FIXED: Replaced non-ASCII characters with ASCII equivalents
 
 #' @importFrom grDevices colorRampPalette heat.colors terrain.colors
@@ -714,16 +715,7 @@ create_fractal_landscape <- function(cells_per_row,
     (x - min(x)) / (max(x) - min(x))
   }
   
-  if (cells_per_row == cells_per_col && requireNamespace("rflsgen", quietly = TRUE)) {
-    raw_fractal <- rflsgen::flsgen_terrain(
-      cells_per_row,    
-      cells_per_col,    
-      fractality         
-    )
-    fractal_matrix <- as.matrix(raw_fractal)
-  } else {
-    fractal_matrix <- generate_rectangular_fractal(cells_per_row, cells_per_col, fractality)
-  }
+  fractal_matrix <- generate_rectangular_fractal(cells_per_row, cells_per_col, fractality)
   
   normalized_fractal <- range01(fractal_matrix)
   
@@ -1127,6 +1119,7 @@ quick_plot_result <- function(simulation_result, ...) {
 #' @param landscape_colors Character. Color scheme for landscape
 #' @param color_by Character. Color by "genotype" or "phenotype"
 #' @param show_stats Logical. Display statistics (default: TRUE)
+#' @param show_legend Logical. Display color legend on plot (default: TRUE)
 #' 
 #' @return Validation data frame (invisibly)
 #' 
@@ -1136,7 +1129,8 @@ validate_habitat_matching <- function(simulation_result,
                                       point_size = 2,
                                       landscape_colors = "terrain",
                                       color_by = "phenotype",
-                                      show_stats = TRUE) {
+                                      show_stats = TRUE,
+                                      show_legend = TRUE) {
   
   if (!inherits(simulation_result, "twolife_result")) {
     stop("simulation_result must be a twolife_result object", call. = FALSE)
@@ -1285,7 +1279,7 @@ validate_habitat_matching <- function(simulation_result,
   grid(col = "gray80", lty = 1, lwd = 0.5)
   abline(h = 0, v = 0, col = "red", lty = 2, lwd = 1)
   
-  if (!is_uniform && !is_binary) {
+  if (!is_uniform && !is_binary && show_legend) {
     legend_vals <- seq(z_range[1], z_range[2], length.out = 5)
     legend("topright", 
            legend = round(legend_vals, 2),
@@ -1313,13 +1307,15 @@ validate_habitat_matching <- function(simulation_result,
 #' @param result_list List of twolife_result objects
 #' @param point_size Numeric. Point size for plots (default: 1.5)
 #' @param landscape_colors Character. Color scheme
+#' @param show_legend Logical. Display color legend on plots (default: TRUE)
 #' 
 #' @return List of validation data frames (invisibly)
 #' 
 #' @export
 batch_validate_habitat_matching <- function(result_list, 
                                             point_size = 1.5,
-                                            landscape_colors = "terrain") {
+                                            landscape_colors = "terrain",
+                                            show_legend = TRUE) {
   
   n_results <- length(result_list)
   
@@ -1349,7 +1345,8 @@ batch_validate_habitat_matching <- function(result_list,
       main = result_name,
       point_size = point_size,
       landscape_colors = landscape_colors,
-      show_stats = TRUE
+      show_stats = TRUE,
+      show_legend = show_legend
     )
     names(validation_results)[i] <- result_name
   }
