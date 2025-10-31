@@ -17,24 +17,23 @@ NULL
 #' 
 #' Runs a spatially-explicit individual-based simulation with habitat selection,
 #' genetic variation, and demographic processes. Supports rectangular landscapes
-#' and customizable habitat selection parameters.
+#' and customizable habitat selection parameters. ## PI: pq não informou aqui também que o pacote modela plasticidade fenotífica?
 #' 
-#' @param landscape_params List containing landscape parameters including habitat matrix
-#' @param individual_params List containing individual parameters
-#' @param genetic_params List containing genetic parameters
-#' @param simulation_params List containing simulation control parameters
-#' @param history_detail Character. Level of event history detail to record:
-#'   "minimal" for only time, event type, and individual ID (fastest, smallest memory),
-#'   "standard" for adding spatial coordinates, patch ID, and genotype (default),
+#' @param landscape_params List containing landscape parameters including habitat matrix ## PI: quais são os elementos desta lista? 
+#' @param individual_params List containing individual parameters ## PI: quais são os elementos desta lista? 
+#' @param genetic_params List containing genetic parameters ## PI: quais são os elementos desta lista? 
+#' @param simulation_params List containing simulation control parameters ## PI: quais são os elementos desta lista? 
+#' @param history_detail Character. Level of event history detail to record: ## PI: Record onde ? Ser mais explícito que isto é o output.
+#'   "minimal" for only time, event type, and individual ID (fastest, smallest memory), ## PI: "For only" significa que vai gravar apenas estas variáveis? De todos os eventos? de tdos os indivíduos? O que define evento?
+#'   "standard" for adding spatial coordinates, patch ID, and genotype (default), ##PI: adicionar a que? Sem a estrutura do output fica difícil entender estas opções. Sugetsão: descrever com precisão os objetos que resultam decada opção destas no campo "Returns" e aqui apenas indicar que cada opçõa destass é um níveld e etalhe do output, descrito na seção "Returns".
 #'   "full" for adding phenotype and niche width (enables exact historical reconstruction)
-#' @param master_seed Integer seed for reproducible simulations (optional)
+#' @param master_seed Integer seed for reproducible simulations (optional) ## PI: tem que ser inteiro? Seed de quê? Pseudo-random seed? Será destinada a qual rotina de geração de números aleatórios?
 #' @param ... Additional named arguments (deprecated)
-#' @param output_file Optional file path for detailed event output
-#' 
-#' @return A list of class 'twolife_result' containing simulation results
-#' 
+#' @param output_file Optional file path for detailed event output ## PI: Seria o output da história ou outro ? O detailed output é produzido em que caso?
+#' @return A list of class 'twolife_result' containing simulation results ## PI: esta seção deve descrever o objeto de saída com todos os seus componentes. Se isso varia em função do parâmetro history_detail, desve descrever o objeto de saída para cada caso.
+#' ##PI: incluir as seções obrigatórias para funções (como usage) e a seção com exemplos simples de uso. Ver https://r-pkgs.org/man.html
 #' @export
-twolife_simulation <- function(landscape_params = list(), 
+twolife_simulation <- function(landscape_params = list(), ## 
                                individual_params = list(), 
                                genetic_params = list(),
                                simulation_params = list(),
@@ -313,12 +312,12 @@ twolife_simulation <- function(landscape_params = list(),
   return(lean_result)
 }
 
-#' Calculate Population Trajectory Over Time
+#' Calculate Population Trajectory Over Time  ## PI: como o modelo é explícito no espaço, tarjetória pode ser interpretada como caminho neste espaço. Pensar num título mais preciso.
 #' 
 #' Computes population size at each event time from simulation results.
 #' Works with all history_detail levels (only requires times and types).
 #' 
-#' @param result Result object from twolife_simulation
+#' @param result Result object from twolife_simulation ## PI: result object ou output object?
 #' 
 #' @return Data frame with columns time and population_size
 #' 
@@ -338,16 +337,16 @@ compute_population_size <- function(result) {
                                                ifelse(events_df$event_type == 2, 0,
                                                       ifelse(events_df$event_type == 3, -1, 0)))))
   
-  events_df$population_size <- cumsum(events_df$pop_change)
+  events_df$population_size <- cumsum(events_df$pop_change) ##PI Não seria necessário começar a soma com o número inicial de indivíduos? Aqui parece que soma apenas os eventos de nascimentos e mortes.
   
   return(events_df[, c("time", "population_size")])
 }
 
-#' Reconstruct Population State at Specific Time
+#' Reconstruct Population State at Specific Time ## PI: "recover" não é mais preciso que reconstruct ?
 #' 
 #' Replays the event log from a simulation to reconstruct the exact positions
 #' and states of all living individuals at a specified time point. Useful for
-#' temporal analysis and creating animations.
+#' temporal analysis and creating animations. ## PI aqui novamente recconstruct me parece uma descrição inadequada do que a função faz. Assim como replay. Pq entendi que ela só recuperar informação do output.
 #' 
 #' Requires history_detail = "standard" or "full"
 #' 
@@ -357,7 +356,7 @@ compute_population_size <- function(result) {
 #' @param show_plot Logical. Display visualization (default: TRUE)
 #' @param point_size Numeric. Size of points in plot (default: 2)
 #' 
-#' @return Invisibly returns list with time, n_alive, population, events_processed, and history_level
+#' @return Invisibly returns list with time, n_alive, population, events_processed, and history_level ##PI por mais que os nomes dos vetores na lista pareçam auto-evidentes, esta seção deve descrever o que cada vetor tem (tipo de dado e o que ele representa, além do nome do vetor). Além disso, se a função pode também retornar gráficos, é preciso informar isso aqui, como side-effect.
 #' 
 #' @examples
 #' \dontrun{
@@ -655,22 +654,22 @@ can_snapshot <- function(simulation_result) {
 #' 
 #' Generates a fractal landscape using spatial autocorrelation. Supports both
 #' square and rectangular landscapes, and can create either continuous or
-#' binary (habitat/matrix) landscapes.
+#' binary (habitat/matrix) landscapes. ##PI Falta seção details para explicar o algoritmo de geração desta paisagem fractal
 #' 
-#' @param cells_per_row Integer. Number of cells per row
+#' @param cells_per_row Integer. Number of cells per row ## PI linhas do que? Precisa explicar que a paisagem devolvida é uma matriz
 #' @param cells_per_col Integer. Number of cells per column. If NULL, creates square landscape.
 #' @param fractality Numeric between 0 and 1. Higher values create more spatially
-#'   autocorrelated (clumped) patterns. 0 = random, 1 = highly structured.
-#' @param min_value Numeric. Minimum habitat value for continuous landscapes (default: 0.0)
+#'   autocorrelated (clumped) patterns. 0 = random, 1 = highly structured. ##PI: o que significa estuturado?
+#' @param min_value Numeric. Minimum habitat value for continuous landscapes (default: 0.0) ##Pi o que é "habitat value'? Pensar num termo que descreva de maneira mais clara que quantidade é esta
 #' @param max_value Numeric. Maximum habitat value for continuous landscapes (default: 1.0)
 #' @param habitat_proportion Numeric between 0 and 1. If provided, creates binary
-#'   landscape with this proportion of cells as habitat (value 1), rest as matrix
-#'   (value 0). If NULL, creates continuous landscape.
-#' @param return_as_landscape_params Logical. If TRUE, returns list(habitat=matrix)
-#'   suitable for direct use in twolife_simulation. If FALSE, returns matrix only.
+#'   landscape with this proportion of cells as habitat (value 1), rest as matrix ## PI "rest as matrix" : problema de redação
+#'   (value 0). If NULL, creates continuous landscape. ##PI o que acontece se o valor aqui é NULL? 
+#' @param return_as_landscape_params Logical. If TRUE, returns list(habitat=matrix) ## PI definir o que é "list(habitat=matrix)"
+#'   suitable for direct use in twolife_simulation. If FALSE, returns matrix only. ## PI que matriz?
 #' 
 #' @return Either a matrix (if return_as_landscape_params=FALSE) or a list with
-#'   habitat component (if return_as_landscape_params=TRUE)
+#'   habitat component (if return_as_landscape_params=TRUE) ## PI descrição incompleta do objeto que é retornado.
 #' 
 #' @export
 create_fractal_landscape <- function(cells_per_row, 
@@ -799,18 +798,18 @@ generate_rectangular_fractal <- function(rows, cols, fractality) {
 #' Create Corner Test Landscapes
 #' 
 #' Creates binary landscapes with habitat confined to one corner, useful for
-#' testing habitat selection and dispersal. Supports rectangular landscapes.
+#' testing habitat selection and dispersal. Supports rectangular landscapes. ## PI: não entendi o que é o habitat confinado a um canto
 #' 
-#' @param cells_per_row Integer greater than or equal to 4. Number of rows
-#' @param cells_per_col Integer greater than or equal to 4. Number of columns. If NULL, creates square landscape.
+#' @param cells_per_row Integer greater than or equal to 4. Number of rows ##PI linhas do que? O nome cells per rows não expressa o mesmo que número de linhas de uma matriz. 
+#' @param cells_per_col Integer greater than or equal to 4. Number of columns. If NULL, creates square landscape. ##PI: mesmos comentários acima aplicados a colunas. Para uma matriz quadrada é mais consistente simplesmente deixar que o usuário entre o mesmo n de linhas e colunas.
 #' @param corner Character. Corner location for habitat: "top-left", "top-right",
-#'   "bottom-left", or "bottom-right" (default: "top-left")
+#'   "bottom-left", or "bottom-right" (default: "top-left") ##Pi o habotat sempre vai ficar num canto?
 #' @param corner_size Integer. Size of habitat corner in cells. If NULL,
-#'   automatically set to 25 percent of the smallest dimension (default: NULL)
+#'   automatically set to 25 percent of the smallest dimension (default: NULL) ## PI: inconsistente fazer com NULL corresponda a um valor numérico possível. Se quiser fazer 25% de default simplesmente inclua o valor como default no argumento da função. Verique todos os casos similares a este, nesta e demais funções.
 #' @param return_as_landscape_params Logical. Return as list(habitat=matrix)
-#'   suitable for twolife_simulation (default: FALSE)
+#'   suitable for twolife_simulation (default: FALSE) ##Pi retorna o que?
 #' 
-#' @return Either a binary matrix or list with habitat component
+#' @return Either a binary matrix or list with habitat component ## PI: descrição completa do objeto retornado.
 #' 
 #' @export
 create_corner_landscape <- function(cells_per_row, 
@@ -882,17 +881,17 @@ create_corner_landscape <- function(cells_per_row,
 #' Plot Landscape with World Coordinates
 #' 
 #' Visualizes landscape in world coordinate system with proper axis scaling.
-#' Works with both square and rectangular landscapes.
+#' Works with both square and rectangular landscapes. 
 #' 
-#' @param landscape_data Either a matrix or list with habitat component
-#' @param cell_size Numeric. Size of each cell (default: 1.0)
+#' @param landscape_data Either a matrix or list with habitat component ##Pi uma matriz com o que? Que lista  é esta?
+#' @param cell_size Numeric. Size of each cell (default: 1.0) ## PI: célula do que? 
 #' @param filename Optional. File path to save plot
 #' @param main Character. Plot title
-#' @param colors Character. Color scheme: "habitat", "terrain", or "viridis"
+#' @param colors Character. Color scheme: "habitat", "terrain", or "viridis" ##PI no caso de argumentos de strings com valores aceitos, declare todos os valores possíveis no corpo da função e use o argumento match. Veja help do match.arg
 #' @param show_legend Logical. Show color legend (default: TRUE)
 #' @param add_grid Logical. Add grid lines (default: TRUE)
 #' 
-#' @return NULL (invisibly)
+#' @return NULL (invisibly) ##PI; para funções que tem side-effect de retornar gráficos, descrever o gráfico que se retorna.
 #' 
 #' @export
 plot_landscape_world_coords <- function(landscape_data, 
@@ -972,19 +971,19 @@ plot_landscape_world_coords <- function(landscape_data,
 #' Plot Simulation Results on Landscape
 #' 
 #' Visualizes simulation results by overlaying survivor positions on the
-#' landscape. Points can be colored by genotype, phenotype, or a single color.
+#' landscape. Points can be colored by genotype, phenotype, or a single color. ## PI sobreviventes ou os indivíduos da população num dado momento do tempo? 
 #' 
 #' @param simulation_result A twolife_result object
 #' @param point_size Numeric. Size of points (default: 2)
 #' @param point_color Character. Color for points when color_by="none"
 #' @param point_shape Integer. Point shape (default: 16)
 #' @param color_by Character. Color points by: "none", "genotype", or "phenotype"
-#' @param landscape_colors Character. Landscape color scheme
+#' @param landscape_colors Character. Landscape color scheme ##PI: nao está claro o que é isso
 #' @param main Character. Plot title
 #' @param filename Optional. File path to save plot
-#' @param add_stats Logical. Add statistics to plot (default: TRUE)
+#' @param add_stats Logical. Add statistics to plot (default: TRUE) ## Que estatísticas?
 #' 
-#' @return simulation_result (invisibly)
+#' @return simulation_result (invisibly) ## Descrever precsiamente a estrutura do objeto retornado. Isso vale para todos os helps de todas as funções. Importante revisar isto. Veja help da função lm para ter um exemplo de como deve ser esta descrição.
 #' 
 #' @export
 plot_simulation_on_landscape <- function(simulation_result,
@@ -1090,16 +1089,17 @@ plot_simulation_on_landscape <- function(simulation_result,
   invisible(simulation_result)
 }
 
-#' Quick Plot of Simulation Results
+#' Quick Plot of Simulation Results 
 #' 
 #' Convenience wrapper for plot_simulation_on_landscape().
 #' 
 #' @param simulation_result A twolife_result object
 #' @param ... Additional arguments passed to plot_simulation_on_landscape
 #' 
-#' @return simulation_result (invisibly)
+#' @return simulation_result (invisibly) 
 #' 
 #' @export
+#' ## PI: não entendi para que esta função, que só repete a chamada da anterior com os valores default
 quick_plot_result <- function(simulation_result, ...) {
   plot_simulation_on_landscape(simulation_result, ...)
 }
@@ -1111,17 +1111,17 @@ quick_plot_result <- function(simulation_result, ...) {
 #' Validate Habitat Matching for Simulation Results
 #' 
 #' Visualizes and validates whether individuals are positioned in habitat
-#' matching their genotype or phenotype values.
+#' matching their genotype or phenotype values. ##PI A função valida ou serve para o usuário verificar isso?
 #' 
 #' @param simulation_result A twolife_result object
 #' @param main Character. Plot title
 #' @param point_size Numeric. Size of points (default: 2)
 #' @param landscape_colors Character. Color scheme for landscape
 #' @param color_by Character. Color by "genotype" or "phenotype"
-#' @param show_stats Logical. Display statistics (default: TRUE)
+#' @param show_stats Logical. Display statistics (default: TRUE) ##PI: que estaísticas?
 #' @param show_legend Logical. Display color legend on plot (default: TRUE)
 #' 
-#' @return Validation data frame (invisibly)
+#' @return Validation data frame (invisibly) ## Veja comentários anteriores
 #' 
 #' @export
 validate_habitat_matching <- function(simulation_result,
@@ -1302,14 +1302,14 @@ validate_habitat_matching <- function(simulation_result,
 
 #' Batch Validate Multiple Simulations
 #' 
-#' Validate habitat matching across multiple simulation results.
+#' Validate habitat matching across multiple simulation results. ##PI: mesma dúvida acima sobre o que vc quer dizer com validar uma simulação
 #' 
 #' @param result_list List of twolife_result objects
 #' @param point_size Numeric. Point size for plots (default: 1.5)
 #' @param landscape_colors Character. Color scheme
 #' @param show_legend Logical. Display color legend on plots (default: TRUE)
 #' 
-#' @return List of validation data frames (invisibly)
+#' @return List of validation data frames (invisibly) ##PI descrição insuficiente e imprecisa, ver comentários anteriores
 #' 
 #' @export
 batch_validate_habitat_matching <- function(result_list, 
@@ -1358,12 +1358,12 @@ batch_validate_habitat_matching <- function(result_list,
 
 #' Calculate Genotype-Habitat Mismatch Statistics Using Fitness
 #' 
-#' Computes fitness-based habitat matching statistics for simulation survivors.
+#' Computes fitness-based habitat matching statistics for simulation survivors. ##PI: aqui explicar um pouco melhor o que é este cálculo. Pode usar também a seção details
 #' 
 #' @param simulation_result A twolife_result object
-#' @param return_individuals Logical. Return individual-level data (default: FALSE)
+#' @param return_individuals Logical. Return individual-level data (default: FALSE) ##PI: não está claro o que é individual-level data
 #' 
-#' @return List of class "genotype_habitat_mismatch" with statistics
+#' @return List of class "genotype_habitat_mismatch" with statistics #PI veja obervações acima sobre descrição do objeto de saída 
 #' 
 #' @export
 calculate_genotype_habitat_mismatch <- function(simulation_result, 
@@ -1497,7 +1497,7 @@ calculate_genotype_habitat_mismatch <- function(simulation_result,
 #' 
 #' @param result_list List of twolife_result objects
 #' 
-#' @return List with comparison data frame and detailed statistics (invisibly)
+#' @return List with comparison data frame and detailed statistics (invisibly) ## PI:veja obervações acima sobre descrição do objeto de saída 
 #' 
 #' @export
 compare_mismatch_statistics <- function(result_list) {
@@ -1558,7 +1558,7 @@ compare_mismatch_statistics <- function(result_list) {
 # ============================================================================
 # PRINT METHODS
 # ============================================================================
-
+##PI: até onde me lembro, métodos devem ser definidos com a função methods, e não desta maneira. Além disso, o help também tem flags diferentes. 
 #' Print Method for TWoLife Results
 #' 
 #' @param x A twolife_result object
