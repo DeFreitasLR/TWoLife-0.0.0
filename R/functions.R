@@ -9,6 +9,11 @@
 #' @importFrom utils modifyList
 NULL
 
+## PI: IMPORTANTE: incluir campo "details" em todos os helps, para
+## descrever brevemente o que a função faz e os conceitos teóricos
+## necessários para entender isso. Veja o campo details de algumas
+## funçẽos que fazem análise complexas, como lm ou lmer.
+
 # ============================================================================
 # CORE SIMULATION FUNCTIONS
 # ============================================================================
