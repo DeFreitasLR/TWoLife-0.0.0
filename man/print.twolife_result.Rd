@@ -19,17 +19,22 @@ Provides a clean summary when a twolife_result object is printed to console.
 Shows key simulation outcomes without overwhelming detail.
 }
 \examples{
+set.seed(500)
 landscape <- create_fractal_landscape(
-  cells_per_row = 15,
+  cells_per_row = 5,
   fractality = 0.5,
-  habitat_proportion = 0.4,
+  habitat_proportion = 0.6,
   return_as_landscape_params = TRUE
 )
 
 result <- twolife_simulation(
   landscape_params = landscape,
-  individual_params = list(initial_population_size = 30),
-  simulation_params = list(max_events = 500),
+  individual_params = list(
+    initial_population_size = 15,
+    base_birth_rate = 0.4,
+    base_mortality_rate = 0.15
+  ),
+  simulation_params = list(max_events = 150),
   master_seed = 123
 )
 

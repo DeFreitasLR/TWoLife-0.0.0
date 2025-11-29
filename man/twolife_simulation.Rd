@@ -41,7 +41,7 @@ twolife_simulation(
   \item{step_length}{Numeric. Distance moved per dispersal event (world units). Default: 1.0}
   \item{base_dispersal_rate}{Numeric. Base dispersal probability per time unit (0-1). Default: 0.1}
   \item{base_birth_rate}{Numeric. Base birth probability per time unit (0-1). 
-    Must be > base_mortality_rate for population persistence. Default: 0.3}
+    Should typically be > base_mortality_rate for population persistence. Default: 0.3}
   \item{base_mortality_rate}{Numeric. Base mortality probability per time unit (0-1). Default: 0.20}
   \item{birth_density_slope}{Numeric. Density-dependence slope for births (negative effect). Default: 0.02}
   \item{mortality_density_slope}{Numeric. Density-dependence slope for mortality (positive effect). Default: 0.02}
@@ -95,12 +95,12 @@ A list of class 'twolife_result' with components:
     \item{survivors}{Data frame with columns: id (integer), x (numeric), y (numeric), 
       genotype (numeric), phenotype (numeric), width (numeric). Empty data frame if extinct.}
     \item{spatial}{List containing world_width (numeric), world_height (numeric), 
-      world_size (numeric, max of width/height), num_patches (integer)}
+      world_size (numeric, maximum dimension: max(world_width, world_height)), num_patches (integer)}
     \item{events}{List with event history. Content depends on history_detail:
       \itemize{
         \item Always included: times (numeric vector), types (integer vector: -1=initial, 0=death, 
           1=birth, 2=movement, 3=emigration), individual_ids (integer vector)
-        \item If history_detail != "minimal": patch_ids, x_coordinates, y_coordinates, genotypes
+        \item If history_detail is "standard" or "full": patch_ids, x_coordinates, y_coordinates, genotypes
         \item If history_detail == "full": phenotypes, widths
       }}
     \item{parameters}{Nested list preserving all input parameters (landscape, individual, genetic, simulation)}
@@ -156,51 +156,64 @@ Event Types:
   }
 }
 \examples{
-# Example 1: Basic simulation with small landscape
+# Quick example for CRAN checks (< 2 seconds)
+set.seed(100)
 landscape <- create_fractal_landscape(
-  cells_per_row = 15,
-  fractality = 0.7,
-  habitat_proportion = 0.4,
+  cells_per_row = 5,
+  fractality = 0.5,
+  habitat_proportion = 0.6,
   return_as_landscape_params = TRUE
 )
 
 result <- twolife_simulation(
   landscape_params = landscape,
   individual_params = list(
-    initial_population_size = 30,
-    base_birth_rate = 0.3,
-    base_mortality_rate = 0.2
+    initial_population_size = 15,
+    base_birth_rate = 0.4,
+    base_mortality_rate = 0.15
   ),
-  simulation_params = list(max_events = 1000),
+  simulation_params = list(max_events = 150),
   master_seed = 123
 )
 
 print(result)
 head(result$survivors)
 
-# Example 2: With genetic variation
+# With genetic variation
 result_genetic <- twolife_simulation(
   landscape_params = landscape,
-  individual_params = list(initial_population_size = 30),
-  genetic_params = list(
-    genotype_means = rnorm(30, mean = 0.5, sd = 0.2),
-    genotype_sds = 0.1
+  individual_params = list(
+    initial_population_size = 15,
+    base_birth_rate = 0.4,
+    base_mortality_rate = 0.15
   ),
-  simulation_params = list(max_events = 1000),
+  genetic_params = list(
+    genotype_means = rnorm(15, mean = 0.5, sd = 0.15),
+    genotype_sds = 0.15
+  ),
+  simulation_params = list(max_events = 150),
   master_seed = 456
 )
 
 \donttest{
+# Larger examples (not run during CRAN checks)
+landscape_full <- create_fractal_landscape(
+  cells_per_row = 5,
+  fractality = 0.7,
+  habitat_proportion = 0.4,
+  return_as_landscape_params = TRUE
+)
+
 # Longer simulation for detailed analysis
 result_long <- twolife_simulation(
-  landscape_params = landscape,
-  individual_params = list(initial_population_size = 50),
+  landscape_params = landscape_full,
+  individual_params = list(initial_population_size = 10),
   simulation_params = list(max_events = 5000),
   history_detail = "full"
 )
 
 # Analyze population trajectory
-pop_trajectory <- compute_population_size(result_long)
+pop_trajectory <- population_size(result_long)
 plot(pop_trajectory$time, pop_trajectory$population_size, type = "l")
 }
 

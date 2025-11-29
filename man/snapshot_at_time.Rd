@@ -66,45 +66,61 @@ The reconstruction works by:
 }
 }
 \examples{
-# Create landscape
+# Quick example
 landscape <- create_fractal_landscape(
-  cells_per_row = 15,
-  fractality = 0.7,
-  habitat_proportion = 0.4,
+  cells_per_row = 5,
+  fractality = 0.5,
+  habitat_proportion = 0.5,
   return_as_landscape_params = TRUE
 )
 
 # Run with standard history
 result <- twolife_simulation(
   landscape_params = landscape,
-  individual_params = list(initial_population_size = 30),
-  simulation_params = list(max_events = 1500),
+  individual_params = list(initial_population_size = 10),
+  simulation_params = list(max_events = 100),
   history_detail = "standard",
   master_seed = 123
 )
 
 # Get trajectory to find interesting time
-traj <- compute_population_size(result)
+traj <- population_size(result)
 mid_time <- traj$time[nrow(traj) \%/\% 2]
 
 # Reconstruct population at midpoint
-state <- snapshot_at_time(result, target_time = mid_time)
+state <- snapshot_at_time(result, target_time = mid_time, show_plot = FALSE)
 
 # Examine the snapshot
 cat("Population at time", state$time, ":", state$n_alive, "individuals\n")
 head(state$population)
 
-# Reconstruct at different times without plotting
-early <- snapshot_at_time(result, target_time = 10, show_plot = FALSE)
-late <- snapshot_at_time(result, target_time = 100, show_plot = FALSE)
-
-cat("Early:", early$n_alive, "alive | Late:", late$n_alive, "alive\n")
-
 \donttest{
+# Larger example with visualization
+landscape_big <- create_fractal_landscape(
+  cells_per_row = 5,
+  fractality = 0.7,
+  habitat_proportion = 0.4,
+  return_as_landscape_params = TRUE
+)
+
+result_big <- twolife_simulation(
+  landscape_params = landscape_big,
+  individual_params = list(initial_population_size = 10),
+  simulation_params = list(max_events = 150),
+  history_detail = "standard",
+  master_seed = 456
+)
+
+traj_big <- population_size(result_big)
+mid_time_big <- traj_big$time[nrow(traj_big) \%/\% 2]
+
+# With plotting
+snapshot_at_time(result_big, target_time = mid_time_big)
+
 # Create animation sequence
-times <- seq(0, max(traj$time), length.out = 10)
+times <- seq(0, max(traj_big$time), length.out = 10)
 for (t in times) {
-  snapshot_at_time(result, target_time = t, 
+  snapshot_at_time(result_big, target_time = t, 
                   color_by = "genotype", point_size = 3)
   Sys.sleep(0.5)  # Pause between frames
 }
@@ -112,6 +128,6 @@ for (t in times) {
 
 }
 \seealso{
-\code{\link{compute_population_size}} for population trajectories,
+\code{\link{population_size}} for population trajectories,
   \code{\link{twolife_simulation}} for running simulations with appropriate history_detail
 }

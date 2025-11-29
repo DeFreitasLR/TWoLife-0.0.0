@@ -149,13 +149,13 @@ several_small_patches <- several_small  # 20% coverage, multiple patches
 
 ```{r visualize-sloss, fig.width=9, fig.height=3, echo=FALSE}
 par(mfrow = c(1, 3), mar = c(4, 4, 3, 2))
-plot_landscape_world_coords(pristine_landscape, 
+plot_landscape(pristine_landscape, 
                             main = "Pristine\n(100% habitat)", 
                             colors = "habitat")
-plot_landscape_world_coords(single_large_patch, 
+plot_landscape(single_large_patch, 
                             main = "Single Large\n(20% habitat)", 
                             colors = "habitat")
-plot_landscape_world_coords(several_small_patches, 
+plot_landscape(several_small_patches, 
                             main = "Several Small\n(20% habitat)", 
                             colors = "habitat")
 par(mfrow = c(1, 1), mar = c(5, 4, 4, 2))
@@ -203,7 +203,7 @@ final_pops <- c(
 final_pops
 
 # Population trajectories
-trajectory_pristine <- compute_population_size(sim_pristine)
+trajectory_pristine <- population_size(sim_pristine)
 head(trajectory_pristine, 3)
 ```
 
@@ -221,8 +221,8 @@ text(x = seq(0.7, by = 1.2, length.out = 3),
      labels = final_pops, cex = 1.1, font = 2)
 
 # Trajectories
-trajectory_single <- compute_population_size(sim_single_large)
-trajectory_several <- compute_population_size(sim_several_small)
+trajectory_single <- population_size(sim_single_large)
+trajectory_several <- population_size(sim_several_small)
 
 plot(trajectory_pristine$time, trajectory_pristine$population_size, 
      type = "l", col = "darkgreen", lwd = 2,
@@ -293,7 +293,7 @@ continuous_landscape <- create_fractal_landscape(
 ```
 
 ```{r visualize-continuous, fig.width=5, fig.height=4.5, echo=FALSE}
-plot_landscape_world_coords(continuous_landscape, 
+plot_landscape(continuous_landscape, 
                             main = "Continuous Environmental Landscape\n(fractality = 0.5)", 
                             colors = "terrain")
 ```
@@ -527,9 +527,9 @@ mechanisms provide incremental effects of `r pop_s4 - pop_s3`
 par(mfrow = c(1, 2), mar = c(5, 4, 3, 2))
 
 # Population dynamics
-traj_s3 <- compute_population_size(sim_s3)
-traj_s4 <- compute_population_size(sim_s4)
-traj_s5 <- compute_population_size(sim_s5)
+traj_s3 <- population_size(sim_s3)
+traj_s4 <- population_size(sim_s4)
+traj_s5 <- population_size(sim_s5)
 
 max_pop <- max(c(traj_s3$population_size, traj_s4$population_size, traj_s5$population_size))
 plot(traj_s3$time, traj_s3$population_size, type = "l", col = "blue", lwd = 2,
@@ -557,7 +557,7 @@ par(mfrow = c(1, 1), mar = c(5, 4, 4, 2))
 
 ## Verifying Phenotype-Environment Matching
 
-The `validate_habitat_matching()` function provides a diagnostic tool to
+The `check_habitat_match()` function provides a diagnostic tool to
 verify that survivors occupy environmentally suitable locations. The
 function displays the landscape with survivor positions colored by
 phenotype, alongside a scatterplot of phenotype versus occupied
@@ -566,7 +566,7 @@ environmental values.
 ```{r validation-s3, fig.width=8, fig.height=4}
 # Scenario 3: Tolerance
 if (pop_s3 > 0) {
-  validate_habitat_matching(sim_s3, 
+  check_habitat_match(sim_s3, 
                            color_by = "phenotype", 
                            landscape_colors = "terrain",
                            point_size = 1.5,
@@ -577,7 +577,7 @@ if (pop_s3 > 0) {
 ```{r validation-s4, fig.width=8, fig.height=4}
 # Scenario 4: Evolution
 if (pop_s4 > 0) {
-  validate_habitat_matching(sim_s4, 
+  check_habitat_match(sim_s4, 
                            color_by = "phenotype", 
                            landscape_colors = "terrain",
                            point_size = 1.5,
@@ -588,7 +588,7 @@ if (pop_s4 > 0) {
 ```{r validation-s5, fig.width=8, fig.height=4}
 # Scenario 5: Habitat Selection
 if (pop_s5 > 0) {
-  validate_habitat_matching(sim_s5, 
+  check_habitat_match(sim_s5, 
                            color_by = "phenotype", 
                            landscape_colors = "terrain",
                            point_size = 1.5,
@@ -676,13 +676,13 @@ TWoLife provides functions for common analyses:
 
 ```{r helper-functions}
 # Population trajectory
-trajectory <- compute_population_size(sim_s5)
+trajectory <- population_size(sim_s5)
 if (isTRUE(!is.null(trajectory) && is.data.frame(trajectory) && nrow(trajectory) > 0)) {
   head(trajectory, 3)
 }
 
 # Spatial validation (shown in previous section)
-# validate_habitat_matching(sim_s5)
+# check_habitat_match(sim_s5)
 ```
 
 ## Custom Analysis Example

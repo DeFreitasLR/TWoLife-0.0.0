@@ -96,21 +96,21 @@ Usage in Simulations:
   cells with value = 0 in binary landscapes.
 }
 \examples{
-# Example 1: Simple binary landscape for quick testing
+# Quick examples
 landscape1 <- create_fractal_landscape(
-  cells_per_row = 15,
-  fractality = 0.7,
-  habitat_proportion = 0.4,
+  cells_per_row = 5,
+  fractality = 0.5,
+  habitat_proportion = 0.5,
   return_as_landscape_params = TRUE
 )
 
 # Visualize
-plot_landscape_world_coords(landscape1, main = "Binary Fractal Landscape")
+plot_landscape(landscape1, main = "Binary Fractal Landscape")
 
-# Example 2: Continuous landscape
+# Continuous landscape
 landscape2 <- create_fractal_landscape(
-  cells_per_row = 15,
-  fractality = 0.8,
+  cells_per_row = 5,
+  fractality = 0.5,
   min_value = 0,
   max_value = 1
 )
@@ -119,9 +119,20 @@ landscape2 <- create_fractal_landscape(
 dim(landscape2)
 range(landscape2)
 
-# Example 3: Rectangular landscape
+\donttest{
+# Larger examples (not run during CRAN checks)
+
+# Binary landscape
 landscape3 <- create_fractal_landscape(
-  cells_per_row = 15,
+  cells_per_row = 5,
+  fractality = 0.7,
+  habitat_proportion = 0.4,
+  return_as_landscape_params = TRUE
+)
+
+# Rectangular landscape
+landscape4 <- create_fractal_landscape(
+  cells_per_row = 5,
   cells_per_col = 20,
   fractality = 0.6,
   habitat_proportion = 0.5,
@@ -130,22 +141,21 @@ landscape3 <- create_fractal_landscape(
 
 # Use in simulation
 result <- twolife_simulation(
-  landscape_params = landscape3,
-  individual_params = list(initial_population_size = 30),
-  simulation_params = list(max_events = 1000),
+  landscape_params = landscape4,
+  individual_params = list(initial_population_size = 10),
+  simulation_params = list(max_events = 100),
   master_seed = 123
 )
 
-\donttest{
-# Example 4: Compare different fractality levels
+# Compare different fractality levels
 par(mfrow = c(2, 2))
 for (frac in c(0.2, 0.5, 0.7, 0.9)) {
   land <- create_fractal_landscape(
-    cells_per_row = 20,
+    cells_per_row = 5,
     fractality = frac,
     habitat_proportion = 0.4
   )
-  plot_landscape_world_coords(
+  plot_landscape(
     list(habitat = land),
     main = paste("Fractality =", frac)
   )
@@ -155,5 +165,5 @@ par(mfrow = c(1, 1))
 
 }
 \seealso{
-\code{\link{plot_landscape_world_coords}} for visualization
+\code{\link{plot_landscape}} for visualization
 }

@@ -30,7 +30,7 @@ population dynamics, spatial patterns, and genetic characteristics.
 }
 \examples{
 landscape <- create_fractal_landscape(
-  cells_per_row = 15,
+  cells_per_row = 5,
   fractality = 0.7,
   habitat_proportion = 0.4,
   return_as_landscape_params = TRUE
@@ -38,8 +38,8 @@ landscape <- create_fractal_landscape(
 
 result <- twolife_simulation(
   landscape_params = landscape,
-  individual_params = list(initial_population_size = 50),
-  simulation_params = list(max_events = 2000),
+  individual_params = list(initial_population_size = 10),
+  simulation_params = list(max_events = 150),
   master_seed = 456
 )
 

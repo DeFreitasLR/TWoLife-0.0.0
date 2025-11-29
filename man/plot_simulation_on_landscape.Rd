@@ -86,28 +86,49 @@ Interpretation:
   }
 }
 \examples{
-# Create fractal landscape
+# Quick example
+set.seed(400)
 landscape <- create_fractal_landscape(
-  cells_per_row = 15,
-  fractality = 0.7,
-  habitat_proportion = 0.4,
+  cells_per_row = 5,
+  fractality = 0.5,
+  habitat_proportion = 0.6,
   return_as_landscape_params = TRUE
 )
 
 # Run simulation
 result <- twolife_simulation(
   landscape_params = landscape,
-  individual_params = list(initial_population_size = 30),
-  simulation_params = list(max_events = 1500),
+  individual_params = list(
+    initial_population_size = 15,
+    base_birth_rate = 0.4,
+    base_mortality_rate = 0.15
+  ),
+  simulation_params = list(max_events = 150),
   master_seed = 101
 )
 
 # Basic plot
 plot_simulation_on_landscape(result)
 
+\donttest{
+# Larger examples (not run during CRAN checks)
+landscape_big <- create_fractal_landscape(
+  cells_per_row = 5,
+  fractality = 0.7,
+  habitat_proportion = 0.4,
+  return_as_landscape_params = TRUE
+)
+
+result_big <- twolife_simulation(
+  landscape_params = landscape_big,
+  individual_params = list(initial_population_size = 10),
+  simulation_params = list(max_events = 150),
+  master_seed = 202
+)
+
 # Customize appearance
 plot_simulation_on_landscape(
-  result,
+  result_big,
   point_size = 3,
   point_color = "blue",
   point_shape = 17,
@@ -116,14 +137,14 @@ plot_simulation_on_landscape(
 
 # Color by genotype with variation
 result_genetic <- twolife_simulation(
-  landscape_params = landscape,
-  individual_params = list(initial_population_size = 30),
+  landscape_params = landscape_big,
+  individual_params = list(initial_population_size = 10),
   genetic_params = list(
     genotype_means = runif(30, 0, 1),
     genotype_sds = 0.1
   ),
-  simulation_params = list(max_events = 1500),
-  master_seed = 202
+  simulation_params = list(max_events = 150),
+  master_seed = 303
 )
 
 plot_simulation_on_landscape(
@@ -132,18 +153,17 @@ plot_simulation_on_landscape(
   point_size = 2.5
 )
 
-\donttest{
 # Color by phenotype (requires plasticity)
 result_plastic <- twolife_simulation(
-  landscape_params = landscape,
+  landscape_params = landscape_big,
   individual_params = list(initial_population_size = 40),
   genetic_params = list(
     genotype_means = runif(40, 0, 1),
     plasticities = 0.5,
     sampling_points = 5
   ),
-  simulation_params = list(max_events = 2000),
-  master_seed = 303
+  simulation_params = list(max_events = 150),
+  master_seed = 404
 )
 
 plot_simulation_on_landscape(
@@ -156,5 +176,5 @@ plot_simulation_on_landscape(
 }
 \seealso{
 \code{\link{plot.twolife_result}} for S3 method (use \code{plot(result)}),
-  \code{\link{validate_habitat_matching}} for habitat-trait correlation plots
+  \code{\link{check_habitat_match}} for habitat-trait correlation plots
 }

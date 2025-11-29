@@ -1,6 +1,6 @@
 # functions.R - Complete TWoLife R interface
 # UPDATED: Added all missing @param documentation and proper imports
-# UPDATED: Added show_legend parameter to validate_habitat_matching functions
+# UPDATED: Added show_legend parameter to check_habitat_match functions
 # FIXED: Replaced non-ASCII characters with ASCII equivalents
 
 #' @importFrom grDevices colorRampPalette heat.colors terrain.colors
@@ -16,8 +16,8 @@ NULL
 #' Run TWoLife Individual-Based Simulation
 #' 
 #' Runs a spatially-explicit individual-based simulation with habitat selection,
-#' genetic variation, and demographic processes. Supports rectangular landscapes
-#' and customizable habitat selection parameters.
+#' genetic variation, phenotypic plasticity, and demographic processes. Supports 
+#' rectangular landscapes and customizable habitat selection parameters.
 #' 
 #' @param landscape_params List containing landscape parameters. Required component:
 #'   \describe{
@@ -43,7 +43,7 @@ NULL
 #'     \item{step_length}{Numeric. Distance moved per dispersal event (world units). Default: 1.0}
 #'     \item{base_dispersal_rate}{Numeric. Base dispersal probability per time unit (0-1). Default: 0.1}
 #'     \item{base_birth_rate}{Numeric. Base birth probability per time unit (0-1). 
-#'       Must be > base_mortality_rate for population persistence. Default: 0.3}
+#'       Should typically be > base_mortality_rate for population persistence. Default: 0.3}
 #'     \item{base_mortality_rate}{Numeric. Base mortality probability per time unit (0-1). Default: 0.20}
 #'     \item{birth_density_slope}{Numeric. Density-dependence slope for births (negative effect). Default: 0.02}
 #'     \item{mortality_density_slope}{Numeric. Density-dependence slope for mortality (positive effect). Default: 0.02}
@@ -92,12 +92,12 @@ NULL
 #'     \item{survivors}{Data frame with columns: id (integer), x (numeric), y (numeric), 
 #'       genotype (numeric), phenotype (numeric), width (numeric). Empty data frame if extinct.}
 #'     \item{spatial}{List containing world_width (numeric), world_height (numeric), 
-#'       world_size (numeric, max of width/height), num_patches (integer)}
+#'       world_size (numeric, maximum dimension: max(world_width, world_height)), num_patches (integer)}
 #'     \item{events}{List with event history. Content depends on history_detail:
 #'       \itemize{
 #'         \item Always included: times (numeric vector), types (integer vector: -1=initial, 0=death, 
 #'           1=birth, 2=movement, 3=emigration), individual_ids (integer vector)
-#'         \item If history_detail != "minimal": patch_ids, x_coordinates, y_coordinates, genotypes
+#'         \item If history_detail is "standard" or "full": patch_ids, x_coordinates, y_coordinates, genotypes
 #'         \item If history_detail == "full": phenotypes, widths
 #'       }}
 #'     \item{parameters}{Nested list preserving all input parameters (landscape, individual, genetic, simulation)}
@@ -148,51 +148,64 @@ NULL
 #'   }
 #' 
 #' @examples
-#' # Example 1: Basic simulation with small landscape
+#' # Quick example for CRAN checks (< 2 seconds)
+#' set.seed(100)
 #' landscape <- create_fractal_landscape(
-#'   cells_per_row = 15,
-#'   fractality = 0.7,
-#'   habitat_proportion = 0.4,
+#'   cells_per_row = 5,
+#'   fractality = 0.5,
+#'   habitat_proportion = 0.6,
 #'   return_as_landscape_params = TRUE
 #' )
 #' 
 #' result <- twolife_simulation(
 #'   landscape_params = landscape,
 #'   individual_params = list(
-#'     initial_population_size = 30,
-#'     base_birth_rate = 0.3,
-#'     base_mortality_rate = 0.2
+#'     initial_population_size = 15,
+#'     base_birth_rate = 0.4,
+#'     base_mortality_rate = 0.15
 #'   ),
-#'   simulation_params = list(max_events = 1000),
+#'   simulation_params = list(max_events = 150),
 #'   master_seed = 123
 #' )
 #' 
 #' print(result)
 #' head(result$survivors)
 #' 
-#' # Example 2: With genetic variation
+#' # With genetic variation
 #' result_genetic <- twolife_simulation(
 #'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 30),
-#'   genetic_params = list(
-#'     genotype_means = rnorm(30, mean = 0.5, sd = 0.2),
-#'     genotype_sds = 0.1
+#'   individual_params = list(
+#'     initial_population_size = 15,
+#'     base_birth_rate = 0.4,
+#'     base_mortality_rate = 0.15
 #'   ),
-#'   simulation_params = list(max_events = 1000),
+#'   genetic_params = list(
+#'     genotype_means = rnorm(15, mean = 0.5, sd = 0.15),
+#'     genotype_sds = 0.15
+#'   ),
+#'   simulation_params = list(max_events = 150),
 #'   master_seed = 456
 #' )
 #' 
 #' \donttest{
+#' # Larger examples (not run during CRAN checks)
+#' landscape_full <- create_fractal_landscape(
+#'   cells_per_row = 5,
+#'   fractality = 0.7,
+#'   habitat_proportion = 0.4,
+#'   return_as_landscape_params = TRUE
+#' )
+#' 
 #' # Longer simulation for detailed analysis
 #' result_long <- twolife_simulation(
-#'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 50),
+#'   landscape_params = landscape_full,
+#'   individual_params = list(initial_population_size = 10),
 #'   simulation_params = list(max_events = 5000),
 #'   history_detail = "full"
 #' )
 #' 
 #' # Analyze population trajectory
-#' pop_trajectory <- compute_population_size(result_long)
+#' pop_trajectory <- population_size(result_long)
 #' plot(pop_trajectory$time, pop_trajectory$population_size, type = "l")
 #' }
 #' 
@@ -507,24 +520,29 @@ twolife_simulation <- function(landscape_params = list(),
 #' individuals wrap around.
 #' 
 #' @examples
-#' # Create small landscape
+#' # Quick example
+#' set.seed(300)
 #' landscape <- create_fractal_landscape(
-#'   cells_per_row = 15,
+#'   cells_per_row = 5,
 #'   fractality = 0.5,
-#'   habitat_proportion = 0.4,
+#'   habitat_proportion = 0.6,
 #'   return_as_landscape_params = TRUE
 #' )
 #' 
 #' # Run simulation
 #' result <- twolife_simulation(
 #'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 30),
-#'   simulation_params = list(max_events = 1000),
+#'   individual_params = list(
+#'     initial_population_size = 15,
+#'     base_birth_rate = 0.4,
+#'     base_mortality_rate = 0.15
+#'   ),
+#'   simulation_params = list(max_events = 150),
 #'   master_seed = 789
 #' )
 #' 
 #' # Calculate trajectory
-#' trajectory <- compute_population_size(result)
+#' trajectory <- population_size(result)
 #' head(trajectory)
 #' 
 #' # Plot population over time
@@ -543,7 +561,7 @@ twolife_simulation <- function(landscape_params = list(),
 #'   \code{\link{snapshot_at_time}} for reconstructing population state at specific times
 #' 
 #' @export
-compute_population_size <- function(result) {
+population_size <- function(result) {
   events_df <- data.frame(
     time = result$events$times,
     event_type = result$events$types,
@@ -612,51 +630,67 @@ compute_population_size <- function(result) {
 #' }
 #' 
 #' @examples
-#' # Create landscape
+#' # Quick example
 #' landscape <- create_fractal_landscape(
-#'   cells_per_row = 15,
-#'   fractality = 0.7,
-#'   habitat_proportion = 0.4,
+#'   cells_per_row = 5,
+#'   fractality = 0.5,
+#'   habitat_proportion = 0.5,
 #'   return_as_landscape_params = TRUE
 #' )
 #' 
 #' # Run with standard history
 #' result <- twolife_simulation(
 #'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 30),
-#'   simulation_params = list(max_events = 1500),
+#'   individual_params = list(initial_population_size = 10),
+#'   simulation_params = list(max_events = 100),
 #'   history_detail = "standard",
 #'   master_seed = 123
 #' )
 #' 
 #' # Get trajectory to find interesting time
-#' traj <- compute_population_size(result)
+#' traj <- population_size(result)
 #' mid_time <- traj$time[nrow(traj) %/% 2]
 #' 
 #' # Reconstruct population at midpoint
-#' state <- snapshot_at_time(result, target_time = mid_time)
+#' state <- snapshot_at_time(result, target_time = mid_time, show_plot = FALSE)
 #' 
 #' # Examine the snapshot
 #' cat("Population at time", state$time, ":", state$n_alive, "individuals\n")
 #' head(state$population)
 #' 
-#' # Reconstruct at different times without plotting
-#' early <- snapshot_at_time(result, target_time = 10, show_plot = FALSE)
-#' late <- snapshot_at_time(result, target_time = 100, show_plot = FALSE)
-#' 
-#' cat("Early:", early$n_alive, "alive | Late:", late$n_alive, "alive\n")
-#' 
 #' \donttest{
+#' # Larger example with visualization
+#' landscape_big <- create_fractal_landscape(
+#'   cells_per_row = 5,
+#'   fractality = 0.7,
+#'   habitat_proportion = 0.4,
+#'   return_as_landscape_params = TRUE
+#' )
+#' 
+#' result_big <- twolife_simulation(
+#'   landscape_params = landscape_big,
+#'   individual_params = list(initial_population_size = 10),
+#'   simulation_params = list(max_events = 150),
+#'   history_detail = "standard",
+#'   master_seed = 456
+#' )
+#' 
+#' traj_big <- population_size(result_big)
+#' mid_time_big <- traj_big$time[nrow(traj_big) %/% 2]
+#' 
+#' # With plotting
+#' snapshot_at_time(result_big, target_time = mid_time_big)
+#' 
 #' # Create animation sequence
-#' times <- seq(0, max(traj$time), length.out = 10)
+#' times <- seq(0, max(traj_big$time), length.out = 10)
 #' for (t in times) {
-#'   snapshot_at_time(result, target_time = t, 
+#'   snapshot_at_time(result_big, target_time = t, 
 #'                   color_by = "genotype", point_size = 3)
 #'   Sys.sleep(0.5)  # Pause between frames
 #' }
 #' }
 #' 
-#' @seealso \code{\link{compute_population_size}} for population trajectories,
+#' @seealso \code{\link{population_size}} for population trajectories,
 #'   \code{\link{twolife_simulation}} for running simulations with appropriate history_detail
 #' 
 #' @export
@@ -988,21 +1022,21 @@ snapshot_at_time <- function(simulation_result,
 #'   cells with value = 0 in binary landscapes.
 #' 
 #' @examples
-#' # Example 1: Simple binary landscape for quick testing
+#' # Quick examples
 #' landscape1 <- create_fractal_landscape(
-#'   cells_per_row = 15,
-#'   fractality = 0.7,
-#'   habitat_proportion = 0.4,
+#'   cells_per_row = 5,
+#'   fractality = 0.5,
+#'   habitat_proportion = 0.5,
 #'   return_as_landscape_params = TRUE
 #' )
 #' 
 #' # Visualize
-#' plot_landscape_world_coords(landscape1, main = "Binary Fractal Landscape")
+#' plot_landscape(landscape1, main = "Binary Fractal Landscape")
 #' 
-#' # Example 2: Continuous landscape
+#' # Continuous landscape
 #' landscape2 <- create_fractal_landscape(
-#'   cells_per_row = 15,
-#'   fractality = 0.8,
+#'   cells_per_row = 5,
+#'   fractality = 0.5,
 #'   min_value = 0,
 #'   max_value = 1
 #' )
@@ -1011,9 +1045,20 @@ snapshot_at_time <- function(simulation_result,
 #' dim(landscape2)
 #' range(landscape2)
 #' 
-#' # Example 3: Rectangular landscape
+#' \donttest{
+#' # Larger examples (not run during CRAN checks)
+#' 
+#' # Binary landscape
 #' landscape3 <- create_fractal_landscape(
-#'   cells_per_row = 15,
+#'   cells_per_row = 5,
+#'   fractality = 0.7,
+#'   habitat_proportion = 0.4,
+#'   return_as_landscape_params = TRUE
+#' )
+#' 
+#' # Rectangular landscape
+#' landscape4 <- create_fractal_landscape(
+#'   cells_per_row = 5,
 #'   cells_per_col = 20,
 #'   fractality = 0.6,
 #'   habitat_proportion = 0.5,
@@ -1022,22 +1067,21 @@ snapshot_at_time <- function(simulation_result,
 #' 
 #' # Use in simulation
 #' result <- twolife_simulation(
-#'   landscape_params = landscape3,
-#'   individual_params = list(initial_population_size = 30),
-#'   simulation_params = list(max_events = 1000),
+#'   landscape_params = landscape4,
+#'   individual_params = list(initial_population_size = 10),
+#'   simulation_params = list(max_events = 100),
 #'   master_seed = 123
 #' )
 #' 
-#' \donttest{
-#' # Example 4: Compare different fractality levels
+#' # Compare different fractality levels
 #' par(mfrow = c(2, 2))
 #' for (frac in c(0.2, 0.5, 0.7, 0.9)) {
 #'   land <- create_fractal_landscape(
-#'     cells_per_row = 20,
+#'     cells_per_row = 5,
 #'     fractality = frac,
 #'     habitat_proportion = 0.4
 #'   )
-#'   plot_landscape_world_coords(
+#'   plot_landscape(
 #'     list(habitat = land),
 #'     main = paste("Fractality =", frac)
 #'   )
@@ -1045,7 +1089,7 @@ snapshot_at_time <- function(simulation_result,
 #' par(mfrow = c(1, 1))
 #' }
 #' 
-#' @seealso \code{\link{plot_landscape_world_coords}} for visualization
+#' @seealso \code{\link{plot_landscape}} for visualization
 #' 
 #' @export
 create_fractal_landscape <- function(cells_per_row, 
@@ -1201,61 +1245,63 @@ create_fractal_landscape <- function(cells_per_row,
 #' }
 #' 
 #' @examples
-#' # Example 1: Fractal landscape
+#' # Quick examples
 #' fractal <- create_fractal_landscape(
-#'   cells_per_row = 15,
-#'   fractality = 0.8,
+#'   cells_per_row = 5,
+#'   fractality = 0.5,
+#'   habitat_proportion = 0.5
+#' )
+#' 
+#' plot_landscape(fractal, main = "Fractal Landscape")
+#' 
+#' # Binary landscape with custom colors
+#' binary <- create_fractal_landscape(
+#'   cells_per_row = 5,
+#'   fractality = 0.5,
 #'   habitat_proportion = 0.4
 #' )
 #' 
-#' plot_landscape_world_coords(fractal, main = "Fractal Landscape")
-#' 
-#' # Example 2: Binary landscape with custom colors
-#' binary <- create_fractal_landscape(
-#'   cells_per_row = 15,
-#'   fractality = 0.7,
-#'   habitat_proportion = 0.3
-#' )
-#' 
-#' plot_landscape_world_coords(
+#' plot_landscape(
 #'   binary,
 #'   main = "Binary Landscape",
 #'   colors = "terrain"
 #' )
 #' 
-#' # Example 3: Using output from landscape function
+#' \donttest{
+#' # Larger examples (not run during CRAN checks)
+#' 
+#' # Using output from landscape function
 #' landscape_list <- create_fractal_landscape(
-#'   cells_per_row = 15,
+#'   cells_per_row = 5,
 #'   fractality = 0.6,
 #'   habitat_proportion = 0.5,
 #'   return_as_landscape_params = TRUE
 #' )
 #' 
-#' plot_landscape_world_coords(landscape_list)
+#' plot_landscape(landscape_list)
 #' 
-#' # Example 4: Continuous landscape
+#' # Continuous landscape
 #' continuous <- create_fractal_landscape(
-#'   cells_per_row = 15,
+#'   cells_per_row = 5,
 #'   fractality = 0.7,
 #'   min_value = 0,
 #'   max_value = 1
 #' )
 #' 
-#' plot_landscape_world_coords(
+#' plot_landscape(
 #'   continuous,
 #'   main = "Continuous Habitat Quality",
 #'   colors = "viridis"
 #' )
 #' 
-#' \donttest{
-#' # Example 5: Compare rectangular landscapes
+#' # Compare rectangular landscapes
 #' par(mfrow = c(1, 2))
 #' 
 #' rect1 <- create_fractal_landscape(15, 20, 0.7, habitat_proportion = 0.4)
-#' plot_landscape_world_coords(rect1, main = "15 × 20")
+#' plot_landscape(rect1, main = "15 × 20")
 #' 
 #' rect2 <- create_fractal_landscape(20, 15, 0.7, habitat_proportion = 0.4)
-#' plot_landscape_world_coords(rect2, main = "20 × 15")
+#' plot_landscape(rect2, main = "20 × 15")
 #' 
 #' par(mfrow = c(1, 1))
 #' }
@@ -1264,13 +1310,13 @@ create_fractal_landscape <- function(cells_per_row,
 #'   \code{\link{create_fractal_landscape}} for landscape generation
 #' 
 #' @export
-plot_landscape_world_coords <- function(landscape_data, 
-                                        cell_size = 1.0,
-                                        filename = NULL,
-                                        main = "Landscape (World Coordinates)",
-                                        colors = "habitat",
-                                        show_legend = TRUE,
-                                        add_grid = TRUE) {
+plot_landscape <- function(landscape_data, 
+                           cell_size = 1.0,
+                           filename = NULL,
+                           main = "Landscape (World Coordinates)",
+                           colors = "habitat",
+                           show_legend = TRUE,
+                           add_grid = TRUE) {
   
   if (is.list(landscape_data) && "habitat" %in% names(landscape_data)) {
     habitat_grid <- landscape_data$habitat
@@ -1399,28 +1445,49 @@ plot_landscape_world_coords <- function(landscape_data,
 #'   }
 #' 
 #' @examples
-#' # Create fractal landscape
+#' # Quick example
+#' set.seed(400)
 #' landscape <- create_fractal_landscape(
-#'   cells_per_row = 15,
-#'   fractality = 0.7,
-#'   habitat_proportion = 0.4,
+#'   cells_per_row = 5,
+#'   fractality = 0.5,
+#'   habitat_proportion = 0.6,
 #'   return_as_landscape_params = TRUE
 #' )
 #' 
 #' # Run simulation
 #' result <- twolife_simulation(
 #'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 30),
-#'   simulation_params = list(max_events = 1500),
+#'   individual_params = list(
+#'     initial_population_size = 15,
+#'     base_birth_rate = 0.4,
+#'     base_mortality_rate = 0.15
+#'   ),
+#'   simulation_params = list(max_events = 150),
 #'   master_seed = 101
 #' )
 #' 
 #' # Basic plot
 #' plot_simulation_on_landscape(result)
 #' 
+#' \donttest{
+#' # Larger examples (not run during CRAN checks)
+#' landscape_big <- create_fractal_landscape(
+#'   cells_per_row = 5,
+#'   fractality = 0.7,
+#'   habitat_proportion = 0.4,
+#'   return_as_landscape_params = TRUE
+#' )
+#' 
+#' result_big <- twolife_simulation(
+#'   landscape_params = landscape_big,
+#'   individual_params = list(initial_population_size = 10),
+#'   simulation_params = list(max_events = 150),
+#'   master_seed = 202
+#' )
+#' 
 #' # Customize appearance
 #' plot_simulation_on_landscape(
-#'   result,
+#'   result_big,
 #'   point_size = 3,
 #'   point_color = "blue",
 #'   point_shape = 17,
@@ -1429,14 +1496,14 @@ plot_landscape_world_coords <- function(landscape_data,
 #' 
 #' # Color by genotype with variation
 #' result_genetic <- twolife_simulation(
-#'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 30),
+#'   landscape_params = landscape_big,
+#'   individual_params = list(initial_population_size = 10),
 #'   genetic_params = list(
 #'     genotype_means = runif(30, 0, 1),
 #'     genotype_sds = 0.1
 #'   ),
-#'   simulation_params = list(max_events = 1500),
-#'   master_seed = 202
+#'   simulation_params = list(max_events = 150),
+#'   master_seed = 303
 #' )
 #' 
 #' plot_simulation_on_landscape(
@@ -1445,18 +1512,17 @@ plot_landscape_world_coords <- function(landscape_data,
 #'   point_size = 2.5
 #' )
 #' 
-#' \donttest{
 #' # Color by phenotype (requires plasticity)
 #' result_plastic <- twolife_simulation(
-#'   landscape_params = landscape,
+#'   landscape_params = landscape_big,
 #'   individual_params = list(initial_population_size = 40),
 #'   genetic_params = list(
 #'     genotype_means = runif(40, 0, 1),
 #'     plasticities = 0.5,
 #'     sampling_points = 5
 #'   ),
-#'   simulation_params = list(max_events = 2000),
-#'   master_seed = 303
+#'   simulation_params = list(max_events = 150),
+#'   master_seed = 404
 #' )
 #' 
 #' plot_simulation_on_landscape(
@@ -1467,7 +1533,7 @@ plot_landscape_world_coords <- function(landscape_data,
 #' }
 #' 
 #' @seealso \code{\link{plot.twolife_result}} for S3 method (use \code{plot(result)}),
-#'   \code{\link{validate_habitat_matching}} for habitat-trait correlation plots
+#'   \code{\link{check_habitat_match}} for habitat-trait correlation plots
 #' 
 #' @export
 plot_simulation_on_landscape <- function(simulation_result,
@@ -1588,17 +1654,22 @@ plot_simulation_on_landscape <- function(simulation_result,
 #' @return The input object \code{x}, invisibly
 #' 
 #' @examples
+#' set.seed(500)
 #' landscape <- create_fractal_landscape(
-#'   cells_per_row = 15,
+#'   cells_per_row = 5,
 #'   fractality = 0.5,
-#'   habitat_proportion = 0.4,
+#'   habitat_proportion = 0.6,
 #'   return_as_landscape_params = TRUE
 #' )
 #' 
 #' result <- twolife_simulation(
 #'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 30),
-#'   simulation_params = list(max_events = 500),
+#'   individual_params = list(
+#'     initial_population_size = 15,
+#'     base_birth_rate = 0.4,
+#'     base_mortality_rate = 0.15
+#'   ),
+#'   simulation_params = list(max_events = 150),
 #'   master_seed = 123
 #' )
 #' 
@@ -1657,7 +1728,7 @@ print.twolife_result <- function(x, ...) {
 #' 
 #' @examples
 #' landscape <- create_fractal_landscape(
-#'   cells_per_row = 15,
+#'   cells_per_row = 5,
 #'   fractality = 0.7,
 #'   habitat_proportion = 0.4,
 #'   return_as_landscape_params = TRUE
@@ -1665,8 +1736,8 @@ print.twolife_result <- function(x, ...) {
 #' 
 #' result <- twolife_simulation(
 #'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 50),
-#'   simulation_params = list(max_events = 2000),
+#'   individual_params = list(initial_population_size = 10),
+#'   simulation_params = list(max_events = 150),
 #'   master_seed = 456
 #' )
 #' 
@@ -1744,17 +1815,22 @@ print.summary.twolife_result <- function(x, ...) {
 #' @return The input object \code{x}, invisibly
 #' 
 #' @examples
+#' set.seed(200)
 #' landscape <- create_fractal_landscape(
-#'   cells_per_row = 15,
+#'   cells_per_row = 5,
 #'   fractality = 0.5,
-#'   habitat_proportion = 0.4,
+#'   habitat_proportion = 0.6,
 #'   return_as_landscape_params = TRUE
 #' )
 #' 
 #' result <- twolife_simulation(
 #'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 30),
-#'   simulation_params = list(max_events = 1000),
+#'   individual_params = list(
+#'     initial_population_size = 15,
+#'     base_birth_rate = 0.4,
+#'     base_mortality_rate = 0.15
+#'   ),
+#'   simulation_params = list(max_events = 150),
 #'   master_seed = 789
 #' )
 #' 
@@ -1849,27 +1925,32 @@ plot.twolife_result <- function(x, ...) {
 #' 
 #' @examples
 #' # Create landscape
+#' set.seed(123)  # For reproducible landscape
 #' landscape <- create_fractal_landscape(
-#'   cells_per_row = 15,
-#'   fractality = 0.7,
-#'   habitat_proportion = 0.4,
+#'   cells_per_row = 5,
+#'   fractality = 0.5,
+#'   habitat_proportion = 0.6,
 #'   return_as_landscape_params = TRUE
 #' )
 #' 
-#' # Simulation with genetic variation
+#' # Simulation with genetic variation (guaranteed survivors)
 #' result <- twolife_simulation(
 #'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 30),
-#'   genetic_params = list(
-#'     genotype_means = runif(30, 0, 1),
-#'     genotype_sds = 0.1
+#'   individual_params = list(
+#'     initial_population_size = 25,
+#'     base_birth_rate = 0.5,
+#'     base_mortality_rate = 0.1
 #'   ),
-#'   simulation_params = list(max_events = 1500),
+#'   genetic_params = list(
+#'     genotype_means = runif(25, 0.4, 0.6),
+#'     genotype_sds = 0.2
+#'   ),
+#'   simulation_params = list(max_events = 250),
 #'   master_seed = 789
 #' )
 #' 
 #' # Validate genotype matching
-#' validation_data <- validate_habitat_matching(
+#' validation_data <- check_habitat_match(
 #'   result,
 #'   color_by = "genotype"
 #' )
@@ -1877,41 +1958,43 @@ plot.twolife_result <- function(x, ...) {
 #' # Examine specific individuals
 #' head(validation_data)
 #' 
-#' # Check correlation manually
-#' cor(validation_data$genotype, validation_data$habitat_value)
+#' # Check correlation
+#' if (!is.null(validation_data) && nrow(validation_data) > 0) {
+#'   cat("Correlation:", cor(validation_data$genotype, validation_data$habitat_value), "\n")
+#' }
 #' 
 #' \donttest{
 #' # Compare with plasticity
 #' result_plastic <- twolife_simulation(
 #'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 30),
+#'   individual_params = list(initial_population_size = 10),
 #'   genetic_params = list(
 #'     genotype_means = runif(30, 0, 1),
 #'     plasticities = 0.5,
 #'     sampling_points = 5
 #'   ),
-#'   simulation_params = list(max_events = 2000),
+#'   simulation_params = list(max_events = 150),
 #'   master_seed = 999
 #' )
 #' 
 #' # Validate phenotype matching (should show stronger correlation)
-#' validate_habitat_matching(
+#' check_habitat_match(
 #'   result_plastic,
 #'   color_by = "phenotype",
 #'   main = "Phenotype Matching (with Plasticity)"
 #' )
 #' }
 #' 
-#' @seealso \code{\link{calculate_genotype_habitat_mismatch}} for fitness-based analysis
+#' @seealso \code{\link{habitat_mismatch}} for fitness-based analysis
 #' 
 #' @export
-validate_habitat_matching <- function(simulation_result,
-                                      main = NULL,
-                                      point_size = 2,
-                                      landscape_colors = "terrain",
-                                      color_by = "phenotype",
-                                      show_stats = TRUE,
-                                      show_legend = TRUE) {
+check_habitat_match <- function(simulation_result,
+                                main = NULL,
+                                point_size = 2,
+                                landscape_colors = "terrain",
+                                color_by = "phenotype",
+                                show_stats = TRUE,
+                                show_legend = TRUE) {
   
   if (!inherits(simulation_result, "twolife_result")) {
     stop("simulation_result must be a twolife_result object", call. = FALSE)
@@ -2115,8 +2198,9 @@ validate_habitat_matching <- function(simulation_result,
 #'     \item{mean_niche_width}{Numeric. Mean niche width}
 #'     \item{sd_niche_width}{Numeric. SD of niche width}
 #'     \item{mean_absolute_mismatch}{Numeric. Mean |phenotype - habitat|}
-#'     \item{fitness_values}{Numeric vector. Fitness for each survivor}
-#'     \item{survivor_data}{Data frame. Detailed data for each survivor}
+#'     \item{individuals}{Data frame with per-individual data (only if return_individuals=TRUE).
+#'       Contains columns: id, x, y, genotype, phenotype, width, habitat_value, fitness,
+#'       absolute_mismatch, raw_mismatch, row_index, col_index}
 #'   }
 #'   
 #'   The object has a custom print method that displays formatted statistics.
@@ -2149,27 +2233,32 @@ validate_habitat_matching <- function(simulation_result,
 #' 
 #' @examples
 #' # Create landscape
+#' set.seed(456)  # For reproducible landscape
 #' landscape <- create_fractal_landscape(
-#'   cells_per_row = 15,
-#'   fractality = 0.7,
-#'   habitat_proportion = 0.4,
+#'   cells_per_row = 5,
+#'   fractality = 0.5,
+#'   habitat_proportion = 0.6,
 #'   return_as_landscape_params = TRUE
 #' )
 #' 
-#' # Run simulation
+#' # Run simulation (guaranteed survivors)
 #' result <- twolife_simulation(
 #'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 30),
-#'   genetic_params = list(
-#'     genotype_means = runif(30, 0, 1),
-#'     genotype_sds = 0.1
+#'   individual_params = list(
+#'     initial_population_size = 25,
+#'     base_birth_rate = 0.5,
+#'     base_mortality_rate = 0.1
 #'   ),
-#'   simulation_params = list(max_events = 1500),
+#'   genetic_params = list(
+#'     genotype_means = runif(25, 0.4, 0.6),
+#'     genotype_sds = 0.2
+#'   ),
+#'   simulation_params = list(max_events = 250),
 #'   master_seed = 567
 #' )
 #' 
 #' # Calculate fitness statistics
-#' fitness_stats <- calculate_genotype_habitat_mismatch(result)
+#' fitness_stats <- habitat_mismatch(result)
 #' 
 #' # Print formatted output
 #' print(fitness_stats)
@@ -2191,24 +2280,24 @@ validate_habitat_matching <- function(simulation_result,
 #' # Compare scenarios
 #' result_neutral <- twolife_simulation(
 #'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 30),
+#'   individual_params = list(initial_population_size = 10),
 #'   genetic_params = list(genotype_means = runif(30, 0, 1)),
 #'   simulation_params = list(max_events = 1500, neutral_mode = TRUE),
 #'   master_seed = 888
 #' )
 #' 
-#' fitness_neutral <- calculate_genotype_habitat_mismatch(result_neutral)
+#' fitness_neutral <- habitat_mismatch(result_neutral)
 #' 
 #' # Compare correlations
 #' cat("With selection:", fitness_stats$correlation, "\n")
 #' cat("Neutral:", fitness_neutral$correlation, "\n")
 #' }
 #' 
-#' @seealso \code{\link{validate_habitat_matching}} for visual validation
+#' @seealso \code{\link{check_habitat_match}} for visual validation
 #' 
 #' @export
-calculate_genotype_habitat_mismatch <- function(simulation_result, 
-                                                return_individuals = FALSE) {
+habitat_mismatch <- function(simulation_result, 
+                             return_individuals = FALSE) {
   
   if (!inherits(simulation_result, "twolife_result")) {
     stop("simulation_result must be a twolife_result object", call. = FALSE)
