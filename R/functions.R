@@ -39,7 +39,7 @@ NULL
 #'     \item{initial_population_size}{Integer. Starting population size. Default: 200}
 #'     \item{neighbor_radius}{Numeric. Radius for density calculations (world units). Default: 2.0}
 #'     \item{vision_angle}{Numeric. Vision angle in radians for movement decisions. 
-#'       pi (180°) = forward hemisphere, 2*pi (360°) = random walk. Default: pi}
+#'       pi (180 degrees) = forward hemisphere, 2*pi (360 degrees) = random walk. Default: pi}
 #'     \item{step_length}{Numeric. Distance moved per dispersal event (world units). Default: 1.0}
 #'     \item{base_dispersal_rate}{Numeric. Base dispersal probability per time unit (0-1). Default: 0.1}
 #'     \item{base_birth_rate}{Numeric. Base birth probability per time unit (0-1). 
@@ -215,9 +215,7 @@ twolife_simulation <- function(landscape_params = list(),
                                genetic_params = list(),
                                simulation_params = list(),
                                history_detail = "standard",
-                               master_seed = NULL,
-                               ..., 
-                               output_file = NULL) {
+                               master_seed = NULL) {
   
   # Validate history_detail parameter
   valid_levels <- c("minimal", "standard", "full")
@@ -225,11 +223,6 @@ twolife_simulation <- function(landscape_params = list(),
     stop("history_detail must be one of: ", 
          paste(valid_levels, collapse = ", "), 
          call. = FALSE)
-  }
-  
-  dots <- list(...)
-  if ("habitat_grid" %in% names(dots)) {
-    stop("habitat_grid argument is deprecated. Please pass habitat inside landscape_params$habitat", call. = FALSE)
   }
   
   if (!is.list(landscape_params)) {
@@ -286,7 +279,7 @@ twolife_simulation <- function(landscape_params = list(),
   ))
   
   pop_size <- all_params$initial_population_size
-  if (is.null(simulation_params$max_events) && !("max_events" %in% names(dots))) {
+  if (is.null(simulation_params$max_events)) {
     all_params$max_events <- (50 * pop_size)
   } else if (is.null(all_params$max_events)) {
     all_params$max_events <- (50 * pop_size)
@@ -389,8 +382,7 @@ twolife_simulation <- function(landscape_params = list(),
     habitat_selection_temperatures = habitat_selection_temperatures,
     neutral_mode = all_params$neutral_mode,
     history_detail = history_detail,
-    master_seed = master_seed,
-    output_file = output_file
+    master_seed = master_seed
   )
   
   final_pop <- as.integer(length(result$survivor_x))
@@ -978,7 +970,7 @@ snapshot_at_time <- function(simulation_result,
 #'   suitable for direct use in \code{twolife_simulation()}. If FALSE, returns matrix only. Default: FALSE
 #' 
 #' @return If \code{return_as_landscape_params = FALSE}: A numeric matrix with dimensions 
-#'   \code{cells_per_row} × \code{cells_per_col}. Values are either continuous (between min_value 
+#'   \code{cells_per_row} x \code{cells_per_col}. Values are either continuous (between min_value 
 #'   and max_value) or binary (0 and 1).
 #'   
 #'   If \code{return_as_landscape_params = TRUE}: A list with one component:
@@ -996,14 +988,14 @@ snapshot_at_time <- function(simulation_result,
 #'         \item Average each cell with its 8 neighbors
 #'         \item Add small random noise
 #'       }
-#'     \item More iterations (higher fractality) → more spatial clumping
+#'     \item More iterations (higher fractality) -> more spatial clumping
 #'   }
 #'   
-#'   Number of smoothing iterations = round(fractality × 10). For example:
+#'   Number of smoothing iterations = round(fractality x 10). For example:
 #'   \itemize{
-#'     \item fractality = 0.0 → 0 iterations (completely random)
-#'     \item fractality = 0.5 → 5 iterations (moderate structure)
-#'     \item fractality = 0.9 → 9 iterations (highly clumped)
+#'     \item fractality = 0.0 -> 0 iterations (completely random)
+#'     \item fractality = 0.5 -> 5 iterations (moderate structure)
+#'     \item fractality = 0.9 -> 9 iterations (highly clumped)
 #'   }
 #' 
 #' Binary vs Continuous:
@@ -1298,10 +1290,10 @@ create_fractal_landscape <- function(cells_per_row,
 #' par(mfrow = c(1, 2))
 #' 
 #' rect1 <- create_fractal_landscape(15, 20, 0.7, habitat_proportion = 0.4)
-#' plot_landscape(rect1, main = "15 × 20")
+#' plot_landscape(rect1, main = "15 x 20")
 #' 
 #' rect2 <- create_fractal_landscape(20, 15, 0.7, habitat_proportion = 0.4)
-#' plot_landscape(rect2, main = "20 × 15")
+#' plot_landscape(rect2, main = "20 x 15")
 #' 
 #' par(mfrow = c(1, 1))
 #' }
@@ -1499,7 +1491,7 @@ plot_landscape <- function(landscape_data,
 #'   landscape_params = landscape_big,
 #'   individual_params = list(initial_population_size = 10),
 #'   genetic_params = list(
-#'     genotype_means = runif(30, 0, 1),
+#'     genotype_means = runif(10, 0, 1),
 #'     genotype_sds = 0.1
 #'   ),
 #'   simulation_params = list(max_events = 150),
@@ -1697,7 +1689,7 @@ print.twolife_result <- function(x, ...) {
   }
   
   cat("\nLandscape:", 
-      nrow(x$parameters$landscape$habitat), "×", 
+      nrow(x$parameters$landscape$habitat), "x", 
       ncol(x$parameters$landscape$habitat), "cells\n")
   
   cat("\nUse summary() for more details\n")
@@ -1722,7 +1714,7 @@ print.twolife_result <- function(x, ...) {
 #'     \item{events}{Total number of events simulated}
 #'     \item{duration}{Simulation duration in time units}
 #'     \item{extinction_time}{Time of extinction (NA if surviving)}
-#'     \item{landscape_size}{Dimensions of landscape (rows × columns)}
+#'     \item{landscape_size}{Dimensions of landscape (rows x columns)}
 #'     \item{history_detail}{Level of event history recorded}
 #'   }
 #' 
@@ -1795,7 +1787,7 @@ print.summary.twolife_result <- function(x, ...) {
   cat("  Events per time unit:", round(x$events / x$duration, 2), "\n")
   
   cat("\nLandscape:\n")
-  cat("  Dimensions:", x$landscape_size[1], "×", x$landscape_size[2], "cells\n")
+  cat("  Dimensions:", x$landscape_size[1], "x", x$landscape_size[2], "cells\n")
   cat("  Total cells:", prod(x$landscape_size), "\n")
   
   cat("\nHistory Detail:", x$history_detail, "\n")
@@ -1969,7 +1961,7 @@ plot.twolife_result <- function(x, ...) {
 #'   landscape_params = landscape,
 #'   individual_params = list(initial_population_size = 10),
 #'   genetic_params = list(
-#'     genotype_means = runif(30, 0, 1),
+#'     genotype_means = runif(10, 0, 1),
 #'     plasticities = 0.5,
 #'     sampling_points = 5
 #'   ),
@@ -2223,8 +2215,8 @@ check_habitat_match <- function(simulation_result,
 #' Connection to Simulation:
 #'   During the simulation, this fitness function affects individual demographic rates:
 #'   \itemize{
-#'     \item Higher fitness → Lower mortality rate in that habitat
-#'     \item Higher fitness → Higher birth rate in that habitat  
+#'     \item Higher fitness -> Lower mortality rate in that habitat
+#'     \item Higher fitness -> Higher birth rate in that habitat  
 #'     \item Fitness combines with density-dependence to determine realized rates
 #'   }
 #'   
@@ -2268,20 +2260,12 @@ check_habitat_match <- function(simulation_result,
 #' cat("Correlation:", fitness_stats$correlation, "\n")
 #' cat("% high fitness:", fitness_stats$percent_high_fitness, "\n")
 #' 
-#' # Examine individual fitness values
-#' hist(fitness_stats$fitness_values, 
-#'      main = "Distribution of Fitness",
-#'      xlab = "Fitness (0-1)")
-#' 
-#' # View detailed survivor data
-#' head(fitness_stats$survivor_data)
-#' 
 #' \donttest{
 #' # Compare scenarios
 #' result_neutral <- twolife_simulation(
 #'   landscape_params = landscape,
 #'   individual_params = list(initial_population_size = 10),
-#'   genetic_params = list(genotype_means = runif(30, 0, 1)),
+#'   genetic_params = list(genotype_means = runif(10, 0, 1)),
 #'   simulation_params = list(max_events = 1500, neutral_mode = TRUE),
 #'   master_seed = 888
 #' )

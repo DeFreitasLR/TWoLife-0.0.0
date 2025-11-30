@@ -28,18 +28,14 @@
 #'     with customizable parameters for landscape, demography, and evolution}
 #'   \item{\code{\link{create_fractal_landscape}}}{Generate realistic test landscapes
 #'     with controlled spatial autocorrelation and fragmentation}
-#'   \item{\code{\link{create_corner_landscape}}}{Generate simple test landscapes
-#'     with habitat confined to corners for testing dispersal}
 #'   \item{\code{\link{plot_simulation_on_landscape}}}{Visualize simulation results
 #'     overlaid on habitat quality maps}
-#'   \item{\code{\link{plot_landscape_world_coords}}}{Plot landscape habitat quality
+#'   \item{\code{\link{plot_landscape}}}{Plot landscape habitat quality
 #'     in world coordinate system}
-#'   \item{\code{\link{compute_population_size}}}{Extract population size trajectories
+#'   \item{\code{\link{population_size}}}{Extract population size trajectories
 #'     over time from simulation results}
 #'   \item{\code{\link{snapshot_at_time}}}{Reconstruct population spatial distribution
 #'     at specific time points during simulation}
-#'   \item{\code{\link{validate_habitat_matching}}}{Analyze whether individuals are
-#'     positioned in habitats matching their traits}
 #' }
 #'
 #' @section Typical Workflow:
@@ -58,11 +54,16 @@
 #' Quick start example:
 #' \preformatted{
 #' # Create a simple landscape
-#' landscape <- create_corner_landscape(30)
+#' landscape <- create_fractal_landscape(
+#'   cells_per_row = 30,
+#'   fractality = 0.5,
+#'   habitat_proportion = 0.4,
+#'   return_as_landscape_params = TRUE
+#' )
 #' 
 #' # Run simulation
 #' result <- twolife_simulation(
-#'   landscape_params = list(habitat = landscape),
+#'   landscape_params = landscape,
 #'   simulation_params = list(max_events = 5000)
 #' )
 #' 

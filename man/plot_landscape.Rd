@@ -113,10 +113,10 @@ plot_landscape(
 par(mfrow = c(1, 2))
 
 rect1 <- create_fractal_landscape(15, 20, 0.7, habitat_proportion = 0.4)
-plot_landscape(rect1, main = "15 × 20")
+plot_landscape(rect1, main = "15 x 20")
 
 rect2 <- create_fractal_landscape(20, 15, 0.7, habitat_proportion = 0.4)
-plot_landscape(rect2, main = "20 × 15")
+plot_landscape(rect2, main = "20 x 15")
 
 par(mfrow = c(1, 1))
 }

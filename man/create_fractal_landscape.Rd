@@ -46,7 +46,7 @@ suitable for direct use in \code{twolife_simulation()}. If FALSE, returns matrix
 }
 \value{
 If \code{return_as_landscape_params = FALSE}: A numeric matrix with dimensions 
-  \code{cells_per_row} × \code{cells_per_col}. Values are either continuous (between min_value 
+  \code{cells_per_row} x \code{cells_per_col}. Values are either continuous (between min_value 
   and max_value) or binary (0 and 1).
   
   If \code{return_as_landscape_params = TRUE}: A list with one component:
@@ -70,14 +70,14 @@ Algorithm:
         \item Average each cell with its 8 neighbors
         \item Add small random noise
       }
-    \item More iterations (higher fractality) → more spatial clumping
+    \item More iterations (higher fractality) -> more spatial clumping
   }
   
-  Number of smoothing iterations = round(fractality × 10). For example:
+  Number of smoothing iterations = round(fractality x 10). For example:
   \itemize{
-    \item fractality = 0.0 → 0 iterations (completely random)
-    \item fractality = 0.5 → 5 iterations (moderate structure)
-    \item fractality = 0.9 → 9 iterations (highly clumped)
+    \item fractality = 0.0 -> 0 iterations (completely random)
+    \item fractality = 0.5 -> 5 iterations (moderate structure)
+    \item fractality = 0.9 -> 9 iterations (highly clumped)
   }
 
 Binary vs Continuous:

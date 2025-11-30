@@ -135,7 +135,7 @@ result_plastic <- twolife_simulation(
   landscape_params = landscape,
   individual_params = list(initial_population_size = 10),
   genetic_params = list(
-    genotype_means = runif(30, 0, 1),
+    genotype_means = runif(10, 0, 1),
     plasticities = 0.5,
     sampling_points = 5
   ),

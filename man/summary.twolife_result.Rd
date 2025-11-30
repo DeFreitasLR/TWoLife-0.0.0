@@ -20,7 +20,7 @@ A list of class 'summary.twolife_result' containing:
     \item{events}{Total number of events simulated}
     \item{duration}{Simulation duration in time units}
     \item{extinction_time}{Time of extinction (NA if surviving)}
-    \item{landscape_size}{Dimensions of landscape (rows × columns)}
+    \item{landscape_size}{Dimensions of landscape (rows x columns)}
     \item{history_detail}{Level of event history recorded}
   }
 }

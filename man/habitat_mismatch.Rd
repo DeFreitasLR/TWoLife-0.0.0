@@ -67,8 +67,8 @@ Fitness Calculation:
 Connection to Simulation:
   During the simulation, this fitness function affects individual demographic rates:
   \itemize{
-    \item Higher fitness → Lower mortality rate in that habitat
-    \item Higher fitness → Higher birth rate in that habitat  
+    \item Higher fitness -> Lower mortality rate in that habitat
+    \item Higher fitness -> Higher birth rate in that habitat  
     \item Fitness combines with density-dependence to determine realized rates
   }
   
@@ -112,20 +112,12 @@ cat("Mean fitness:", fitness_stats$mean_fitness, "\n")
 cat("Correlation:", fitness_stats$correlation, "\n")
 cat("\% high fitness:", fitness_stats$percent_high_fitness, "\n")
 
-# Examine individual fitness values
-hist(fitness_stats$fitness_values, 
-     main = "Distribution of Fitness",
-     xlab = "Fitness (0-1)")
-
-# View detailed survivor data
-head(fitness_stats$survivor_data)
-
 \donttest{
 # Compare scenarios
 result_neutral <- twolife_simulation(
   landscape_params = landscape,
   individual_params = list(initial_population_size = 10),
-  genetic_params = list(genotype_means = runif(30, 0, 1)),
+  genetic_params = list(genotype_means = runif(10, 0, 1)),
   simulation_params = list(max_events = 1500, neutral_mode = TRUE),
   master_seed = 888
 )

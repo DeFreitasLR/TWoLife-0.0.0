@@ -10,9 +10,7 @@ twolife_simulation(
   genetic_params = list(),
   simulation_params = list(),
   history_detail = "standard",
-  master_seed = NULL,
-  ...,
-  output_file = NULL
+  master_seed = NULL
 )
 }
 \arguments{
@@ -37,7 +35,7 @@ twolife_simulation(
   \item{initial_population_size}{Integer. Starting population size. Default: 200}
   \item{neighbor_radius}{Numeric. Radius for density calculations (world units). Default: 2.0}
   \item{vision_angle}{Numeric. Vision angle in radians for movement decisions. 
-    pi (180°) = forward hemisphere, 2*pi (360°) = random walk. Default: pi}
+    pi (180 degrees) = forward hemisphere, 2*pi (360 degrees) = random walk. Default: pi}
   \item{step_length}{Numeric. Distance moved per dispersal event (world units). Default: 1.0}
   \item{base_dispersal_rate}{Numeric. Base dispersal probability per time unit (0-1). Default: 0.1}
   \item{base_birth_rate}{Numeric. Base birth probability per time unit (0-1). 
@@ -108,8 +106,8 @@ A list of class 'twolife_result' with components:
 }
 \description{
 Runs a spatially-explicit individual-based simulation with habitat selection,
-genetic variation, and demographic processes. Supports rectangular landscapes
-and customizable habitat selection parameters.
+genetic variation, phenotypic plasticity, and demographic processes. Supports 
+rectangular landscapes and customizable habitat selection parameters.
 }
 \details{
 Simulation Stopping Conditions:

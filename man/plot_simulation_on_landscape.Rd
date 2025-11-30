@@ -140,7 +140,7 @@ result_genetic <- twolife_simulation(
   landscape_params = landscape_big,
   individual_params = list(initial_population_size = 10),
   genetic_params = list(
-    genotype_means = runif(30, 0, 1),
+    genotype_means = runif(10, 0, 1),
     genotype_sds = 0.1
   ),
   simulation_params = list(max_events = 150),
