@@ -9,7 +9,7 @@ habitat_mismatch(simulation_result, return_individuals = FALSE)
 \arguments{
 \item{simulation_result}{A 'twolife_result' object from \code{\link{twolife_simulation}}}
 
-\item{return_individuals}{Logical. Return individual-level data. Default: FALSE}
+\item{return_individuals}{Logical. If TRUE, includes individual-level data in output. Default: FALSE}
 }
 \value{
 A list of class 'genotype_habitat_mismatch' with components:
@@ -26,16 +26,17 @@ A list of class 'genotype_habitat_mismatch' with components:
     \item{percent_high_fitness}{Numeric. Percentage with fitness > 0.8}
     \item{percent_medium_fitness}{Numeric. Percentage with fitness 0.5-0.8}
     \item{percent_low_fitness}{Numeric. Percentage with fitness < 0.5}
-    \item{correlation}{Numeric. Correlation between phenotype and habitat (-1 to 1)}
-    \item{mean_genotype}{Numeric. Mean genotype value}
-    \item{sd_genotype}{Numeric. SD of genotype}
-    \item{mean_phenotype}{Numeric. Mean phenotype value}
-    \item{sd_phenotype}{Numeric. SD of phenotype}
+    \item{correlation}{Numeric. Pearson correlation between phenotype and habitat (-1 to 1)}
+    \item{mean_genotype}{Numeric. Mean genotype value of survivors}
+    \item{sd_genotype}{Numeric. Standard deviation of genotype}
+    \item{mean_phenotype}{Numeric. Mean phenotype value of survivors}
+    \item{sd_phenotype}{Numeric. Standard deviation of phenotype}
     \item{mean_habitat}{Numeric. Mean habitat value at survivor locations}
-    \item{sd_habitat}{Numeric. SD of habitat at survivor locations}
-    \item{mean_niche_width}{Numeric. Mean niche width}
-    \item{sd_niche_width}{Numeric. SD of niche width}
+    \item{sd_habitat}{Numeric. Standard deviation of habitat at survivor locations}
+    \item{mean_niche_width}{Numeric. Mean niche width (genotype_sds) of survivors}
+    \item{sd_niche_width}{Numeric. Standard deviation of niche width}
     \item{mean_absolute_mismatch}{Numeric. Mean |phenotype - habitat|}
+    \item{median_absolute_mismatch}{Numeric. Median |phenotype - habitat|}
     \item{individuals}{Data frame with per-individual data (only if return_individuals=TRUE).
       Contains columns: id, x, y, genotype, phenotype, width, habitat_value, fitness,
       absolute_mismatch, raw_mismatch, row_index, col_index}
@@ -44,40 +45,69 @@ A list of class 'genotype_habitat_mismatch' with components:
   The object has a custom print method that displays formatted statistics.
 }
 \description{
-Computes fitness-based metrics quantifying how well individuals match their
-habitat. Uses a fitness function based on the absolute difference between
-phenotype and habitat quality, scaled by niche width. Provides comprehensive
-statistics on habitat matching quality.
+Computes fitness-based metrics quantifying how well surviving individuals match their
+habitat. Calculates fitness using the same Gaussian function used during the simulation,
+providing comprehensive statistics on habitat matching quality and population fitness.
 }
 \details{
 Fitness Calculation:
-  Fitness is calculated as: \code{exp(-(phenotype - habitat)^2 / (2 * niche_width^2))}
+  This function uses the same fitness formula that determines demographic rates during
+  the simulation. Fitness quantifies how well an individual's phenotype matches the
+  habitat quality at its location.
   
-  This Gaussian fitness function produces values between 0 and 1 where:
+  For generalists (niche_width > 0):
+  
+  \deqn{fitness = exp\left(-\frac{(phenotype - habitat)^2}{2 \times niche\_width^2}\right)}
+  
+  Where:
   \itemize{
-    \item 1.0 = perfect match (phenotype equals habitat)
-    \item > 0.8 = high fitness (within ~1 niche width)
-    \item 0.5-0.8 = medium fitness (1-2 niche widths away)
-    \item < 0.5 = low fitness (> 2 niche widths away, poor match)
+    \item phenotype = individual's expressed trait value (genotype + plasticity)
+    \item habitat = habitat quality value at individual's location (0 to 1)
+    \item niche_width = genotype_sds parameter (tolerance to mismatch)
+    \item fitness ranges from 0 (complete mismatch) to 1 (perfect match)
   }
   
-  Special case: When niche_width = 0 (specialist with no tolerance), fitness is 1.0
-  if phenotype exactly matches habitat (within 0.001), otherwise 0.0.
+  For perfect specialists (niche_width = 0):
+  
+  \deqn{fitness = 1 \text{ if } |phenotype - habitat| < 0.001, \text{ otherwise } fitness = 0}
+  
+  This binary fitness function means specialists only survive in exactly matching habitat.
 
-Connection to Simulation:
-  During the simulation, this fitness function affects individual demographic rates:
+Fitness Interpretation:
   \itemize{
-    \item Higher fitness -> Lower mortality rate in that habitat
-    \item Higher fitness -> Higher birth rate in that habitat  
-    \item Fitness combines with density-dependence to determine realized rates
+    \item fitness = 1.0: Perfect match. Phenotype exactly equals habitat quality.
+    \item fitness > 0.8: High fitness. Within ~1 niche width of optimum.
+    \item fitness = 0.5-0.8: Medium fitness. 1-2 niche widths from optimum.
+    \item fitness < 0.5: Low fitness. More than 2 niche widths from optimum.
+    \item fitness = 0.368 (1/e): Exactly 1 niche width from optimum (Gaussian inflection point).
   }
   
-  The correlation between phenotype and habitat indicates the effectiveness of
-  habitat selection and/or evolutionary adaptation over the simulation.
+  Example: If niche_width = 0.2 and phenotype = 0.5:
+  \itemize{
+    \item habitat = 0.5 -> fitness = 1.0 (perfect)
+    \item habitat = 0.7 (1 niche width away) -> fitness = 0.368
+    \item habitat = 0.9 (2 niche widths away) -> fitness = 0.135 (poor)
+  }
+
+Connection to Simulation Demography:
+  During simulation, this fitness value affects demographic rates. For generalists
+  (genotype_sds > 0), the mortality rate is interpolated based on fitness:
+  
+  \deqn{mortality = mortality_{max} - (fitness_{relative} \times (mortality_{max} - mortality_{min}))}
+  
+  Where:
+  \itemize{
+    \item \eqn{mortality_{max} = matrix\_mortality\_multiplier \times base\_mortality\_rate}
+    \item \eqn{mortality_{min} = base\_mortality\_rate}
+    \item \eqn{fitness_{relative}} = fitness at current habitat / fitness at optimal habitat
+  }
+  
+  Higher fitness leads to lower mortality rate, higher birth rate (for generalists),
+  and greater probability of leaving offspring.
 }
 \examples{
 # Create landscape
-set.seed(456)  # For reproducible landscape
+set.seed(456)
 landscape <- create_fractal_landscape(
   cells_per_row = 5,
   fractality = 0.5,
@@ -85,7 +115,7 @@ landscape <- create_fractal_landscape(
   return_as_landscape_params = TRUE
 )
 
-# Run simulation (guaranteed survivors)
+# Run simulation
 result <- twolife_simulation(
   landscape_params = landscape,
   individual_params = list(
@@ -113,7 +143,7 @@ cat("Correlation:", fitness_stats$correlation, "\n")
 cat("\% high fitness:", fitness_stats$percent_high_fitness, "\n")
 
 \donttest{
-# Compare scenarios
+# Compare with neutral scenario
 result_neutral <- twolife_simulation(
   landscape_params = landscape,
   individual_params = list(initial_population_size = 10),
@@ -124,9 +154,11 @@ result_neutral <- twolife_simulation(
 
 fitness_neutral <- habitat_mismatch(result_neutral)
 
-# Compare correlations
-cat("With selection:", fitness_stats$correlation, "\n")
-cat("Neutral:", fitness_neutral$correlation, "\n")
+# Compare
+cat("With selection - Mean fitness:", fitness_stats$mean_fitness, "\n")
+cat("Neutral - Mean fitness:", fitness_neutral$mean_fitness, "\n")
+cat("With selection - Correlation:", fitness_stats$correlation, "\n")
+cat("Neutral - Correlation:", fitness_neutral$correlation, "\n")
 }
 
 }

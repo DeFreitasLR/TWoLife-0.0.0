@@ -898,25 +898,6 @@ plot(niche_widths, final_pops, type = "b",
 
 # Discussion
 
-## Key Findings
-
-**From Basic Workflow:** TWoLife models discrete habitat configurations,
-demonstrating how spatial arrangement affects carrying capacity beyond
-simple area calculations. Configuration effects can shift populations
-from viable to extinct even with constant total habitat.
-
-**From Main Analysis:**
-
-1.  **Niche width is necessary and sufficient** for baseline persistence
-    in heterogeneous environments (S3 transition)
-2.  **Genetic diversity without tolerance is insufficient** (S1-S2
-    extinctions)
-3.  **Evolution and behavior provide enhancing mechanisms** but cannot
-    substitute for physiological flexibility (S4-S5 incremental effects)
-4.  **Mechanisms interact synergistically:** cumulative gain
-    (`r cumulative_gain` individuals) exceeds sum of sequential
-    additions
-
 ## What TWoLife Enables
 
 **Continuous environmental representation:** Unlike most
@@ -943,48 +924,6 @@ necessity and sufficiency.
 consequences are tracked throughout simulations, supporting validation
 and detailed analysis of emergent patterns.
 
-## Comparison to Existing Approaches
-
-Traditional population models assume either: - Homogeneous space with
-uniform individuals (analytical models) - Discrete habitat types with
-identical individuals (metapopulation models) - Continuous space but
-simplified genetics (some agent-based models)
-
-TWoLife uniquely combines continuous spatial heterogeneity with
-individual genetic variation and mechanistic fitness determination. This
-enables addressing questions requiring both dimensions:
-
--   How much genetic variation is necessary for persistence in variable
-    environments?
--   Can behavioral plasticity substitute for genetic adaptation?
--   How do evolution rates interact with landscape structure to
-    determine range limits?
-
-## Applications and Extensions
-
-The framework demonstrated here extends to diverse questions in:
-
-**Spatial ecology:** - Source-sink dynamics in continuous gradients -
-Range limits emerging from trait-environment mismatches - Carrying
-capacity in heterogeneous landscapes
-
-**Evolutionary biology:** - Local adaptation rates in fragmented
-populations - Evolution of dispersal and habitat selection - Niche
-conservatism versus niche evolution
-
-**Conservation biology:** - Reserve design accounting for individual
-variation - Genetic rescue effectiveness under different landscape
-structures - Climate change vulnerability based on adaptive capacity
-
-**Theoretical ecology:** - Coexistence mechanisms via niche
-differentiation - Bet-hedging through genetic variation - Individual
-variation effects on population stability
-
-Users can extend analyses by modifying landscape parameters (extent,
-resolution, fractality), genetic parameters (mutation rates, niche
-widths), demographic parameters (population sizes, dispersal kernels),
-or implementing additional mechanisms (frequency-dependent selection,
-multiple environmental axes, social interactions).
 
 # Conclusion
 
@@ -1016,64 +955,3 @@ By integrating spatial heterogeneity and individual variation within a
 unified simulation framework, TWoLife advances our capacity to
 understand population dynamics, evolutionary processes, and conservation
 strategies in realistic ecological contexts.
-
-## Reproducibility Verification
-
-This vignette uses a systematic seed management strategy to ensure
-complete reproducibility:
-
-```{r verify-reproducibility}
-# Verify that simulations with identical parameters and seeds produce identical results
-verify_landscape <- create_fractal_landscape(
-  cells_per_row = 10,
-  fractality = 0.5,
-  habitat_proportion = 0.8
-)
-
-# First run
-verify_sim1 <- twolife_simulation(
-  landscape_params = list(habitat = verify_landscape),
-  individual_params = list(initial_population_size = 20),
-  simulation_params = list(max_events = 100),
-  master_seed = 999
-)
-
-# Second run with identical parameters
-verify_sim2 <- twolife_simulation(
-  landscape_params = list(habitat = verify_landscape),
-  individual_params = list(initial_population_size = 20),
-  simulation_params = list(max_events = 100),
-  master_seed = 999
-)
-
-# Verify identical results
-pop1 <- verify_sim1$summary$final_population_size
-pop2 <- verify_sim2$summary$final_population_size
-events1 <- verify_sim1$summary$total_events
-events2 <- verify_sim2$summary$total_events
-
-cat("Reproducibility check:\n")
-cat("  Population sizes:", pop1, "vs", pop2, "->", 
-    ifelse(pop1 == pop2, "✓ IDENTICAL", "✗ DIFFER"), "\n")
-cat("  Event counts:", events1, "vs", events2, "->",
-    ifelse(events1 == events2, "✓ IDENTICAL", "✗ DIFFER"), "\n")
-
-if (pop1 == pop2 && events1 == events2) {
-  cat("\n✓ Reproducibility verified: This vignette produces identical results across knits.\n")
-} else {
-  cat("\n✗ Warning: Results differ. Check seed management.\n")
-}
-```
-
-**Seed Management Strategy:**
-
--   **Base seed**: `set.seed(42)` at the start
--   **Landscape generation**: Simple seeds (100 for pristine, 200 for
-    continuous)
--   **Initial genotypes**: `set.seed(300)` before generation
--   **Simulations**: Each gets a unique seed (42-44 for SLOSS, 45-49 for
-    scenarios)
-
-This simplified approach ensures: - Complete reproducibility across all
-knits - Easy to understand and verify - Each component has independent
-random sequences - Transparency about all random number generation

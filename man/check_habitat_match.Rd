@@ -49,49 +49,78 @@ Invisibly returns a data frame with columns:
   }
 }
 \description{
-Visualizes and quantifies whether individuals are positioned in habitat
-matching their genotype or phenotype values. Provides scatter plots and
-correlation statistics to assess the effectiveness of habitat selection.
+Visualizes and quantifies whether surviving individuals are positioned
+in habitat matching their genotype or phenotype values. Calculates
+correlation between individual trait values and habitat environmental values to assess
+effectiveness of habitat selection or adaptation.
 }
 \details{
-Visualization:
+What This Function Measures:
+  This function tests whether individuals are found in habitats matching their trait
+  values. Perfect matching would show:
+  \itemize{
+    \item Individuals with trait value 0.8 in habitats with quality ~0.8
+    \item Individuals with trait value 0.2 in habitats with quality ~0.2
+    \item Strong positive correlation (r close to 1.0)
+  }
+
+Mathematical Basis:
+  Calculates Pearson correlation coefficient:
+  
+  \deqn{r = \frac{Cov(trait, habitat)}{SD_{trait} \times SD_{habitat}}}
+  
+  Where:
+  \itemize{
+    \item trait = genotype or phenotype values of survivors
+    \item habitat = habitat quality values at survivor locations
+    \item r ranges from -1 (perfect negative correlation) to +1 (perfect positive correlation)
+  }
+  
+  Also provides Spearman rank correlation (robust to outliers and non-linear relationships).
+
+Visualization Components:
   Creates a two-panel plot:
-  \enumerate{
-    \item Left panel: Landscape with survivor locations colored by trait value. 
-      Visual matching between point colors and background colors suggests good habitat selection.
-    \item Right panel: Scatter plot of trait value vs. habitat value with best-fit line 
-      and Pearson correlation coefficient.
+  
+  Left panel - Spatial distribution:
+  \itemize{
+    \item Shows landscape with habitat quality as background color
+    \item Survivor locations as colored points (color = trait value)
+    \item Good matching: point colors visually match background colors
+    \item Poor matching: points of one color scattered across all background colors
+  }
+  
+  Right panel - Correlation plot:
+  \itemize{
+    \item X-axis: habitat value at individual location (0 to 1)
+    \item Y-axis: trait value (genotype or phenotype)
+    \item Each point = one surviving individual
+    \item Best-fit line and Pearson r displayed
+    \item Perfect matching would show points along diagonal (r = 1.0)
   }
 
-Correlation Interpretation:
+Connection to Simulation Parameters:
+  Correlation strength depends on:
   \itemize{
-    \item r > 0.7: Strong positive correlation - effective habitat selection or adaptation
-    \item r = 0.3-0.7: Moderate correlation - partial habitat matching
-    \item r < 0.3: Weak correlation - random distribution or neutral scenario
-    \item r < 0: Negative correlation - individuals avoiding preferred habitat (unusual)
-  }
-
-Genotype vs Phenotype Analysis:
-  \itemize{
-    \item Use color_by = "genotype" to test if genetic variation predicts habitat use
-    \item Use color_by = "phenotype" when plasticity is present (recommended) - this 
-      includes both genetic and plastic responses
-    \item With plasticity: phenotype-habitat correlation typically higher than genotype-habitat 
-      correlation because phenotypes adjust to local conditions
+    \item sampling_points: Higher values enable better habitat selection (stronger r)
+    \item habitat_selection_temperatures: Lower values create stronger selection (stronger r)
+    \item mutation_rates: Higher values create more trait variation to match habitat variation
+    \item genotype_sds: Niche width - narrower niches (lower values) favor stronger matching
+    \item simulation duration: Longer simulations allow more adaptation (stronger r over time)
   }
 
 Statistical Output:
-  When show_stats = TRUE, prints:
+  When show_stats = TRUE, prints to console:
   \itemize{
-    \item Sample size
-    \item Pearson correlation with p-value
-    \item Spearman rank correlation (robust to outliers)
-    \item Mean and range of trait and habitat values
+    \item Sample size (number of survivors)
+    \item Pearson correlation with p-value (tests H0: r = 0)
+    \item Spearman rank correlation (non-parametric alternative)
+    \item Mean and range of trait values
+    \item Mean and range of habitat values at survivor locations
   }
 }
 \examples{
 # Create landscape
-set.seed(123)  # For reproducible landscape
+set.seed(123)
 landscape <- create_fractal_landscape(
   cells_per_row = 5,
   fractality = 0.5,
@@ -99,7 +128,7 @@ landscape <- create_fractal_landscape(
   return_as_landscape_params = TRUE
 )
 
-# Simulation with genetic variation (guaranteed survivors)
+# Simulation with genetic variation
 result <- twolife_simulation(
   landscape_params = landscape,
   individual_params = list(
@@ -121,7 +150,7 @@ validation_data <- check_habitat_match(
   color_by = "genotype"
 )
 
-# Examine specific individuals
+# Examine data
 head(validation_data)
 
 # Check correlation

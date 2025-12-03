@@ -80,6 +80,20 @@ Algorithm:
     \item fractality = 0.9 -> 9 iterations (highly clumped)
   }
 
+Mathematical Formula:
+  For each smoothing iteration t, the value at cell (i,j) is updated:
+  
+  \deqn{value_{t+1}(i,j) = \alpha \times mean(neighbors_t(i,j)) + (1-\alpha) \times \epsilon}
+  
+  Where:
+  \itemize{
+    \item \eqn{\alpha = 0.9} (smoothing weight)
+    \item \eqn{neighbors_t(i,j)} = values of 8 surrounding cells at iteration t
+    \item \eqn{\epsilon \sim Uniform(0, 1)} (random noise)
+    \item Number of iterations = round(fractality x 10)
+  }
+  
+  Edge cells use available neighbors only (fewer than 8).
 Binary vs Continuous:
   \itemize{
     \item If habitat_proportion is NULL: Creates continuous landscape with values 
