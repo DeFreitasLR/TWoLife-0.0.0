@@ -57,19 +57,24 @@ Fitness Calculation:
 
   For generalists (niche_width > 0):
 
-  \deqn{fitness = exp\left(-\frac{(phenotype - habitat)^2}{2 \times niche\_width^2}\right)}
+  \deqn{f = \exp\left(-\frac{(p - h)^2}{2\sigma^2}\right)}
 
   Where:
   \itemize{
-    \item phenotype = individual's expressed trait value (genotype + plasticity)
-    \item habitat = habitat quality value at individual's location (0 to 1)
-    \item niche_width = genotype_sds parameter (tolerance to mismatch)
-    \item fitness ranges from 0 (complete mismatch) to 1 (perfect match)
+    \item \eqn{f} = fitness (ranges 0 to 1)
+    \item \eqn{p} = phenotype (individual's expressed trait value)
+    \item \eqn{h} = habitat quality at individual's location (0 to 1)
+    \item \eqn{\sigma} = niche_width (genotype_sds parameter, tolerance to mismatch)
   }
 
   For perfect specialists (niche_width = 0):
 
-  \deqn{fitness = 1 \text{ if } |phenotype - habitat| < 0.001, \text{ otherwise } fitness = 0}
+  \deqn{f = \begin{cases} 
+  1 & \text{if } |p - h| < \epsilon \\
+  0 & \text{otherwise}
+  \end{cases}}
+
+  Where \eqn{\epsilon = 0.001} is the tolerance threshold.
 
   This binary fitness function means specialists only survive in exactly matching habitat.
 
@@ -82,24 +87,17 @@ Fitness Interpretation:
     \item fitness = 0.368 (1/e): Exactly 1 niche width from optimum (Gaussian inflection point).
   }
 
-  Example: If niche_width = 0.2 and phenotype = 0.5:
-  \itemize{
-    \item habitat = 0.5 -> fitness = 1.0 (perfect)
-    \item habitat = 0.7 (1 niche width away) -> fitness = 0.368
-    \item habitat = 0.9 (2 niche widths away) -> fitness = 0.135 (poor)
-  }
-
 Connection to Simulation Demography:
   During simulation, this fitness value affects demographic rates. For generalists
   (genotype_sds > 0), the mortality rate is interpolated based on fitness:
 
-  \deqn{mortality = mortality_{max} - (fitness_{relative} \times (mortality_{max} - mortality_{min}))}
+  \deqn{\mu = \mu_{max} - f_{rel}(\mu_{max} - \mu_{min})}
 
   Where:
   \itemize{
-    \item \eqn{mortality_{max} = matrix\_mortality\_multiplier \times base\_mortality\_rate}
-    \item \eqn{mortality_{min} = base\_mortality\_rate}
-    \item \eqn{fitness_{relative}} = fitness at current habitat / fitness at optimal habitat
+    \item \eqn{\mu_{max} = m \mu_0} (matrix_mortality_multiplier × base_mortality_rate)
+    \item \eqn{\mu_{min} = \mu_0} (base_mortality_rate)
+    \item \eqn{f_{rel} = f/f_{max}} (relative fitness: fitness at current habitat / fitness at optimal habitat)
   }
 
   Higher fitness leads to lower mortality rate, higher birth rate (for generalists),

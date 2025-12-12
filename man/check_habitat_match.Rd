@@ -66,13 +66,14 @@ What This Function Measures:
 Mathematical Basis:
   Calculates Pearson correlation coefficient:
 
-  \deqn{r = \frac{Cov(trait, habitat)}{SD_{trait} \times SD_{habitat}}}
+  \deqn{r = \frac{\text{Cov}(X, H)}{\sigma_X \sigma_H}}
 
   Where:
   \itemize{
-    \item trait = genotype or phenotype values of survivors
-    \item habitat = habitat quality values at survivor locations
-    \item r ranges from -1 (perfect negative correlation) to +1 (perfect positive correlation)
+    \item \eqn{X} = trait values (genotype or phenotype) of survivors
+    \item \eqn{H} = habitat quality values at survivor locations
+    \item \eqn{\sigma_X}, \eqn{\sigma_H} = standard deviations
+    \item \eqn{r} ranges from -1 (perfect negative) to +1 (perfect positive correlation)
   }
 
   Also provides Spearman rank correlation (robust to outliers and non-linear relationships).

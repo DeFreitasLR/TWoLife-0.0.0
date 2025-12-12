@@ -72,24 +72,24 @@ Algorithm:
     \item More iterations (higher fractality) -> more spatial clumping
   }
 
-  Number of smoothing iterations = round(fractality \times 10). For example:
-  \itemize{
-    \item fractality = 0.0 -> 0 iterations (completely random)
-    \item fractality = 0.5 -> 5 iterations (moderate structure)
-    \item fractality = 0.9 -> 9 iterations (highly clumped)
-  }
+  Number of smoothing iterations:
+  
+  \deqn{n_{iter} = \text{round}(10f)}
+  
+  Where \eqn{f} = fractality parameter.
 
 Mathematical Formula:
   For each smoothing iteration t, the value at cell (i,j) is updated:
 
-  \deqn{value_{t+1}(i,j) = \alpha \times mean(neighbors_t(i,j)) + (1-\alpha) \times \epsilon}
+  \deqn{v_{t+1}(i,j) = \alpha \cdot \bar{v}_t(i,j) + (1-\alpha) \cdot \varepsilon}
 
   Where:
   \itemize{
-    \item \eqn{\alpha = 0.9} (smoothing weight)
-    \item \eqn{neighbors_t(i,j)} = values of 8 surrounding cells at iteration t
-    \item \eqn{\epsilon \sim Uniform(0, 1)} (random noise)
-    \item Number of iterations = round(fractality \times 10)
+    \item \eqn{v_t(i,j)} = value at cell (i,j) at iteration t
+    \item \eqn{\bar{v}_t(i,j)} = mean of neighboring cells (8 neighbors)
+    \item \eqn{\alpha = 0.9} = smoothing weight
+    \item \eqn{\varepsilon \sim U(0,1)} = random noise
+    \item \eqn{n_{iter}} = number of smoothing iterations
   }
 
   Edge cells use available neighbors only (fewer than 8).
