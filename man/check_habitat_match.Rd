@@ -22,7 +22,10 @@ check_habitat_match(
 \item{point_size}{Numeric. Size of points in scatter plot.}
 
 \item{landscape_colors}{Character. Color scheme for landscape background.
-Options: "habitat", "terrain", "viridis".}
+Options: "habitat", "terrain", "viridis". Note: Binary landscapes (habitat
+values of 0 and 1 only) automatically use the "habitat" color scheme
+(0 = white matrix, 1 = green habitat) regardless of this parameter, ensuring
+consistent visual interpretation.}
 
 \item{color_by}{Character. Which trait to analyze:
 \itemize{
@@ -119,67 +122,52 @@ Statistical Output:
   }
 }
 \examples{
-# Create landscape
-set.seed(123)
+set.seed(100)
 landscape <- create_fractal_landscape(
   cells_per_row = 5,
   fractality = 0.5,
   habitat_proportion = 0.6,
   return_as_landscape_params = TRUE
 )
-
-# Simulation with genetic variation
+landscape_genetic <- create_fractal_landscape(
+  cells_per_row = 5,
+  fractality = 0.5,
+  min_value = 0.35,
+  max_value = 0.64,
+  return_as_landscape_params = TRUE
+)
 result <- twolife_simulation(
   landscape_params = landscape,
   individual_params = list(
-    initial_population_size = 25,
-    base_birth_rate = 0.5,
-    base_mortality_rate = 0.1
+    initial_population_size = 15,
+    base_birth_rate = 0.4,
+    base_mortality_rate = 0.15
+  ),
+  simulation_params = list(max_events = 5),
+  master_seed = 123
+)
+result_genetic <- twolife_simulation(
+  landscape_params = landscape_genetic,
+  individual_params = list(
+    initial_population_size = 15,
+    base_birth_rate = 0.4,
+    base_mortality_rate = 0.15
   ),
   genetic_params = list(
-    genotype_means = runif(25, 0.4, 0.6),
-    genotype_sds = 0.2
+    genotype_means = rnorm(15, mean = 0.5, sd = 0.15),
+    genotype_sds = 0.15
   ),
-  simulation_params = list(max_events = 250),
-  master_seed = 789
+  simulation_params = list(max_events = 5),
+  master_seed = 456
 )
-
-# Validate genotype matching
-validation_data <- check_habitat_match(
-  result,
-  color_by = "genotype"
-)
-
-# Examine data
-head(validation_data)
-
-# Check correlation
-if (!is.null(validation_data) && nrow(validation_data) > 0) {
-  cat("Correlation:", cor(validation_data$genotype, validation_data$habitat_value), "\n")
+validation <- check_habitat_match(result)
+validation_genetic <- check_habitat_match(result_genetic, color_by = "genotype")
+head(validation)
+head(validation_genetic)
+if (!is.null(validation_genetic) && nrow(validation_genetic) > 0) {
+  cor_value <- cor(validation_genetic$genotype, validation_genetic$habitat_value)
+  cat("Genotype-habitat correlation:", round(cor_value, 3), "\n")
 }
-
-\donttest{
-# Compare with plasticity
-result_plastic <- twolife_simulation(
-  landscape_params = landscape,
-  individual_params = list(initial_population_size = 10),
-  genetic_params = list(
-    genotype_means = runif(10, 0, 1),
-    plasticities = 0.5,
-    sampling_points = 5
-  ),
-  simulation_params = list(max_events = 150),
-  master_seed = 999
-)
-
-# Validate phenotype matching (should show stronger correlation)
-check_habitat_match(
-  result_plastic,
-  color_by = "phenotype",
-  main = "Phenotype Matching (with Plasticity)"
-)
-}
-
 }
 \seealso{
 \code{\link{habitat_mismatch}} for fitness-based analysis

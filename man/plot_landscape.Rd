@@ -17,111 +17,137 @@ plot_landscape(
 \arguments{
 \item{landscape_data}{Either:
 \itemize{
-  \item A numeric matrix of habitat values
-  \item A list with a \code{$habitat} component (output from landscape creation functions)
+  \item A numeric matrix of habitat values (dimensions: rows × columns)
+  \item A list with a \code{$habitat} component (output from \code{\link{create_fractal_landscape}}
+    or landscape creation functions)
 }}
 
 \item{cell_size}{Numeric. Size of each landscape cell in world units. Should match
-the cell_size used in simulations.}
+the cell_size parameter used in \code{\link{twolife_simulation}}. Together with
+matrix dimensions, defines world_width and world_height.}
 
 \item{filename}{Character. Optional file path to save plot (e.g., "landscape.png").
-If NULL, displays interactively.}
+If NULL, displays interactively in the active graphics device.}
 
-\item{main}{Character. Plot title.}
+\item{main}{Character. Plot title displayed at the top of the figure.}
 
-\item{colors}{Character. Color scheme:
+\item{colors}{Character. Color scheme for habitat visualization:
 \itemize{
-  \item "habitat" - Green gradient (white=matrix, dark green=high quality habitat)
-  \item "terrain" - Built-in terrain.colors palette
-  \item "viridis" - Viridis color scale (requires viridisLite package)
+  \item "habitat" - Custom green gradient (white = 0 = matrix/unsuitable, 
+    dark green = 1 = optimal habitat). Emphasizes habitat vs. matrix distinction.
+  \item "terrain" - R's built-in terrain.colors() palette (green-brown-white gradient).
+    General-purpose landscape visualization.
+  \item "viridis" - Perceptually uniform viridis color scale (requires viridisLite package).
+    Best for continuous habitat quality gradients and colorblind-friendly displays.
 }}
 
-\item{show_legend}{Logical. Whether to show color legend.}
+\item{show_legend}{Logical. If TRUE, displays color legend showing mapping between
+habitat values and colors.}
 
-\item{add_grid}{Logical. If TRUE, adds grid lines and crosshairs at origin.}
+\item{add_grid}{Logical. If TRUE, adds:
+\itemize{
+  \item Gray grid lines at cell boundaries
+  \item Red crosshairs marking origin (0, 0)
+}}
 }
 \value{
-NULL, invisibly. Function is called for its side effect (plotting).
+NULL, invisibly. Function is called for its side effect (creating a plot).
 }
 \description{
-Visualizes landscapes in the world coordinate system with proper axis scaling.
-Works with both square and rectangular landscapes. Shows the landscape as it
-appears in the simulation, centered at the origin with correct spatial scaling.
+Visualizes landscape habitat quality in the world coordinate system used by 
+TWoLife simulations. Displays proper axis scaling, centered origin, and 
+optional grid overlay. Essential for understanding spatial context of 
+simulation results and verifying landscape structure.
 }
 \details{
-The function displays landscapes in world coordinates where:
+## World Coordinate System
+
+TWoLife uses a centered coordinate system where:
+
+\deqn{x \in \left[-\frac{W}{2}, +\frac{W}{2}\right], \quad y \in \left[-\frac{H}{2}, +\frac{H}{2}\right]}
+
+Where:
 \itemize{
-  \item Origin (0, 0) is at the center
-  \item X-axis ranges from -world_width/2 to +world_width/2
-  \item Y-axis ranges from -world_height/2 to +world_height/2
-  \item Red crosshairs mark the origin
-  \item Grid lines aid spatial interpretation
+  \item \eqn{W = \text{ncol}(\text{habitat}) \times \text{cell\_size}} = world_width
+  \item \eqn{H = \text{nrow}(\text{habitat}) \times \text{cell\_size}} = world_height
+  \item Origin (0, 0) is at the landscape center
+  \item Individual positions (x, y) are continuous within these bounds
+}
+
+## Coordinate Mapping
+
+Matrix indices map to world coordinates via:
+
+\deqn{x_{\text{center}} = \left(\text{col} - \frac{\text{ncol}}{2}\right) \times \text{cell\_size}}
+\deqn{y_{\text{center}} = \left(\text{row} - \frac{\text{nrow}}{2}\right) \times \text{cell\_size}}
+
+Important notes:
+\itemize{
+  \item Matrix row 1 (top) maps to positive y values
+  \item Matrix column 1 (left) maps to negative x values
+  \item Each cell spans ±cell_size/2 around its center
+}
+
+## Color Palette Details
+
+\tabular{llll}{
+  \strong{Palette} \tab \strong{Range} \tab \strong{Best For} \tab \strong{Properties} \cr
+  "habitat" \tab White → Dark Green \tab Binary landscapes \tab Clear matrix/habitat contrast \cr
+  "terrain" \tab Green → Brown → White \tab Natural landscapes \tab Traditional terrain visualization \cr
+  "viridis" \tab Purple → Green → Yellow \tab Continuous gradients \tab Perceptually uniform, colorblind-safe \cr
+}
+
+## Rectangular Landscapes
+
+The function automatically handles non-square landscapes:
+\itemize{
+  \item Maintains correct aspect ratio
+  \item Adjusts axis limits independently for x and y
+  \item Preserves cell_size scaling in both dimensions
+}
+
+## Grid Overlay
+
+When add_grid = TRUE:
+\itemize{
+  \item **Gray lines**: Mark boundaries between landscape cells (aid in counting cells,
+    measuring distances)
+  \item **Red crosshairs**: Show (0, 0) origin (reference point for individual positions)
+}
+
+## Visualization Best Practices
+
+\itemize{
+  \item **Match simulation parameters**: Always use the same cell_size as in your simulation
+  \item **Verify scale**: Check that world dimensions match simulation output spatial range
+  \item **Color choice**: Use "habitat" for binary, "viridis" for continuous gradients
+  \item **Grid for precision**: Enable grid when analyzing specific spatial positions
 }
 }
 \examples{
-# Quick examples
-fractal <- create_fractal_landscape(
+set.seed(100)
+landscape <- create_fractal_landscape(
   cells_per_row = 5,
   fractality = 0.5,
-  habitat_proportion = 0.5
-)
-
-plot_landscape(fractal, main = "Fractal Landscape")
-
-# Binary landscape with custom colors
-binary <- create_fractal_landscape(
-  cells_per_row = 5,
-  fractality = 0.5,
-  habitat_proportion = 0.4
-)
-
-plot_landscape(
-  binary,
-  main = "Binary Landscape",
-  colors = "terrain"
-)
-
-\donttest{
-# Larger examples (not run during CRAN checks)
-
-# Using output from landscape function
-landscape_list <- create_fractal_landscape(
-  cells_per_row = 5,
-  fractality = 0.6,
-  habitat_proportion = 0.5,
+  habitat_proportion = 0.6,
   return_as_landscape_params = TRUE
 )
-
-plot_landscape(landscape_list)
-
-# Continuous landscape
-continuous <- create_fractal_landscape(
+plot_landscape(landscape, main = "Binary Habitat Landscape")
+landscape_genetic <- create_fractal_landscape(
   cells_per_row = 5,
-  fractality = 0.7,
-  min_value = 0,
-  max_value = 1
+  fractality = 0.5,
+  min_value = 0.35,
+  max_value = 0.64,
+  return_as_landscape_params = TRUE
 )
-
 plot_landscape(
-  continuous,
-  main = "Continuous Habitat Quality",
+  landscape_genetic,
+  main = "Continuous Gradient",
   colors = "viridis"
 )
-
-# Compare rectangular landscapes
-par(mfrow = c(1, 2))
-
-rect1 <- create_fractal_landscape(15, 20, 0.7, habitat_proportion = 0.4)
-plot_landscape(rect1, main = "15 x 20")
-
-rect2 <- create_fractal_landscape(20, 15, 0.7, habitat_proportion = 0.4)
-plot_landscape(rect2, main = "20 x 15")
-
-par(mfrow = c(1, 1))
-}
-
 }
 \seealso{
 \code{\link{plot_simulation_on_landscape}} to overlay simulation results,
-  \code{\link{create_fractal_landscape}} for landscape generation
+  \code{\link{create_fractal_landscape}} for landscape generation,
+  \code{\link{twolife_simulation}} for running simulations with landscapes
 }

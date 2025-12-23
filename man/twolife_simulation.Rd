@@ -16,7 +16,7 @@ twolife_simulation(
 \arguments{
 \item{landscape_params}{List containing landscape parameters:
 \describe{
-  \item{habitat}{Matrix (integer, logical or numeric). World Habitat Pixel Matrix. Matriz values should be binary (0/1, T/F) or continuous habitat values (from 0 to 1). Each value represents represents an environmental quality value of a pixel. Individuals experience fitness effects based on how well their phenotype matches the habitat value of the pixel they are located.  Matrix dimensions define the landscape size and grid resolution. Required.}
+  \item{habitat}{Matrix (integer, logical or numeric). World Habitat Pixel Matrix. Matriz values should be binary (0/1) or continuous habitat values (usually from 0 to 1). Each value represents represents an environmental quality value of a pixel. Individuals experience fitness effects based on how well their phenotype matches the habitat value of the pixel they are located.  Matrix dimensions define the landscape size and grid resolution. Required.}
   \item{cell_size}{Numeric. Length of the side of a landscape cell in world units. Defines the spatial resolution of the landscape. If habitat is a 100x100 matrix and cell_size = 1.0, the simulated world dimensions are 100x100 world units (world_width = 100, world_height = 100). All spatial parameters (step_length, neighbor_radius, coordinates) use these same world units. The position of individuals have are in continuous (x,y) coordinates and are not restricted to pixel centers.}
   \item{boundary_condition}{Integer. Defines what happens to individuals that reach the edges of world borders:
     \itemize{
@@ -32,7 +32,7 @@ twolife_simulation(
     
     This density value is then used in birth and mortality rate calculations via birth_density_slope and mortality_density_slope parameters. See Details for mathematical formulas.}
   \item{matrix_mortality_multiplier}{Numeric. Mortality rate multiplier applied based on habitat suitability. Controls how mortality scales from optimal to unsuitable habitat. Values > 1 increase mortality in poor-quality habitat, creating "hostile matrix" effects. For perfect specialists (genotype_sds = 0), the multiplier is applied directly in non-optimal habitat. For generalists (genotype_sds > 0), mortality is interpolated based on fitness, creating a smooth gradient. See Details for mathematical formulas.}
-  \item{matrix_dispersal_multiplier}{Numeric. Dispersal rate multiplier applied based on habitat suitability. Controls the frequency of dispersal events (not the distance per event) in unsuitable habitat. Values < 1 reduce dispersal frequency in matrix, while values > 1 increase it. For perfect specialists (genotype_sds = 0), the multiplier is applied in non-optimal habitat. For generalists (genotype_sds > 0), dispersal rate remains at base_dispersal_rate regardless of habitat. Important: This affects the rate of dispersal events, NOT the distance (step_length). See Details for mathematical formulas.}
+  \item{matrix_dispersal_multiplier}{Numeric. Dispersal rate multiplier applied based on habitat suitability. Controls the frequency of dispersal events in unsuitable habitat. Values < 1 reduce dispersal frequency in matrix, while values > 1 increase it. For perfect specialists (genotype_sds = 0), the multiplier is applied in non-optimal habitat. For generalists (genotype_sds > 0), dispersal rate remains at base_dispersal_rate regardless of habitat. Important: This affects the rate of dispersal events, NOT the distance (step_length). See Details for mathematical formulas.}
 }}
 
 \item{individual_params}{List containing individual-level parameters:
@@ -41,9 +41,9 @@ twolife_simulation(
     \item{neighbor_radius}{Numeric. Distance (in world units) within which other individuals are counted as neighbors for local density calculations. Only used when density_type = 1 (local). See Details section 'Density Calculations' for formula.}
     \item{vision_angle}{Numeric. Angular range (in radians) within which an individual can change direction during random walk dispersal (sampling_points = 0). See Details section 'Habitat Selection' for movement formulas.}
     \item{step_length}{Numeric. Maximum distance (in world units) an individual moves during each dispersal event. For random walk (sampling_points = 0), individual moves exactly this distance in chosen direction. For habitat selection (sampling_points > 0), defines the radius for sampling candidate locations. See Details section 'Habitat Selection' for formulas.}
-    \item{base_dispersal_rate}{Numeric. Baseline probability per time unit that a dispersal event occurs (range: 0-1). Modified by habitat quality for perfect specialists (genotype_sds = 0) via matrix_dispersal_multiplier.}
-    \item{base_birth_rate}{Numeric. Baseline probability per time unit that a birth event occurs (range: 0-1). Modified by density-dependence (see birth_density_slope) and by habitat quality for perfect specialists (specialists cannot reproduce in non-optimal habitat). See Details section 'Birth Rate Calculations' for formulas.}
-    \item{base_mortality_rate}{Numeric. Baseline probability per time unit that a mortality event occurs (range: 0-1). Mathematical application shown in matrix_mortality_multiplier parameter.}
+    \item{base_dispersal_rate}{Numeric. Baseline probability per time unit that a dispersal event occurs (usual range: 0-1). Modified by habitat quality for perfect specialists (genotype_sds = 0) via matrix_dispersal_multiplier.}
+    \item{base_birth_rate}{Numeric. Baseline probability per time unit that a birth event occurs (usual range: 0-1). Modified by density-dependence (see birth_density_slope) and by habitat quality for perfect specialists (specialists cannot reproduce in non-optimal habitat). See Details section 'Birth Rate Calculations' for formulas.}
+    \item{base_mortality_rate}{Numeric. Baseline probability per time unit that a mortality event occurs (usual range: 0-1). Mathematical application shown in matrix_mortality_multiplier parameter.}
     \item{birth_density_slope}{Numeric. Controls the strength of negative density-dependence on birth rate. Higher values cause birth rate to decrease more rapidly as local density increases. See Details section 'Birth Rate Calculations' for formula.}
     \item{mortality_density_slope}{Numeric. Controls the strength of positive density-dependence on mortality rate. Higher values cause mortality rate to increase more rapidly as local density increases. See Details sections 'Matrix Mortality Multiplier' and 'Density Calculations' for formulas.}
     \item{initial_placement_mode}{Integer. Determines how individuals are positioned at simulation start:
@@ -71,8 +71,8 @@ twolife_simulation(
 
 \item{simulation_params}{List containing simulation control parameters:
 \describe{
-  \item{max_events}{Integer. Maximum number of events to simulate before stopping. An "event" is any demographic or movement action: birth, death, dispersal, or emigration. The simulation processes events sequentially until max_events is reached, population goes extinct, or population exceeds 1,000,000. See Details for information on the Gillespie algorithm and time advancement.}
-  \item{neutral_mode}{Logical. If TRUE, creates a null model without genetic variation or habitat selection. Effects: (1) all individuals are assigned the mean genotype of the initial population with no variation, (2) habitat selection is disabled (individuals perform random walk regardless of sampling_points), and (3) no fitness-based selection occurs (all habitats are equivalent). Demographic processes (birth, death, dispersal rates) and movement mechanics remain unchanged. Useful for null model comparisons to isolate effects of genetic variation and habitat selection.}
+  \item{max_events}{Integer. Maximum number of event time units to simulate before stopping. An "event" is any demographic or movement action: birth, death, dispersal, or emigration. The simulation processes events sequentially until max_events is reached, population goes extinct, or population exceeds 1,000,000. See Details for information on the Gillespie algorithm and time advancement.}
+  \item{neutral_mode}{Logical. If TRUE, creates a null model without genetic variation or habitat selection. Effects: (1) all individuals are assigned the mean genotype of the initial population with no variation. Demographic processes (birth, death, dispersal rates) and movement mechanics remain unchanged. Useful for null model comparisons to isolate effects of genetic variation and habitat selection.}
 }}
 
 \item{history_detail}{Character. Level of detail recorded in event history outputed by the function. Higher detail levels enable more analyses but use more memory.
@@ -380,7 +380,6 @@ master_seed = NULL
 }
 
 \examples{
-# Quick example for CRAN checks (< 2 seconds)
 set.seed(100)
 landscape <- create_fractal_landscape(
   cells_per_row = 5,
@@ -388,7 +387,6 @@ landscape <- create_fractal_landscape(
   habitat_proportion = 0.6,
   return_as_landscape_params = TRUE
 )
-
 result <- twolife_simulation(
   landscape_params = landscape,
   individual_params = list(
@@ -396,16 +394,21 @@ result <- twolife_simulation(
     base_birth_rate = 0.4,
     base_mortality_rate = 0.15
   ),
-  simulation_params = list(max_events = 150),
+  simulation_params = list(max_events = 5),
   master_seed = 123
 )
-
 print(result)
+summary(result)
 head(result$survivors)
-
-# With genetic variation
+landscape_genetic <- create_fractal_landscape(
+  cells_per_row = 5,
+  fractality = 0.5,
+  min_value = 0.35,
+  max_value = 0.64,
+  return_as_landscape_params = TRUE
+)
 result_genetic <- twolife_simulation(
-  landscape_params = landscape,
+  landscape_params = landscape_genetic,
   individual_params = list(
     initial_population_size = 15,
     base_birth_rate = 0.4,
@@ -415,30 +418,11 @@ result_genetic <- twolife_simulation(
     genotype_means = rnorm(15, mean = 0.5, sd = 0.15),
     genotype_sds = 0.15
   ),
-  simulation_params = list(max_events = 150),
+  simulation_params = list(max_events = 5),
   master_seed = 456
 )
-
-\donttest{
-# Larger examples (not run during CRAN checks)
-landscape_full <- create_fractal_landscape(
-  cells_per_row = 5,
-  fractality = 0.7,
-  habitat_proportion = 0.4,
-  return_as_landscape_params = TRUE
-)
-
-# Longer simulation for detailed analysis
-result_long <- twolife_simulation(
-  landscape_params = landscape_full,
-  individual_params = list(initial_population_size = 10),
-  simulation_params = list(max_events = 5000),
-  history_detail = "full"
-)
-
-# Analyze population trajectory
-pop_trajectory <- population_size(result_long)
-plot(pop_trajectory$time, pop_trajectory$population_size, type = "l")
-}
-
+summary(result_genetic)
+head(result_genetic$survivors)
+hist(result$survivors$genotype, main = "No Genetic Variation")
+hist(result_genetic$survivors$genotype, main = "With Genetic Variation")
 }

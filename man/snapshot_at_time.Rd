@@ -14,119 +14,167 @@ snapshot_at_time(
 }
 \arguments{
 \item{simulation_result}{A 'twolife_result' object from \code{\link{twolife_simulation}}.
-Must have been created with \code{history_detail = "standard"} or \code{"full"}.}
+Must have been created with \code{history_detail = "standard"} or \code{"full"}.
+The "minimal" history level lacks spatial coordinates and cannot be used.}
 
-\item{target_time}{Numeric. Time point to reconstruct population state.
-Must be >= 0 and <= maximum simulation time. If larger than max time,
+\item{target_time}{Numeric. Time point to reconstruct population state (in simulation time units).
+Must be \eqn{\geq 0} and \eqn{\leq} maximum simulation time. If larger than max time,
 automatically uses final time with a warning.}
 
-\item{color_by}{Character. How to color points in visualization:
+\item{color_by}{Character. Trait used to color points in visualization:
 \itemize{
-  \item "genotype" - Color by genotype values
-  \item "phenotype" - Color by phenotype values (requires history_detail = "full")
-  \item "none" - Single color (red)
+  \item "genotype" - Color by genetic environmental optimum (\eqn{\mu_g})
+  \item "phenotype" - Color by expressed phenotype (\eqn{\mu_p = \mu_g + \epsilon}). 
+    Requires history_detail = "full"
+  \item "none" - Single color (red) for all individuals
 }}
 
-\item{show_plot}{Logical. If TRUE, displays visualization of population at target_time.}
+\item{show_plot}{Logical. If TRUE, displays spatial visualization of reconstructed population
+with landscape background.}
 
-\item{point_size}{Numeric. Size of points in plot.}
+\item{point_size}{Numeric. Size of points representing individuals in the plot.}
 }
 \value{
 Invisibly returns a list with components:
   \describe{
-    \item{time}{Numeric. The target_time used (may differ from input if capped at max time)}
+    \item{time}{Numeric. The actual time used (may differ from input if capped at max time)}
     \item{n_alive}{Integer. Number of living individuals at target_time}
-    \item{population}{Data frame with columns: id (integer), x (numeric), y (numeric),
-      genotype (numeric), phenotype (numeric, NA if history_detail != "full"),
-      width (numeric, NA if history_detail != "full"), patch_id (integer)}
+    \item{population}{Data frame with columns:
+      \itemize{
+        \item id: Integer individual ID
+        \item x, y: Numeric world coordinates
+        \item genotype: Numeric genetic optimum value
+        \item phenotype: Numeric phenotype (NA if history_detail != "full")
+        \item width: Numeric niche width (\eqn{\sigma_g}, NA if history_detail != "full")
+        \item patch_id: Integer landscape cell ID
+      }}
     \item{events_processed}{Integer. Number of events processed up to target_time}
-    \item{history_level}{Character. The history_detail level from the simulation
-      ("minimal", "standard", or "full")}
+    \item{history_level}{Character. The history_detail level: "standard" or "full"}
   }
 }
 \description{
-Replays the event log from a simulation to reconstruct the exact positions
-and states of all living individuals at a specified time point. Useful for
-temporal analysis, creating animations, and studying population dynamics
-at critical moments.
+Replays the event log from a simulation to reconstruct the exact spatial distribution,
+genotypes, and phenotypes of all living individuals at a specified time point. 
+Essential for temporal analysis, creating animations, studying critical demographic 
+transitions, and visualizing spatial-genetic patterns through time.
 }
 \details{
-This function requires simulations run with \code{history_detail = "standard"} or
-\code{"full"}. The "minimal" history level does not record spatial coordinates,
-making reconstruction impossible. The function will check and provide a clear
-error message if the result doesn't support snapshots.
+## Reconstruction Algorithm
 
-The reconstruction works by:
-\enumerate{
-  \item Filtering events up to target_time
-  \item Tracking births and deaths to determine who is alive
-  \item Recording the most recent position for each living individual
-  \item Optionally visualizing the spatial distribution
+The function reconstructs population state using:
+
+\deqn{P(t) = \{i : t_{\text{birth},i} \leq t < t_{\text{death},i}\}}
+
+Where:
+\itemize{
+  \item \eqn{P(t)} = set of individuals alive at time \eqn{t}
+  \item \eqn{t_{\text{birth},i}} = birth time of individual \eqn{i}
+  \item \eqn{t_{\text{death},i}} = death/emigration time of individual \eqn{i} 
+    (or \eqn{+\infty} if still alive)
 }
+
+Pseudocode:
+```
+1. Initialize empty population tracker
+2. Filter events: keep only events with time <= target_time
+3. For each event in chronological order:
+   - If birth (type = 1) or initial (type = -1): Add individual to alive set
+   - If death (type = 0) or emigration (type = 3): Remove from alive set
+   - If movement (type = 2): Update position of individual
+4. For each alive individual, retrieve most recent state (position, genotype, phenotype)
+5. Return reconstructed population
+```
+
+## Temporal Resolution
+
+Reconstruction accuracy depends on event density:
+\itemize{
+  \item **High temporal resolution**: Many events per time unit → precise state reconstruction
+  \item **Low temporal resolution**: Few events per time unit → states may span long intervals
+  \item Between events, individual states remain constant (positions frozen until next movement)
+}
+
+This reflects the event-based nature of individual-based models: changes only occur 
+at discrete event times.
+
+## History Detail Requirements
+
+\tabular{lll}{
+  \strong{history_detail} \tab \strong{Available Data} \tab \strong{color_by Options} \cr
+  "minimal" \tab Event times, types only \tab Cannot reconstruct \cr
+  "standard" \tab + positions, genotypes \tab "genotype", "none" \cr
+  "full" \tab + phenotypes, niche widths \tab All options \cr
+}
+
+## Visualization Components
+
+When show_plot = TRUE:
+\itemize{
+  \item **Background**: Habitat quality from landscape matrix
+  \item **Points**: Individual positions colored by selected trait
+  \item **Title**: Shows target_time and number of individuals alive
+  \item **Legend**: Maps colors to trait values (if color_by != "none")
+}
+
+## Animation Workflow
+
+To create animations:
+1. Get time points: \code{times <- seq(0, max_time, length.out = 50)}
+2. For each time: \code{snapshot_at_time(result, t)}
+3. Save plots or compile frames into video
+
+See Examples for complete animation code.
 }
 \examples{
-# Quick example
+set.seed(100)
 landscape <- create_fractal_landscape(
   cells_per_row = 5,
   fractality = 0.5,
-  habitat_proportion = 0.5,
+  habitat_proportion = 0.6,
   return_as_landscape_params = TRUE
 )
-
-# Run with standard history
+landscape_genetic <- create_fractal_landscape(
+  cells_per_row = 5,
+  fractality = 0.5,
+  min_value = 0.35,
+  max_value = 0.64,
+  return_as_landscape_params = TRUE
+)
 result <- twolife_simulation(
   landscape_params = landscape,
-  individual_params = list(initial_population_size = 10),
-  simulation_params = list(max_events = 100),
-  history_detail = "standard",
+  individual_params = list(
+    initial_population_size = 15,
+    base_birth_rate = 0.4,
+    base_mortality_rate = 0.15
+  ),
+  simulation_params = list(max_events = 5),
   master_seed = 123
 )
-
-# Get trajectory to find interesting time
-traj <- population_size(result)
-mid_time <- traj$time[nrow(traj) \%/\% 2]
-
-# Reconstruct population at midpoint
-state <- snapshot_at_time(result, target_time = mid_time, show_plot = FALSE)
-
-# Examine the snapshot
-cat("Population at time", state$time, ":", state$n_alive, "individuals\n")
-head(state$population)
-
-\donttest{
-# Larger example with visualization
-landscape_big <- create_fractal_landscape(
-  cells_per_row = 5,
-  fractality = 0.7,
-  habitat_proportion = 0.4,
-  return_as_landscape_params = TRUE
-)
-
-result_big <- twolife_simulation(
-  landscape_params = landscape_big,
-  individual_params = list(initial_population_size = 10),
-  simulation_params = list(max_events = 150),
-  history_detail = "standard",
+result_genetic <- twolife_simulation(
+  landscape_params = landscape_genetic,
+  individual_params = list(
+    initial_population_size = 15,
+    base_birth_rate = 0.4,
+    base_mortality_rate = 0.15
+  ),
+  genetic_params = list(
+    genotype_means = rnorm(15, mean = 0.5, sd = 0.15),
+    genotype_sds = 0.15
+  ),
+  simulation_params = list(max_events = 5),
   master_seed = 456
 )
-
-traj_big <- population_size(result_big)
-mid_time_big <- traj_big$time[nrow(traj_big) \%/\% 2]
-
-# With plotting
-snapshot_at_time(result_big, target_time = mid_time_big)
-
-# Create animation sequence
-times <- seq(0, max(traj_big$time), length.out = 10)
-for (t in times) {
-  snapshot_at_time(result_big, target_time = t,
-                  color_by = "genotype", point_size = 3)
-  Sys.sleep(0.5)  # Pause between frames
+state_5 <- snapshot_at_time(result, 5, show_plot = FALSE)
+state_genetic_5 <- snapshot_at_time(result_genetic, 5, show_plot = FALSE)
+cat("At time 5 (no variation):", state_5$n_alive, "individuals\n")
+cat("At time 5 (with variation):", state_genetic_5$n_alive, "individuals\n")
+if (state_genetic_5$n_alive > 0) {
+  cat("Mean genotype:", mean(state_genetic_5$population$genotype), "\n")
+  cat("SD genotype:", sd(state_genetic_5$population$genotype), "\n")
 }
-}
-
 }
 \seealso{
 \code{\link{population_size}} for population trajectories,
-  \code{\link{twolife_simulation}} for running simulations with appropriate history_detail
+  \code{\link{twolife_simulation}} for running simulations with appropriate history_detail,
+  \code{\link{check_habitat_match}} for analyzing trait-habitat matching
 }

@@ -104,61 +104,55 @@ Connection to Simulation Demography:
   and greater probability of leaving offspring.
 }
 \examples{
-# Create landscape
-set.seed(456)
+set.seed(100)
 landscape <- create_fractal_landscape(
   cells_per_row = 5,
   fractality = 0.5,
   habitat_proportion = 0.6,
   return_as_landscape_params = TRUE
 )
-
-# Run simulation
+landscape_genetic <- create_fractal_landscape(
+  cells_per_row = 5,
+  fractality = 0.5,
+  min_value = 0.35,
+  max_value = 0.64,
+  return_as_landscape_params = TRUE
+)
 result <- twolife_simulation(
   landscape_params = landscape,
   individual_params = list(
-    initial_population_size = 25,
-    base_birth_rate = 0.5,
-    base_mortality_rate = 0.1
+    initial_population_size = 15,
+    base_birth_rate = 0.4,
+    base_mortality_rate = 0.15
+  ),
+  simulation_params = list(max_events = 5),
+  master_seed = 123
+)
+result_genetic <- twolife_simulation(
+  landscape_params = landscape_genetic,
+  individual_params = list(
+    initial_population_size = 15,
+    base_birth_rate = 0.4,
+    base_mortality_rate = 0.15
   ),
   genetic_params = list(
-    genotype_means = runif(25, 0.4, 0.6),
-    genotype_sds = 0.2
+    genotype_means = rnorm(15, mean = 0.5, sd = 0.15),
+    genotype_sds = 0.15
   ),
-  simulation_params = list(max_events = 250),
-  master_seed = 567
+  simulation_params = list(max_events = 5),
+  master_seed = 456
 )
-
-# Calculate fitness statistics
-fitness_stats <- habitat_mismatch(result)
-
-# Print formatted output
-print(fitness_stats)
-
-# Access specific metrics
-cat("Mean fitness:", fitness_stats$mean_fitness, "\n")
-cat("Correlation:", fitness_stats$correlation, "\n")
-cat("\% high fitness:", fitness_stats$percent_high_fitness, "\n")
-
-\donttest{
-# Compare with neutral scenario
-result_neutral <- twolife_simulation(
-  landscape_params = landscape,
-  individual_params = list(initial_population_size = 10),
-  genetic_params = list(genotype_means = runif(10, 0, 1)),
-  simulation_params = list(max_events = 1500, neutral_mode = TRUE),
-  master_seed = 888
-)
-
-fitness_neutral <- habitat_mismatch(result_neutral)
-
-# Compare
-cat("With selection - Mean fitness:", fitness_stats$mean_fitness, "\n")
-cat("Neutral - Mean fitness:", fitness_neutral$mean_fitness, "\n")
-cat("With selection - Correlation:", fitness_stats$correlation, "\n")
-cat("Neutral - Correlation:", fitness_neutral$correlation, "\n")
-}
-
+mismatch <- habitat_mismatch(result)
+mismatch_genetic <- habitat_mismatch(result_genetic)
+print(mismatch)
+print(mismatch_genetic)
+cat("\nNo genetic variation:\n")
+cat("  Mean fitness:", mismatch$mean_fitness, "\n")
+cat("  Correlation:", mismatch$correlation, "\n")
+cat("\nWith genetic variation:\n")
+cat("  Mean fitness:", mismatch_genetic$mean_fitness, "\n")
+cat("  Correlation:", mismatch_genetic$correlation, "\n")
+cat("  \% high fitness:", mismatch_genetic$percent_high_fitness, "\n")
 }
 \seealso{
 \code{\link{check_habitat_match}} for visual validation

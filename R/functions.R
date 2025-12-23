@@ -21,7 +21,7 @@ NULL
 #'
 #' @param landscape_params List containing landscape parameters:
 #'   \describe{
-#'     \item{habitat}{Matrix (integer, logical or numeric). World Habitat Pixel Matrix. Matriz values should be binary (0/1, T/F) or continuous habitat values (from 0 to 1). Each value represents represents an environmental quality value of a pixel. Individuals experience fitness effects based on how well their phenotype matches the habitat value of the pixel they are located.  Matrix dimensions define the landscape size and grid resolution. Required.}
+#'     \item{habitat}{Matrix (integer, logical or numeric). World Habitat Pixel Matrix. Matriz values should be binary (0/1) or continuous habitat values (usually from 0 to 1). Each value represents represents an environmental quality value of a pixel. Individuals experience fitness effects based on how well their phenotype matches the habitat value of the pixel they are located.  Matrix dimensions define the landscape size and grid resolution. Required.}
 #'     \item{cell_size}{Numeric. Length of the side of a landscape cell in world units. Defines the spatial resolution of the landscape. If habitat is a 100x100 matrix and cell_size = 1.0, the simulated world dimensions are 100x100 world units (world_width = 100, world_height = 100). All spatial parameters (step_length, neighbor_radius, coordinates) use these same world units. The position of individuals have are in continuous (x,y) coordinates and are not restricted to pixel centers.}
 #'     \item{boundary_condition}{Integer. Defines what happens to individuals that reach the edges of world borders:
 #'       \itemize{
@@ -37,7 +37,7 @@ NULL
 #'       
 #'       This density value is then used in birth and mortality rate calculations via birth_density_slope and mortality_density_slope parameters. See Details for mathematical formulas.}
 #'     \item{matrix_mortality_multiplier}{Numeric. Mortality rate multiplier applied based on habitat suitability. Controls how mortality scales from optimal to unsuitable habitat. Values > 1 increase mortality in poor-quality habitat, creating "hostile matrix" effects. For perfect specialists (genotype_sds = 0), the multiplier is applied directly in non-optimal habitat. For generalists (genotype_sds > 0), mortality is interpolated based on fitness, creating a smooth gradient. See Details for mathematical formulas.}
-#'     \item{matrix_dispersal_multiplier}{Numeric. Dispersal rate multiplier applied based on habitat suitability. Controls the frequency of dispersal events (not the distance per event) in unsuitable habitat. Values < 1 reduce dispersal frequency in matrix, while values > 1 increase it. For perfect specialists (genotype_sds = 0), the multiplier is applied in non-optimal habitat. For generalists (genotype_sds > 0), dispersal rate remains at base_dispersal_rate regardless of habitat. Important: This affects the rate of dispersal events, NOT the distance (step_length). See Details for mathematical formulas.}
+#'     \item{matrix_dispersal_multiplier}{Numeric. Dispersal rate multiplier applied based on habitat suitability. Controls the frequency of dispersal events in unsuitable habitat. Values < 1 reduce dispersal frequency in matrix, while values > 1 increase it. For perfect specialists (genotype_sds = 0), the multiplier is applied in non-optimal habitat. For generalists (genotype_sds > 0), dispersal rate remains at base_dispersal_rate regardless of habitat. Important: This affects the rate of dispersal events, NOT the distance (step_length). See Details for mathematical formulas.}
 #'   }
 #' @param individual_params List containing individual-level parameters:
 #'   \describe{
@@ -45,9 +45,9 @@ NULL
 #'     \item{neighbor_radius}{Numeric. Distance (in world units) within which other individuals are counted as neighbors for local density calculations. Only used when density_type = 1 (local). See Details section 'Density Calculations' for formula.}
 #'     \item{vision_angle}{Numeric. Angular range (in radians) within which an individual can change direction during random walk dispersal (sampling_points = 0). See Details section 'Habitat Selection' for movement formulas.}
 #'     \item{step_length}{Numeric. Maximum distance (in world units) an individual moves during each dispersal event. For random walk (sampling_points = 0), individual moves exactly this distance in chosen direction. For habitat selection (sampling_points > 0), defines the radius for sampling candidate locations. See Details section 'Habitat Selection' for formulas.}
-#'     \item{base_dispersal_rate}{Numeric. Baseline probability per time unit that a dispersal event occurs (range: 0-1). Modified by habitat quality for perfect specialists (genotype_sds = 0) via matrix_dispersal_multiplier.}
-#'     \item{base_birth_rate}{Numeric. Baseline probability per time unit that a birth event occurs (range: 0-1). Modified by density-dependence (see birth_density_slope) and by habitat quality for perfect specialists (specialists cannot reproduce in non-optimal habitat). See Details section 'Birth Rate Calculations' for formulas.}
-#'     \item{base_mortality_rate}{Numeric. Baseline probability per time unit that a mortality event occurs (range: 0-1). Mathematical application shown in matrix_mortality_multiplier parameter.}
+#'     \item{base_dispersal_rate}{Numeric. Baseline probability per time unit that a dispersal event occurs (usual range: 0-1). Modified by habitat quality for perfect specialists (genotype_sds = 0) via matrix_dispersal_multiplier.}
+#'     \item{base_birth_rate}{Numeric. Baseline probability per time unit that a birth event occurs (usual range: 0-1). Modified by density-dependence (see birth_density_slope) and by habitat quality for perfect specialists (specialists cannot reproduce in non-optimal habitat). See Details section 'Birth Rate Calculations' for formulas.}
+#'     \item{base_mortality_rate}{Numeric. Baseline probability per time unit that a mortality event occurs (usual range: 0-1). Mathematical application shown in matrix_mortality_multiplier parameter.}
 #'     \item{birth_density_slope}{Numeric. Controls the strength of negative density-dependence on birth rate. Higher values cause birth rate to decrease more rapidly as local density increases. See Details section 'Birth Rate Calculations' for formula.}
 #'     \item{mortality_density_slope}{Numeric. Controls the strength of positive density-dependence on mortality rate. Higher values cause mortality rate to increase more rapidly as local density increases. See Details sections 'Matrix Mortality Multiplier' and 'Density Calculations' for formulas.}
 #'     \item{initial_placement_mode}{Integer. Determines how individuals are positioned at simulation start:
@@ -73,8 +73,8 @@ NULL
 #'   }
 #' @param simulation_params List containing simulation control parameters:
 #'   \describe{
-#'     \item{max_events}{Integer. Maximum number of events to simulate before stopping. An "event" is any demographic or movement action: birth, death, dispersal, or emigration. The simulation processes events sequentially until max_events is reached, population goes extinct, or population exceeds 1,000,000. See Details for information on the Gillespie algorithm and time advancement.}
-#'     \item{neutral_mode}{Logical. If TRUE, creates a null model without genetic variation or habitat selection. Effects: (1) all individuals are assigned the mean genotype of the initial population with no variation, (2) habitat selection is disabled (individuals perform random walk regardless of sampling_points), and (3) no fitness-based selection occurs (all habitats are equivalent). Demographic processes (birth, death, dispersal rates) and movement mechanics remain unchanged. Useful for null model comparisons to isolate effects of genetic variation and habitat selection.}
+#'     \item{max_events}{Integer. Maximum number of event time units to simulate before stopping. An "event" is any demographic or movement action: birth, death, dispersal, or emigration. The simulation processes events sequentially until max_events is reached, population goes extinct, or population exceeds 1,000,000. See Details for information on the Gillespie algorithm and time advancement.}
+#'     \item{neutral_mode}{Logical. If TRUE, creates a null model without genetic variation or habitat selection. Effects: (1) all individuals are assigned the mean genotype of the initial population with no variation. Demographic processes (birth, death, dispersal rates) and movement mechanics remain unchanged. Useful for null model comparisons to isolate effects of genetic variation and habitat selection.}
 #'   }
 #' @param history_detail Character. Level of detail recorded in event history outputed by the function. Higher detail levels enable more analyses but use more memory.
 #'
@@ -373,7 +373,6 @@ NULL
 #'   }
 #'
 #' @examples
-#' # Quick example for CRAN checks (< 2 seconds)
 #' set.seed(100)
 #' landscape <- create_fractal_landscape(
 #'   cells_per_row = 5,
@@ -381,7 +380,6 @@ NULL
 #'   habitat_proportion = 0.6,
 #'   return_as_landscape_params = TRUE
 #' )
-#'
 #' result <- twolife_simulation(
 #'   landscape_params = landscape,
 #'   individual_params = list(
@@ -389,16 +387,21 @@ NULL
 #'     base_birth_rate = 0.4,
 #'     base_mortality_rate = 0.15
 #'   ),
-#'   simulation_params = list(max_events = 150),
+#'   simulation_params = list(max_events = 5),
 #'   master_seed = 123
 #' )
-#'
 #' print(result)
+#' summary(result)
 #' head(result$survivors)
-#'
-#' # With genetic variation
+#' landscape_genetic <- create_fractal_landscape(
+#'   cells_per_row = 5,
+#'   fractality = 0.5,
+#'   min_value = 0.35,
+#'   max_value = 0.64,
+#'   return_as_landscape_params = TRUE
+#' )
 #' result_genetic <- twolife_simulation(
-#'   landscape_params = landscape,
+#'   landscape_params = landscape_genetic,
 #'   individual_params = list(
 #'     initial_population_size = 15,
 #'     base_birth_rate = 0.4,
@@ -408,32 +411,13 @@ NULL
 #'     genotype_means = rnorm(15, mean = 0.5, sd = 0.15),
 #'     genotype_sds = 0.15
 #'   ),
-#'   simulation_params = list(max_events = 150),
+#'   simulation_params = list(max_events = 5),
 #'   master_seed = 456
 #' )
-#'
-#' \donttest{
-#' # Larger examples (not run during CRAN checks)
-#' landscape_full <- create_fractal_landscape(
-#'   cells_per_row = 5,
-#'   fractality = 0.7,
-#'   habitat_proportion = 0.4,
-#'   return_as_landscape_params = TRUE
-#' )
-#'
-#' # Longer simulation for detailed analysis
-#' result_long <- twolife_simulation(
-#'   landscape_params = landscape_full,
-#'   individual_params = list(initial_population_size = 10),
-#'   simulation_params = list(max_events = 5000),
-#'   history_detail = "full"
-#' )
-#'
-#' # Analyze population trajectory
-#' pop_trajectory <- population_size(result_long)
-#' plot(pop_trajectory$time, pop_trajectory$population_size, type = "l")
-#' }
-#'
+#' summary(result_genetic)
+#' head(result_genetic$survivors)
+#' hist(result$survivors$genotype, main = "No Genetic Variation")
+#' hist(result_genetic$survivors$genotype, main = "With Genetic Variation")
 #' @export
 twolife_simulation <- function(landscape_params = list(),
                                individual_params = list(),
@@ -708,45 +692,90 @@ twolife_simulation <- function(landscape_params = list(),
 
 #' Calculate Population Trajectory Over Time
 #'
-#' Computes population size at each event time from simulation results.
-#' Works with all history_detail levels (only requires event times and types).
-#' Useful for analyzing population dynamics, detecting extinctions, and
-#' identifying critical time points.
+#' Computes population size at each event time from simulation results by 
+#' tracking the cumulative effects of demographic events. Essential for 
+#' analyzing population dynamics, growth rates, extinction risk, and 
+#' identifying critical demographic transitions. Compatible with all 
+#' history_detail levels.
 #'
 #' @param result A 'twolife_result' object returned by \code{\link{twolife_simulation}}.
 #'   Must contain \code{$events$times} and \code{$events$types} components.
 #'
 #' @return A data frame with two columns:
 #'   \describe{
-#'     \item{time}{Numeric. Event times in chronological order}
-#'     \item{population_size}{Integer. Population size at each event time (cumulative sum of births and deaths)}
+#'     \item{time}{Numeric. Event times in chronological order (in simulation time units)}
+#'     \item{population_size}{Integer. Population size at each event time, calculated
+#'       as cumulative sum of demographic changes}
 #'   }
 #'
 #' @details
-#' Event types and their effects on population size:
+#' ## Algorithm
+#' 
+#' Population size at time \eqn{t} is calculated using:
+#' 
+#' \deqn{N(t) = N_0 + \sum_{i=1}^{t} \Delta N_i}
+#' 
+#' Where:
 #' \itemize{
-#'   \item -1 (initial): +1 to population
-#'   \item 0 (death): -1 from population
-#'   \item 1 (birth): +1 to population
-#'   \item 2 (movement): no change to population
-#'   \item 3 (emigration): -1 from population (only occurs with absorbing boundaries)
+#'   \item \eqn{N(t)} = population size at time t
+#'   \item \eqn{N_0} = initial population size
+#'   \item \eqn{\Delta N_i} = population change from event i
 #' }
-#'
-#' Note: Emigration events (type 3) only occur when boundary_condition = 2 (absorbing).
-#' With reflective boundaries (1), individuals bounce back. With periodic boundaries (3),
-#' individuals wrap around.
-#'
+#' 
+#' ## Event Types and Population Change
+#' 
+#' Each event type contributes differently to \eqn{\Delta N}:
+#' 
+#' \itemize{
+#'   \item **-1 (initial)**: \eqn{\Delta N = +1}. Records each founding individual
+#'   \item **0 (death)**: \eqn{\Delta N = -1}. Mortality event
+#'   \item **1 (birth)**: \eqn{\Delta N = +1}. Successful reproduction
+#'   \item **2 (movement/dispersal)**: \eqn{\Delta N = 0}. Spatial redistribution only
+#'   \item **3 (emigration)**: \eqn{\Delta N = -1}. Individual crosses absorbing boundary
+#' }
+#' 
+#' ## Boundary Condition Effects
+#' 
+#' Emigration events (type 3) only occur with **boundary_condition = 2** (absorbing):
+#' \itemize{
+#'   \item boundary_condition = 1 (reflective): Individuals bounce back, no emigration
+#'   \item boundary_condition = 2 (absorbing): Crossing boundary causes emigration (\eqn{\Delta N = -1})
+#'   \item boundary_condition = 3 (periodic): Individuals wrap around, no emigration
+#' }
+#' 
+#' ## Time Scaling
+#' 
+#' Event times follow the Gillespie algorithm (see \code{\link{twolife_simulation}} Details).
+#' Time intervals between events are exponentially distributed with rate proportional 
+#' to total demographic rates. Faster dynamics (higher birth/death rates) compress 
+#' more events into less time.
+#' 
+#' ## Analysis Applications
+#' 
+#' This function enables:
+#' \itemize{
+#'   \item **Population viability analysis**: Detect extinction times and probabilities
+#'   \item **Growth rate estimation**: Calculate \eqn{r = \frac{1}{t}\log\frac{N(t)}{N_0}}
+#'   \item **Demographic transitions**: Identify when population stabilizes or crashes
+#'   \item **Density-dependent effects**: Compare trajectories with different density parameters
+#'   \item **Animation frames**: Provides time points for \code{\link{snapshot_at_time}}
+#' }
+#' 
 #' @examples
-#' # Quick example
-#' set.seed(300)
+#' set.seed(100)
 #' landscape <- create_fractal_landscape(
 #'   cells_per_row = 5,
 #'   fractality = 0.5,
 #'   habitat_proportion = 0.6,
 #'   return_as_landscape_params = TRUE
 #' )
-#'
-#' # Run simulation
+#' landscape_genetic <- create_fractal_landscape(
+#'   cells_per_row = 5,
+#'   fractality = 0.5,
+#'   min_value = 0.35,
+#'   max_value = 0.64,
+#'   return_as_landscape_params = TRUE
+#' )
 #' result <- twolife_simulation(
 #'   landscape_params = landscape,
 #'   individual_params = list(
@@ -754,26 +783,30 @@ twolife_simulation <- function(landscape_params = list(),
 #'     base_birth_rate = 0.4,
 #'     base_mortality_rate = 0.15
 #'   ),
-#'   simulation_params = list(max_events = 150),
-#'   master_seed = 789
+#'   simulation_params = list(max_events = 5),
+#'   master_seed = 123
 #' )
-#'
-#' # Calculate trajectory
+#' result_genetic <- twolife_simulation(
+#'   landscape_params = landscape_genetic,
+#'   individual_params = list(
+#'     initial_population_size = 15,
+#'     base_birth_rate = 0.4,
+#'     base_mortality_rate = 0.15
+#'   ),
+#'   genetic_params = list(
+#'     genotype_means = rnorm(15, mean = 0.5, sd = 0.15),
+#'     genotype_sds = 0.15
+#'   ),
+#'   simulation_params = list(max_events = 5),
+#'   master_seed = 456
+#' )
 #' trajectory <- population_size(result)
-#' head(trajectory)
-#'
-#' # Plot population over time
-#' plot(trajectory$time, trajectory$population_size,
-#'      type = "l",
-#'      xlab = "Time",
-#'      ylab = "Population Size",
-#'      main = "Population Dynamics")
-#'
-#' # Find peak population
-#' peak_time <- trajectory$time[which.max(trajectory$population_size)]
-#' peak_size <- max(trajectory$population_size)
-#' cat("Peak population:", peak_size, "at time", peak_time, "\n")
-#'
+#' trajectory_genetic <- population_size(result_genetic)
+#' ylim_max <- max(trajectory$population_size, trajectory_genetic$population_size)
+#' plot(trajectory, main = "No Genetic Variation", ylim = c(0, ylim_max))
+#' plot(trajectory_genetic, main = "With Genetic Variation", ylim = c(0, ylim_max))
+#' cat("Final size (no variation):", tail(trajectory$population_size, 1), "\n")
+#' cat("Final size (with variation):", tail(trajectory_genetic$population_size, 1), "\n")
 #' @seealso \code{\link{twolife_simulation}} for running simulations,
 #'   \code{\link{snapshot_at_time}} for reconstructing population state at specific times
 #'
@@ -800,114 +833,162 @@ population_size <- function(result) {
 
 #' Reconstruct Population State at Specific Time
 #'
-#' Replays the event log from a simulation to reconstruct the exact positions
-#' and states of all living individuals at a specified time point. Useful for
-#' temporal analysis, creating animations, and studying population dynamics
-#' at critical moments.
+#' Replays the event log from a simulation to reconstruct the exact spatial distribution,
+#' genotypes, and phenotypes of all living individuals at a specified time point. 
+#' Essential for temporal analysis, creating animations, studying critical demographic 
+#' transitions, and visualizing spatial-genetic patterns through time.
 #'
 #' @param simulation_result A 'twolife_result' object from \code{\link{twolife_simulation}}.
 #'   Must have been created with \code{history_detail = "standard"} or \code{"full"}.
-#' @param target_time Numeric. Time point to reconstruct population state.
-#'   Must be >= 0 and <= maximum simulation time. If larger than max time,
+#'   The "minimal" history level lacks spatial coordinates and cannot be used.
+#' @param target_time Numeric. Time point to reconstruct population state (in simulation time units).
+#'   Must be \eqn{\geq 0} and \eqn{\leq} maximum simulation time. If larger than max time,
 #'   automatically uses final time with a warning.
-#' @param color_by Character. How to color points in visualization:
+#' @param color_by Character. Trait used to color points in visualization:
 #'   \itemize{
-#'     \item "genotype" - Color by genotype values
-#'     \item "phenotype" - Color by phenotype values (requires history_detail = "full")
-#'     \item "none" - Single color (red)
+#'     \item "genotype" - Color by genetic environmental optimum (\eqn{\mu_g})
+#'     \item "phenotype" - Color by expressed phenotype (\eqn{\mu_p = \mu_g + \epsilon}). 
+#'       Requires history_detail = "full"
+#'     \item "none" - Single color (red) for all individuals
 #'   }
-#' @param show_plot Logical. If TRUE, displays visualization of population at target_time.
-#' @param point_size Numeric. Size of points in plot.
+#' @param show_plot Logical. If TRUE, displays spatial visualization of reconstructed population
+#'   with landscape background.
+#' @param point_size Numeric. Size of points representing individuals in the plot.
 #'
 #' @return Invisibly returns a list with components:
 #'   \describe{
-#'     \item{time}{Numeric. The target_time used (may differ from input if capped at max time)}
+#'     \item{time}{Numeric. The actual time used (may differ from input if capped at max time)}
 #'     \item{n_alive}{Integer. Number of living individuals at target_time}
-#'     \item{population}{Data frame with columns: id (integer), x (numeric), y (numeric),
-#'       genotype (numeric), phenotype (numeric, NA if history_detail != "full"),
-#'       width (numeric, NA if history_detail != "full"), patch_id (integer)}
+#'     \item{population}{Data frame with columns:
+#'       \itemize{
+#'         \item id: Integer individual ID
+#'         \item x, y: Numeric world coordinates
+#'         \item genotype: Numeric genetic optimum value
+#'         \item phenotype: Numeric phenotype (NA if history_detail != "full")
+#'         \item width: Numeric niche width (\eqn{\sigma_g}, NA if history_detail != "full")
+#'         \item patch_id: Integer landscape cell ID
+#'       }}
 #'     \item{events_processed}{Integer. Number of events processed up to target_time}
-#'     \item{history_level}{Character. The history_detail level from the simulation
-#'       ("minimal", "standard", or "full")}
+#'     \item{history_level}{Character. The history_detail level: "standard" or "full"}
 #'   }
 #'
 #' @details
-#' This function requires simulations run with \code{history_detail = "standard"} or
-#' \code{"full"}. The "minimal" history level does not record spatial coordinates,
-#' making reconstruction impossible. The function will check and provide a clear
-#' error message if the result doesn't support snapshots.
-#'
-#' The reconstruction works by:
-#' \enumerate{
-#'   \item Filtering events up to target_time
-#'   \item Tracking births and deaths to determine who is alive
-#'   \item Recording the most recent position for each living individual
-#'   \item Optionally visualizing the spatial distribution
+#' ## Reconstruction Algorithm
+#' 
+#' The function reconstructs population state using:
+#' 
+#' \deqn{P(t) = \{i : t_{\text{birth},i} \leq t < t_{\text{death},i}\}}
+#' 
+#' Where:
+#' \itemize{
+#'   \item \eqn{P(t)} = set of individuals alive at time \eqn{t}
+#'   \item \eqn{t_{\text{birth},i}} = birth time of individual \eqn{i}
+#'   \item \eqn{t_{\text{death},i}} = death/emigration time of individual \eqn{i} 
+#'     (or \eqn{+\infty} if still alive)
 #' }
-#'
+#' 
+#' Pseudocode:
+#' ```
+#' 1. Initialize empty population tracker
+#' 2. Filter events: keep only events with time <= target_time
+#' 3. For each event in chronological order:
+#'    - If birth (type = 1) or initial (type = -1): Add individual to alive set
+#'    - If death (type = 0) or emigration (type = 3): Remove from alive set
+#'    - If movement (type = 2): Update position of individual
+#' 4. For each alive individual, retrieve most recent state (position, genotype, phenotype)
+#' 5. Return reconstructed population
+#' ```
+#' 
+#' ## Temporal Resolution
+#' 
+#' Reconstruction accuracy depends on event density:
+#' \itemize{
+#'   \item **High temporal resolution**: Many events per time unit → precise state reconstruction
+#'   \item **Low temporal resolution**: Few events per time unit → states may span long intervals
+#'   \item Between events, individual states remain constant (positions frozen until next movement)
+#' }
+#' 
+#' This reflects the event-based nature of individual-based models: changes only occur 
+#' at discrete event times.
+#' 
+#' ## History Detail Requirements
+#' 
+#' \tabular{lll}{
+#'   \strong{history_detail} \tab \strong{Available Data} \tab \strong{color_by Options} \cr
+#'   "minimal" \tab Event times, types only \tab Cannot reconstruct \cr
+#'   "standard" \tab + positions, genotypes \tab "genotype", "none" \cr
+#'   "full" \tab + phenotypes, niche widths \tab All options \cr
+#' }
+#' 
+#' ## Visualization Components
+#' 
+#' When show_plot = TRUE:
+#' \itemize{
+#'   \item **Background**: Habitat quality from landscape matrix
+#'   \item **Points**: Individual positions colored by selected trait
+#'   \item **Title**: Shows target_time and number of individuals alive
+#'   \item **Legend**: Maps colors to trait values (if color_by != "none")
+#' }
+#' 
+#' ## Animation Workflow
+#' 
+#' To create animations:
+#' 1. Get time points: \code{times <- seq(0, max_time, length.out = 50)}
+#' 2. For each time: \code{snapshot_at_time(result, t)}
+#' 3. Save plots or compile frames into video
+#' 
+#' See Examples for complete animation code.
+#' 
 #' @examples
-#' # Quick example
+#' set.seed(100)
 #' landscape <- create_fractal_landscape(
 #'   cells_per_row = 5,
 #'   fractality = 0.5,
-#'   habitat_proportion = 0.5,
+#'   habitat_proportion = 0.6,
 #'   return_as_landscape_params = TRUE
 #' )
-#'
-#' # Run with standard history
+#' landscape_genetic <- create_fractal_landscape(
+#'   cells_per_row = 5,
+#'   fractality = 0.5,
+#'   min_value = 0.35,
+#'   max_value = 0.64,
+#'   return_as_landscape_params = TRUE
+#' )
 #' result <- twolife_simulation(
 #'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 10),
-#'   simulation_params = list(max_events = 100),
-#'   history_detail = "standard",
+#'   individual_params = list(
+#'     initial_population_size = 15,
+#'     base_birth_rate = 0.4,
+#'     base_mortality_rate = 0.15
+#'   ),
+#'   simulation_params = list(max_events = 5),
 #'   master_seed = 123
 #' )
-#'
-#' # Get trajectory to find interesting time
-#' traj <- population_size(result)
-#' mid_time <- traj$time[nrow(traj) %/% 2]
-#'
-#' # Reconstruct population at midpoint
-#' state <- snapshot_at_time(result, target_time = mid_time, show_plot = FALSE)
-#'
-#' # Examine the snapshot
-#' cat("Population at time", state$time, ":", state$n_alive, "individuals\n")
-#' head(state$population)
-#'
-#' \donttest{
-#' # Larger example with visualization
-#' landscape_big <- create_fractal_landscape(
-#'   cells_per_row = 5,
-#'   fractality = 0.7,
-#'   habitat_proportion = 0.4,
-#'   return_as_landscape_params = TRUE
-#' )
-#'
-#' result_big <- twolife_simulation(
-#'   landscape_params = landscape_big,
-#'   individual_params = list(initial_population_size = 10),
-#'   simulation_params = list(max_events = 150),
-#'   history_detail = "standard",
+#' result_genetic <- twolife_simulation(
+#'   landscape_params = landscape_genetic,
+#'   individual_params = list(
+#'     initial_population_size = 15,
+#'     base_birth_rate = 0.4,
+#'     base_mortality_rate = 0.15
+#'   ),
+#'   genetic_params = list(
+#'     genotype_means = rnorm(15, mean = 0.5, sd = 0.15),
+#'     genotype_sds = 0.15
+#'   ),
+#'   simulation_params = list(max_events = 5),
 #'   master_seed = 456
 #' )
-#'
-#' traj_big <- population_size(result_big)
-#' mid_time_big <- traj_big$time[nrow(traj_big) %/% 2]
-#'
-#' # With plotting
-#' snapshot_at_time(result_big, target_time = mid_time_big)
-#'
-#' # Create animation sequence
-#' times <- seq(0, max(traj_big$time), length.out = 10)
-#' for (t in times) {
-#'   snapshot_at_time(result_big, target_time = t,
-#'                   color_by = "genotype", point_size = 3)
-#'   Sys.sleep(0.5)  # Pause between frames
+#' state_5 <- snapshot_at_time(result, 5, show_plot = FALSE)
+#' state_genetic_5 <- snapshot_at_time(result_genetic, 5, show_plot = FALSE)
+#' cat("At time 5 (no variation):", state_5$n_alive, "individuals\n")
+#' cat("At time 5 (with variation):", state_genetic_5$n_alive, "individuals\n")
+#' if (state_genetic_5$n_alive > 0) {
+#'   cat("Mean genotype:", mean(state_genetic_5$population$genotype), "\n")
+#'   cat("SD genotype:", sd(state_genetic_5$population$genotype), "\n")
 #' }
-#' }
-#'
 #' @seealso \code{\link{population_size}} for population trajectories,
-#'   \code{\link{twolife_simulation}} for running simulations with appropriate history_detail
+#'   \code{\link{twolife_simulation}} for running simulations with appropriate history_detail,
+#'   \code{\link{check_habitat_match}} for analyzing trait-habitat matching
 #'
 #' @export
 snapshot_at_time <- function(simulation_result,
@@ -1163,162 +1244,197 @@ snapshot_at_time <- function(simulation_result,
 # LANDSCAPE GENERATION FUNCTIONS
 # ============================================================================
 
-#' Create Fractal Landscape
+#' Create Fractal Landscape with Spatial Autocorrelation
 #'
-#' Generates a spatially autocorrelated landscape using fractal algorithms.
-#' Supports both square and rectangular landscapes, and can create either
-#' continuous or binary (habitat/matrix) patterns. Useful for testing
-#' habitat selection and spatial processes.
+#' Generates spatially autocorrelated landscapes using iterative neighbor averaging,
+#' a simplified fractal-like algorithm. Creates realistic habitat patterns with
+#' controllable fragmentation and clustering. Supports both square and rectangular
+#' landscapes, and can generate either continuous environmental gradients or
+#' binary habitat/matrix patterns.
 #'
-#' @param cells_per_row Integer. Number of cells per row. Must be positive. Typical values: 10-100.
-#' @param cells_per_col Integer. Number of cells per column. If NULL, creates square landscape
-#'   (cells_per_col = cells_per_row)
-#' @param fractality Numeric between 0 and 1. Controls spatial autocorrelation:
+#' @param cells_per_row Integer. Number of cells per row (matrix rows). Must be positive.
+#'   Typical values: 10-100 for most simulations. Larger values increase resolution
+#'   but also memory requirements and computation time.
+#' @param cells_per_col Integer. Number of cells per column (matrix columns). If NULL,
+#'   creates square landscape (cells_per_col = cells_per_row). Use different values
+#'   to create rectangular landscapes matching specific study regions.
+#' @param fractality Numeric between 0 and 1. Controls degree of spatial autocorrelation
+#'   and clumping:
 #'   \itemize{
-#'     \item 0 = completely random (no spatial structure)
-#'     \item 0.3-0.5 = moderate clumping
-#'     \item 0.7-0.9 = highly clumped/fragmented
-#'     \item 1 = maximum spatial structure
+#'     \item **0.0-0.2**: Nearly random, little spatial structure. Isolated habitat cells
+#'       scattered throughout matrix.
+#'     \item **0.3-0.5**: Moderate clumping. Small habitat patches with some aggregation.
+#'       Good for testing intermediate fragmentation scenarios.
+#'     \item **0.6-0.7**: Strong clumping. Larger, more contiguous patches with clear
+#'       spatial structure. Typical of many real landscapes.
+#'     \item **0.8-1.0**: Very strong clumping. Large, highly aggregated patches or gradients.
+#'       Useful for testing extreme fragmentation or strong environmental gradients.
 #'   }
-#' @param min_value Numeric. Minimum habitat value for continuous landscapes.
-#' @param max_value Numeric. Maximum habitat value for continuous landscapes. Must be > min_value.
-#' @param habitat_proportion Numeric between 0 and 1. If provided, creates binary landscape:
+#'   
+#'   Higher fractality → more smoothing iterations → stronger spatial autocorrelation.
+#'   
+#' @param min_value Numeric. Minimum habitat quality for continuous landscapes.
+#'   Only used when habitat_proportion = NULL. Typically 0.0.
+#' @param max_value Numeric. Maximum habitat quality for continuous landscapes.
+#'   Only used when habitat_proportion = NULL. Must be > min_value. Typically 1.0.
+#' @param habitat_proportion Numeric between 0 and 1, or NULL. Controls landscape type:
 #'   \itemize{
-#'     \item Proportion of cells designated as habitat (value = 1)
-#'     \item Remaining cells are matrix (value = 0)
-#'     \item Uses fractality to determine spatial arrangement
-#'     \item If NULL, creates continuous landscape
+#'     \item **If provided**: Creates **binary** landscape (0/1, matrix/habitat).
+#'       Value specifies proportion of cells designated as habitat (value = 1).
+#'       Remaining cells become matrix (value = 0). Fractality determines spatial
+#'       clustering of habitat cells.
+#'     \item **If NULL**: Creates **continuous** landscape with values scaled to
+#'       [min_value, max_value]. Represents smooth environmental gradients.
 #'   }
-#' @param return_as_landscape_params Logical. If TRUE, returns \code{list(habitat = matrix)}
-#'   suitable for direct use in \code{twolife_simulation()}. If FALSE, returns matrix only.
+#' @param return_as_landscape_params Logical. Controls return format:
+#'   \itemize{
+#'     \item **TRUE**: Returns \code{list(habitat = matrix)}, ready for direct use
+#'       as landscape_params in \code{\link{twolife_simulation}}
+#'     \item **FALSE**: Returns matrix only, for custom processing or visualization
+#'   }
 #'
-#' @return If \code{return_as_landscape_params = FALSE}: A numeric matrix with dimensions
-#'   \code{cells_per_row} x \code{cells_per_col}. Values are either continuous (between min_value
-#'   and max_value) or binary (0 and 1).
+#' @return If \code{return_as_landscape_params = FALSE}:
+#'   \itemize{
+#'     \item Numeric matrix with dimensions \code{cells_per_row} × \code{cells_per_col}
+#'     \item Values are either continuous ([min_value, max_value]) or binary (0, 1)
+#'   }
 #'
-#'   If \code{return_as_landscape_params = TRUE}: A list with one component:
-#'   \describe{
-#'     \item{habitat}{The generated landscape matrix}
+#'   If \code{return_as_landscape_params = TRUE}:
+#'   \itemize{
+#'     \item List with component: \code{$habitat} (the generated landscape matrix)
+#'     \item Compatible with \code{twolife_simulation(landscape_params = ...)}
 #'   }
 #'
 #' @details
-#' Algorithm:
-#'   The fractal generation uses iterative neighbor averaging:
-#'   \enumerate{
-#'     \item Start with random values at each cell
-#'     \item For each iteration (controlled by fractality):
-#'       \itemize{
-#'         \item Average each cell with its 8 neighbors
-#'         \item Add small random noise
-#'       }
-#'     \item More iterations (higher fractality) -> more spatial clumping
-#'   }
-#'
-#'   Number of smoothing iterations:
-#'   
-#'   \deqn{n_{iter} = \text{round}(10f)}
-#'   
-#'   Where \eqn{f} = fractality parameter.
-#'
-#' Mathematical Formula:
-#'   For each smoothing iteration t, the value at cell (i,j) is updated:
-#'
-#'   \deqn{v_{t+1}(i,j) = \alpha \cdot \bar{v}_t(i,j) + (1-\alpha) \cdot \varepsilon}
-#'
-#'   Where:
-#'   \itemize{
-#'     \item \eqn{v_t(i,j)} = value at cell (i,j) at iteration t
-#'     \item \eqn{\bar{v}_t(i,j)} = mean of neighboring cells (8 neighbors)
-#'     \item \eqn{\alpha = 0.9} = smoothing weight
-#'     \item \eqn{\varepsilon \sim U(0,1)} = random noise
-#'     \item \eqn{n_{iter}} = number of smoothing iterations
-#'   }
-#'
-#'   Edge cells use available neighbors only (fewer than 8).
-#' Binary vs Continuous:
-#'   \itemize{
-#'     \item If habitat_proportion is NULL: Creates continuous landscape with values
-#'       scaled to [min_value, max_value]
-#'     \item If habitat_proportion is provided: Applies threshold to make binary
-#'       (0 = matrix, 1 = habitat), with fractality determining spatial clustering
-#'   }
-#'
-#' Usage in Simulations:
-#'   Binary landscapes (habitat_proportion specified) are typical for most simulations,
-#'   representing discrete habitat patches in a hostile matrix. Continuous landscapes
-#'   represent gradual environmental gradients. The matrix_mortality_multiplier and
-#'   matrix_dispersal_multiplier parameters in twolife_simulation() only affect
-#'   cells with value = 0 in binary landscapes.
+#' ## Fractal Generation Algorithm
+#' 
+#' The function uses iterative neighbor averaging to create spatial autocorrelation:
+#' 
+#' **Step 1: Initialization**
+#' 
+#' Each cell \eqn{(i,j)} starts with random value:
+#' \deqn{v_0(i,j) \sim \text{Uniform}(0, 1)}
+#' 
+#' **Step 2: Iterative Smoothing**
+#' 
+#' The algorithm performs \eqn{n_{\text{iter}}} smoothing iterations:
+#' 
+#' \deqn{n_{\text{iter}} = \text{round}(10 \times \text{fractality})}
+#' 
+#' At each iteration \eqn{t}, cell values are updated:
+#' 
+#' \deqn{v_{t+1}(i,j) = \alpha \cdot \bar{v}_t(i,j) + (1-\alpha) \cdot \varepsilon_{i,j}}
+#' 
+#' Where:
+#' \itemize{
+#'   \item \eqn{v_t(i,j)} = value at cell \eqn{(i,j)} at iteration \eqn{t}
+#'   \item \eqn{\bar{v}_t(i,j)} = mean of 8-connected neighbors (Moore neighborhood):
+#'     \deqn{\bar{v}_t(i,j) = \frac{1}{N_{\text{neighbors}}}\sum_{(i',j') \in N(i,j)} v_t(i',j')}
+#'   \item \eqn{\alpha = 0.9} = smoothing weight (high value preserves spatial structure)
+#'   \item \eqn{\varepsilon_{i,j} \sim \text{Uniform}(0,1)} = random noise (maintains variability)
+#'   \item Edge cells use only available neighbors (\eqn{N_{\text{neighbors}} < 8})
+#' }
+#' 
+#' **Step 3: Finalization**
+#' 
+#' After all iterations:
+#' 
+#' For **continuous landscapes** (habitat_proportion = NULL):
+#' \deqn{v_{\text{final}}(i,j) = \text{min\_value} + v_n(i,j) \times (\text{max\_value} - \text{min\_value})}
+#' 
+#' For **binary landscapes** (habitat_proportion specified):
+#' \itemize{
+#'   \item Sort all cell values
+#'   \item Set top \code{habitat_proportion} quantile to 1 (habitat)
+#'   \item Set remaining cells to 0 (matrix)
+#'   \item Result: spatially clustered binary pattern
+#' }
+#' 
+#' ## Spatial Autocorrelation
+#' 
+#' The iterative averaging creates spatial autocorrelation described by:
+#' 
+#' \deqn{\text{Cor}(v(i,j), v(i',j')) \approx \exp\left(-\frac{d}{\lambda}\right)}
+#' 
+#' Where:
+#' \itemize{
+#'   \item \eqn{d = \sqrt{(i-i')^2 + (j-j')^2}} = distance between cells
+#'   \item \eqn{\lambda \propto \text{fractality}} = correlation length scale
+#'   \item Higher fractality → larger \eqn{\lambda} → longer-range correlations → bigger patches
+#' }
+#' 
+#' ## Comparison to Other Methods
+#' 
+#' \tabular{llll}{
+#'   \strong{Method} \tab \strong{Spatial Structure} \tab \strong{Computation} \tab \strong{Parameters} \cr
+#'   This function \tab Moderate \tab Fast \tab Simple (fractality) \cr
+#'   Midpoint displacement \tab Strong fractal \tab Medium \tab Hurst exponent \cr
+#'   Random fields (NLMR) \tab Tunable \tab Slow \tab Multiple parameters \cr
+#'   Percolation \tab Binary only \tab Fast \tab Threshold only \cr
+#' }
+#' 
+#' Advantages of this method:
+#' \itemize{
+#'   \item Fast computation (suitable for parameter sweeps)
+#'   \item Intuitive fractality parameter (0-1 scale)
+#'   \item Supports both continuous and binary landscapes
+#'   \item No external dependencies
+#' }
+#' 
+#' ## Parameter Selection Guidelines
+#' 
+#' **For habitat fragmentation studies:**
+#' \itemize{
+#'   \item Low fragmentation: fractality = 0.7-0.9, habitat_proportion = 0.5-0.7
+#'   \item Medium fragmentation: fractality = 0.4-0.6, habitat_proportion = 0.3-0.5
+#'   \item High fragmentation: fractality = 0.1-0.3, habitat_proportion = 0.2-0.4
+#' }
+#' 
+#' **For environmental gradient studies:**
+#' \itemize{
+#'   \item Smooth gradients: fractality = 0.8-1.0, habitat_proportion = NULL
+#'   \item Patchy gradients: fractality = 0.4-0.6, habitat_proportion = NULL
+#' }
+#' 
+#' **For realistic landscapes:**
+#' \itemize{
+#'   \item Forest fragments: fractality = 0.5-0.7, habitat_proportion = 0.3-0.5
+#'   \item Agricultural landscapes: fractality = 0.4-0.6, habitat_proportion = 0.4-0.6
+#'   \item Urban-rural gradients: fractality = 0.6-0.8, continuous landscape
+#' }
+#' 
+#' ## Edge Effects
+#' 
+#' Cells at landscape edges have fewer neighbors, which can create slight edge artifacts:
+#' \itemize{
+#'   \item Effect is minor for most fractality values
+#'   \item Becomes more noticeable at very high fractality (> 0.9)
+#'   \item Use larger landscapes if edge effects are a concern
+#'   \item Consider periodic boundary conditions in simulations if modeling infinite landscapes
+#' }
 #'
 #' @examples
-#' # Quick examples
+#' set.seed(100)
 #' landscape1 <- create_fractal_landscape(
 #'   cells_per_row = 5,
 #'   fractality = 0.5,
-#'   habitat_proportion = 0.5,
+#'   habitat_proportion = 0.6,
 #'   return_as_landscape_params = TRUE
 #' )
-#'
-#' # Visualize
-#' plot_landscape(landscape1, main = "Binary Fractal Landscape")
-#'
-#' # Continuous landscape
+#' plot_landscape(landscape1, main = "Binary Habitat Landscape")
 #' landscape2 <- create_fractal_landscape(
 #'   cells_per_row = 5,
 #'   fractality = 0.5,
-#'   min_value = 0,
-#'   max_value = 1
-#' )
-#'
-#' # Check dimensions and values
-#' dim(landscape2)
-#' range(landscape2)
-#'
-#' \donttest{
-#' # Larger examples (not run during CRAN checks)
-#'
-#' # Binary landscape
-#' landscape3 <- create_fractal_landscape(
-#'   cells_per_row = 5,
-#'   fractality = 0.7,
-#'   habitat_proportion = 0.4,
+#'   min_value = 0.35,
+#'   max_value = 0.64,
 #'   return_as_landscape_params = TRUE
 #' )
-#'
-#' # Rectangular landscape
-#' landscape4 <- create_fractal_landscape(
-#'   cells_per_row = 5,
-#'   cells_per_col = 20,
-#'   fractality = 0.6,
-#'   habitat_proportion = 0.5,
-#'   return_as_landscape_params = TRUE
-#' )
-#'
-#' # Use in simulation
-#' result <- twolife_simulation(
-#'   landscape_params = landscape4,
-#'   individual_params = list(initial_population_size = 10),
-#'   simulation_params = list(max_events = 100),
-#'   master_seed = 123
-#' )
-#'
-#' # Compare different fractality levels
-#' par(mfrow = c(2, 2))
-#' for (frac in c(0.2, 0.5, 0.7, 0.9)) {
-#'   land <- create_fractal_landscape(
-#'     cells_per_row = 5,
-#'     fractality = frac,
-#'     habitat_proportion = 0.4
-#'   )
-#'   plot_landscape(
-#'     list(habitat = land),
-#'     main = paste("Fractality =", frac)
-#'   )
-#' }
-#' par(mfrow = c(1, 1))
-#' }
-#'
-#' @seealso \code{\link{plot_landscape}} for visualization
+#' plot_landscape(landscape2, main = "Continuous Gradient for Genetics")
+#' print(landscape1)  # Binary habitat values
+#' print(landscape2)  # Continuous range
+#' @seealso \code{\link{plot_landscape}} for visualization,
+#'   \code{\link{twolife_simulation}} for using landscapes in simulations,
+#'   \code{\link{plot_simulation_on_landscape}} for overlaying simulation results
 #'
 #' @export
 create_fractal_landscape <- function(cells_per_row,
@@ -1437,105 +1553,131 @@ create_fractal_landscape <- function(cells_per_row,
 
 #' Plot Landscape with World Coordinates
 #'
-#' Visualizes landscapes in the world coordinate system with proper axis scaling.
-#' Works with both square and rectangular landscapes. Shows the landscape as it
-#' appears in the simulation, centered at the origin with correct spatial scaling.
+#' Visualizes landscape habitat quality in the world coordinate system used by 
+#' TWoLife simulations. Displays proper axis scaling, centered origin, and 
+#' optional grid overlay. Essential for understanding spatial context of 
+#' simulation results and verifying landscape structure.
 #'
 #' @param landscape_data Either:
 #'   \itemize{
-#'     \item A numeric matrix of habitat values
-#'     \item A list with a \code{$habitat} component (output from landscape creation functions)
+#'     \item A numeric matrix of habitat values (dimensions: rows × columns)
+#'     \item A list with a \code{$habitat} component (output from \code{\link{create_fractal_landscape}}
+#'       or landscape creation functions)
 #'   }
 #' @param cell_size Numeric. Size of each landscape cell in world units. Should match
-#'   the cell_size used in simulations.
+#'   the cell_size parameter used in \code{\link{twolife_simulation}}. Together with
+#'   matrix dimensions, defines world_width and world_height.
 #' @param filename Character. Optional file path to save plot (e.g., "landscape.png").
-#'   If NULL, displays interactively.
-#' @param main Character. Plot title.
-#' @param colors Character. Color scheme:
+#'   If NULL, displays interactively in the active graphics device.
+#' @param main Character. Plot title displayed at the top of the figure.
+#' @param colors Character. Color scheme for habitat visualization:
 #'   \itemize{
-#'     \item "habitat" - Green gradient (white=matrix, dark green=high quality habitat)
-#'     \item "terrain" - Built-in terrain.colors palette
-#'     \item "viridis" - Viridis color scale (requires viridisLite package)
+#'     \item "habitat" - Custom green gradient (white = 0 = matrix/unsuitable, 
+#'       dark green = 1 = optimal habitat). Emphasizes habitat vs. matrix distinction.
+#'     \item "terrain" - R's built-in terrain.colors() palette (green-brown-white gradient).
+#'       General-purpose landscape visualization.
+#'     \item "viridis" - Perceptually uniform viridis color scale (requires viridisLite package).
+#'       Best for continuous habitat quality gradients and colorblind-friendly displays.
 #'   }
-#' @param show_legend Logical. Whether to show color legend.
-#' @param add_grid Logical. If TRUE, adds grid lines and crosshairs at origin.
+#' @param show_legend Logical. If TRUE, displays color legend showing mapping between
+#'   habitat values and colors.
+#' @param add_grid Logical. If TRUE, adds:
+#'   \itemize{
+#'     \item Gray grid lines at cell boundaries
+#'     \item Red crosshairs marking origin (0, 0)
+#'   }
 #'
-#' @return NULL, invisibly. Function is called for its side effect (plotting).
+#' @return NULL, invisibly. Function is called for its side effect (creating a plot).
 #'
 #' @details
-#' The function displays landscapes in world coordinates where:
+#' ## World Coordinate System
+#' 
+#' TWoLife uses a centered coordinate system where:
+#' 
+#' \deqn{x \in \left[-\frac{W}{2}, +\frac{W}{2}\right], \quad y \in \left[-\frac{H}{2}, +\frac{H}{2}\right]}
+#' 
+#' Where:
 #' \itemize{
-#'   \item Origin (0, 0) is at the center
-#'   \item X-axis ranges from -world_width/2 to +world_width/2
-#'   \item Y-axis ranges from -world_height/2 to +world_height/2
-#'   \item Red crosshairs mark the origin
-#'   \item Grid lines aid spatial interpretation
+#'   \item \eqn{W = \text{ncol}(\text{habitat}) \times \text{cell\_size}} = world_width
+#'   \item \eqn{H = \text{nrow}(\text{habitat}) \times \text{cell\_size}} = world_height
+#'   \item Origin (0, 0) is at the landscape center
+#'   \item Individual positions (x, y) are continuous within these bounds
+#' }
+#' 
+#' ## Coordinate Mapping
+#' 
+#' Matrix indices map to world coordinates via:
+#' 
+#' \deqn{x_{\text{center}} = \left(\text{col} - \frac{\text{ncol}}{2}\right) \times \text{cell\_size}}
+#' \deqn{y_{\text{center}} = \left(\text{row} - \frac{\text{nrow}}{2}\right) \times \text{cell\_size}}
+#' 
+#' Important notes:
+#' \itemize{
+#'   \item Matrix row 1 (top) maps to positive y values
+#'   \item Matrix column 1 (left) maps to negative x values
+#'   \item Each cell spans ±cell_size/2 around its center
+#' }
+#' 
+#' ## Color Palette Details
+#' 
+#' \tabular{llll}{
+#'   \strong{Palette} \tab \strong{Range} \tab \strong{Best For} \tab \strong{Properties} \cr
+#'   "habitat" \tab White → Dark Green \tab Binary landscapes \tab Clear matrix/habitat contrast \cr
+#'   "terrain" \tab Green → Brown → White \tab Natural landscapes \tab Traditional terrain visualization \cr
+#'   "viridis" \tab Purple → Green → Yellow \tab Continuous gradients \tab Perceptually uniform, colorblind-safe \cr
+#' }
+#' 
+#' ## Rectangular Landscapes
+#' 
+#' The function automatically handles non-square landscapes:
+#' \itemize{
+#'   \item Maintains correct aspect ratio
+#'   \item Adjusts axis limits independently for x and y
+#'   \item Preserves cell_size scaling in both dimensions
+#' }
+#' 
+#' ## Grid Overlay
+#' 
+#' When add_grid = TRUE:
+#' \itemize{
+#'   \item **Gray lines**: Mark boundaries between landscape cells (aid in counting cells,
+#'     measuring distances)
+#'   \item **Red crosshairs**: Show (0, 0) origin (reference point for individual positions)
+#' }
+#' 
+#' ## Visualization Best Practices
+#' 
+#' \itemize{
+#'   \item **Match simulation parameters**: Always use the same cell_size as in your simulation
+#'   \item **Verify scale**: Check that world dimensions match simulation output spatial range
+#'   \item **Color choice**: Use "habitat" for binary, "viridis" for continuous gradients
+#'   \item **Grid for precision**: Enable grid when analyzing specific spatial positions
 #' }
 #'
 #' @examples
-#' # Quick examples
-#' fractal <- create_fractal_landscape(
+#' set.seed(100)
+#' landscape <- create_fractal_landscape(
 #'   cells_per_row = 5,
 #'   fractality = 0.5,
-#'   habitat_proportion = 0.5
-#' )
-#'
-#' plot_landscape(fractal, main = "Fractal Landscape")
-#'
-#' # Binary landscape with custom colors
-#' binary <- create_fractal_landscape(
-#'   cells_per_row = 5,
-#'   fractality = 0.5,
-#'   habitat_proportion = 0.4
-#' )
-#'
-#' plot_landscape(
-#'   binary,
-#'   main = "Binary Landscape",
-#'   colors = "terrain"
-#' )
-#'
-#' \donttest{
-#' # Larger examples (not run during CRAN checks)
-#'
-#' # Using output from landscape function
-#' landscape_list <- create_fractal_landscape(
-#'   cells_per_row = 5,
-#'   fractality = 0.6,
-#'   habitat_proportion = 0.5,
+#'   habitat_proportion = 0.6,
 #'   return_as_landscape_params = TRUE
 #' )
-#'
-#' plot_landscape(landscape_list)
-#'
-#' # Continuous landscape
-#' continuous <- create_fractal_landscape(
+#' plot_landscape(landscape, main = "Binary Habitat Landscape")
+#' landscape_genetic <- create_fractal_landscape(
 #'   cells_per_row = 5,
-#'   fractality = 0.7,
-#'   min_value = 0,
-#'   max_value = 1
+#'   fractality = 0.5,
+#'   min_value = 0.35,
+#'   max_value = 0.64,
+#'   return_as_landscape_params = TRUE
 #' )
-#'
 #' plot_landscape(
-#'   continuous,
-#'   main = "Continuous Habitat Quality",
+#'   landscape_genetic,
+#'   main = "Continuous Gradient",
 #'   colors = "viridis"
 #' )
-#'
-#' # Compare rectangular landscapes
-#' par(mfrow = c(1, 2))
-#'
-#' rect1 <- create_fractal_landscape(15, 20, 0.7, habitat_proportion = 0.4)
-#' plot_landscape(rect1, main = "15 x 20")
-#'
-#' rect2 <- create_fractal_landscape(20, 15, 0.7, habitat_proportion = 0.4)
-#' plot_landscape(rect2, main = "20 x 15")
-#'
-#' par(mfrow = c(1, 1))
-#' }
-#'
 #' @seealso \code{\link{plot_simulation_on_landscape}} to overlay simulation results,
-#'   \code{\link{create_fractal_landscape}} for landscape generation
+#'   \code{\link{create_fractal_landscape}} for landscape generation,
+#'   \code{\link{twolife_simulation}} for running simulations with landscapes
 #'
 #' @export
 plot_landscape <- function(landscape_data,
@@ -1612,75 +1754,132 @@ plot_landscape <- function(landscape_data,
   invisible(NULL)
 }
 
-#' Plot Simulation Results on Landscape
+#' Visualize Simulation Results Overlaid on Landscape
 #'
-#' Visualizes simulation results by overlaying survivor positions on the
-#' landscape. Points can be colored by genotype, phenotype, or a single color.
-#' Provides immediate visual feedback on spatial distribution and habitat selection.
+#' Creates a comprehensive visualization showing the spatial distribution of
+#' surviving individuals on the habitat landscape. Displays habitat quality
+#' as background colors with survivors as colored points, enabling assessment
+#' of habitat selection, spatial clustering, and genotype-environment matching.
 #'
-#' @param simulation_result A 'twolife_result' object from \code{\link{twolife_simulation}}
-#' @param point_size Numeric. Size of survivor points. Larger values make points more visible.
-#' @param point_color Character. Color for points when \code{color_by="none"}.
-#'   Any valid R color name or hex code.
-#' @param point_shape Integer. Point shape following R's pch codes (e.g., 16 = filled circle,
-#'   1 = open circle, 17 = filled triangle)
-#' @param color_by Character. How to color survivor points:
+#' @param simulation_result A 'twolife_result' object from \code{\link{twolife_simulation}}.
+#' @param point_size Numeric. Size of points representing surviving individuals in the plot.
+#' @param point_color Character. Color for points when color_by="none". Any valid R color name or hex code.
+#' @param point_shape Integer. Point shape following R's pch codes (16 = filled circle, 1 = open circle, 17 = filled triangle).
+#' @param color_by Character. Trait used to color survivor points:
 #'   \itemize{
-#'     \item "none" - Single color specified by \code{point_color}
+#'     \item "none" - Single color specified by point_color
 #'     \item "genotype" - Color gradient based on genotype values (heat colors)
 #'     \item "phenotype" - Color gradient based on phenotype values (heat colors)
 #'   }
-#' @param landscape_colors Character. Color scheme for landscape:
+#' @param landscape_colors Character. Color scheme for landscape background:
 #'   \itemize{
-#'     \item "habitat" - Green gradient for continuous, white/green for binary
-#'     \item "terrain" - Built-in terrain.colors palette
-#'     \item "viridis" - Viridis color scale (requires viridisLite package)
+#'     \item "habitat" - Green gradient (white = matrix, dark green = high-quality habitat). Best for binary landscapes.
+#'     \item "terrain" - Built-in terrain.colors palette (green-brown-white). General-purpose visualization.
+#'     \item "viridis" - Viridis color scale (requires viridisLite package). Perceptually uniform and colorblind-friendly.
 #'   }
-#' @param main Character. Plot title. If NULL, automatically generated.
+#' @param main Character. Plot title. If NULL, automatically generates title showing final time and population size.
 #' @param filename Character. Optional file path to save plot. If NULL, displays interactively.
 #' @param add_stats Logical. If TRUE, adds statistics text to plot (currently not implemented).
 #'
-#' @return The input \code{simulation_result} object, invisibly. Allows for piping/chaining operations.
+#' @return The input simulation_result object, invisibly. Allows for piping/chaining operations.
 #'
 #' @details
-#' Coordinate System:
-#'   The function displays the landscape in world coordinates where:
-#'   \itemize{
-#'     \item Origin (0, 0) is at the center
-#'     \item Red crosshairs mark the origin
-#'     \item Grid lines aid spatial interpretation
-#'   }
+#' ## Visualization Components
 #'
-#' Color Mapping:
-#'   \itemize{
-#'     \item "none": All survivors shown in a single color (point_color)
-#'     \item "genotype": Heat gradient (red = low, yellow = high) shows genetic variation
-#'     \item "phenotype": Heat gradient shows expressed trait values (includes plasticity effects)
-#'   }
+#' 1. **Background Layer**: Landscape habitat quality
+#'    \itemize{
+#'      \item Color intensity represents habitat quality
+#'      \item Binary: white (matrix) vs green (habitat)
+#'      \item Continuous: gradient from low to high quality
+#'    }
 #'
-#'   When coloring by genotype/phenotype, visual clustering of similar colors in similar
-#'   habitats indicates successful habitat selection or local adaptation.
+#' 2. **Foreground Layer**: Surviving individuals
+#'    \itemize{
+#'      \item Each point represents one individual at final position
+#'      \item Point color represents trait value (genotype or phenotype)
+#'      \item Point size controlled by point_size parameter
+#'    }
 #'
-#' Interpretation:
-#'   \itemize{
-#'     \item Survivors clustered in habitat (green/dark areas) = effective habitat preference
-#'     \item Match between point colors and background colors (when using "genotype" or "phenotype")
-#'       = phenotype-environment matching (high fitness)
-#'     \item Scattered distribution = weak habitat selection or high dispersal
-#'     \item Survivors in matrix (white/light areas) = tolerance to poor habitat or recent dispersal
-#'   }
+#' 3. **Coordinate System**:
+#'    \itemize{
+#'      \item X-axis: Horizontal world coordinates (centered at 0)
+#'      \item Y-axis: Vertical world coordinates (centered at 0)
+#'      \item Range: \eqn{\pm \text{world\_dimension}/2}
+#'      \item Grid overlay marks cell boundaries
+#'    }
+#'
+#' ## Interpretation Guidelines
+#'
+#' **Spatial Pattern Analysis:**
+#' \itemize{
+#'   \item **Clustered survivors**: Suggests habitat selection or density-dependent processes
+#'   \item **Even distribution**: May indicate weak habitat selection or high dispersal
+#'   \item **Edge concentration**: Possible boundary condition effects or edge habitat preference
+#'   \item **Patch occupancy**: Compare survivor locations to habitat patches in binary landscapes
+#' }
+#'
+#' **Genotype-Environment Matching:**
+#'
+#' When \code{color_by = "genotype"}:
+#' \itemize{
+#'   \item **Matching colors**: Point color similar to background → good habitat matching
+#'   \item **Contrasting colors**: Point color differs from background → potential mismatch
+#'   \item **Gradient tracking**: Points follow habitat gradient → successful adaptation
+#'   \item **Spatial sorting**: Different genotypes in different patches → local adaptation
+#' }
+#'
+#' Visual pattern interpretation depends on:
+#' \deqn{\text{Matching Quality} \propto \frac{\text{sampling\_points} \times (1 - \text{genotype\_sds})}{\text{habitat\_selection\_temperatures}}}
+#'
+#' Strong matching expected with:
+#' \itemize{
+#'   \item High sampling_points (informed habitat choice)
+#'   \item Low genotype_sds (narrow niches, specialists)
+#'   \item Low habitat_selection_temperatures (deterministic selection)
+#'   \item High mutation_rates (genetic variation for adaptation)
+#' }
+#'
+#' **Phenotype vs Genotype:**
+#'
+#' When plasticity > 0:
+#' \itemize{
+#'   \item \code{color_by = "genotype"}: Shows inherited genetic values
+#'   \item \code{color_by = "phenotype"}: Shows expressed traits (genotype + plastic response)
+#'   \item Phenotypes typically show stronger habitat matching than genotypes
+#'   \item Difference reveals plastic response magnitude
+#' }
+#'
+#' ## Color Palette Selection
+#'
+#' \tabular{lll}{
+#'   \strong{Palette} \tab \strong{Best For} \tab \strong{Interpretation} \cr
+#'   "habitat" \tab Binary landscapes \tab Clear habitat/matrix distinction \cr
+#'   "terrain" \tab General use \tab Traditional landscape colors \cr
+#'   "viridis" \tab Continuous gradients \tab Accurate gradient perception \cr
+#' }
+#'
+#' For publications:
+#' \itemize{
+#'   \item Use "viridis" for colorblind accessibility
+#'   \item Match color scheme to manuscript style guidelines
+#'   \item Consider grayscale conversion for print journals
+#' }
 #'
 #' @examples
-#' # Quick example
-#' set.seed(400)
+#' set.seed(100)
 #' landscape <- create_fractal_landscape(
 #'   cells_per_row = 5,
 #'   fractality = 0.5,
 #'   habitat_proportion = 0.6,
 #'   return_as_landscape_params = TRUE
 #' )
-#'
-#' # Run simulation
+#' landscape_genetic <- create_fractal_landscape(
+#'   cells_per_row = 5,
+#'   fractality = 0.5,
+#'   min_value = 0.35,
+#'   max_value = 0.64,
+#'   return_as_landscape_params = TRUE
+#' )
 #' result <- twolife_simulation(
 #'   landscape_params = landscape,
 #'   individual_params = list(
@@ -1688,78 +1887,28 @@ plot_landscape <- function(landscape_data,
 #'     base_birth_rate = 0.4,
 #'     base_mortality_rate = 0.15
 #'   ),
-#'   simulation_params = list(max_events = 150),
-#'   master_seed = 101
+#'   simulation_params = list(max_events = 5),
+#'   master_seed = 123
 #' )
-#'
-#' # Basic plot
-#' plot_simulation_on_landscape(result)
-#'
-#' \donttest{
-#' # Larger examples (not run during CRAN checks)
-#' landscape_big <- create_fractal_landscape(
-#'   cells_per_row = 5,
-#'   fractality = 0.7,
-#'   habitat_proportion = 0.4,
-#'   return_as_landscape_params = TRUE
-#' )
-#'
-#' result_big <- twolife_simulation(
-#'   landscape_params = landscape_big,
-#'   individual_params = list(initial_population_size = 10),
-#'   simulation_params = list(max_events = 150),
-#'   master_seed = 202
-#' )
-#'
-#' # Customize appearance
-#' plot_simulation_on_landscape(
-#'   result_big,
-#'   point_size = 3,
-#'   point_color = "blue",
-#'   point_shape = 17,
-#'   main = "Final Population Distribution"
-#' )
-#'
-#' # Color by genotype with variation
 #' result_genetic <- twolife_simulation(
-#'   landscape_params = landscape_big,
-#'   individual_params = list(initial_population_size = 10),
-#'   genetic_params = list(
-#'     genotype_means = runif(10, 0, 1),
-#'     genotype_sds = 0.1
+#'   landscape_params = landscape_genetic,
+#'   individual_params = list(
+#'     initial_population_size = 15,
+#'     base_birth_rate = 0.4,
+#'     base_mortality_rate = 0.15
 #'   ),
-#'   simulation_params = list(max_events = 150),
-#'   master_seed = 303
-#' )
-#'
-#' plot_simulation_on_landscape(
-#'   result_genetic,
-#'   color_by = "genotype",
-#'   point_size = 2.5
-#' )
-#'
-#' # Color by phenotype (requires plasticity)
-#' result_plastic <- twolife_simulation(
-#'   landscape_params = landscape_big,
-#'   individual_params = list(initial_population_size = 40),
 #'   genetic_params = list(
-#'     genotype_means = runif(40, 0, 1),
-#'     plasticities = 0.5,
-#'     sampling_points = 5
+#'     genotype_means = rnorm(15, mean = 0.5, sd = 0.15),
+#'     genotype_sds = 0.15
 #'   ),
-#'   simulation_params = list(max_events = 150),
-#'   master_seed = 404
+#'   simulation_params = list(max_events = 5),
+#'   master_seed = 456
 #' )
-#'
-#' plot_simulation_on_landscape(
-#'   result_plastic,
-#'   color_by = "phenotype",
-#'   landscape_colors = "terrain"
-#' )
-#' }
-#'
-#' @seealso \code{\link{plot.twolife_result}} for S3 method (use \code{plot(result)}),
-#'   \code{\link{check_habitat_match}} for habitat-trait correlation plots
+#' plot_simulation_on_landscape(result, main = "No Genetic Variation")
+#' plot_simulation_on_landscape(result_genetic, main = "With Genetic Variation")
+#' @seealso \code{\link{twolife_simulation}} for running simulations,
+#'   \code{\link{plot_landscape}} for landscape visualization,
+#'   \code{\link{snapshot_at_time}} for temporal snapshots
 #'
 #' @export
 plot_simulation_on_landscape <- function(simulation_result,
@@ -2092,7 +2241,10 @@ plot.twolife_result <- function(x, ...) {
 #' @param main Character. Plot title. If NULL, automatically generated.
 #' @param point_size Numeric. Size of points in scatter plot.
 #' @param landscape_colors Character. Color scheme for landscape background.
-#'   Options: "habitat", "terrain", "viridis".
+#'   Options: "habitat", "terrain", "viridis". Note: Binary landscapes (habitat
+#'   values of 0 and 1 only) automatically use the "habitat" color scheme
+#'   (0 = white matrix, 1 = green habitat) regardless of this parameter, ensuring
+#'   consistent visual interpretation.
 #' @param color_by Character. Which trait to analyze:
 #'   \itemize{
 #'     \item "genotype" - Analyze genotype-habitat matching
@@ -2179,67 +2331,52 @@ plot.twolife_result <- function(x, ...) {
 #'   }
 #'
 #' @examples
-#' # Create landscape
-#' set.seed(123)
+#' set.seed(100)
 #' landscape <- create_fractal_landscape(
 #'   cells_per_row = 5,
 #'   fractality = 0.5,
 #'   habitat_proportion = 0.6,
 #'   return_as_landscape_params = TRUE
 #' )
-#'
-#' # Simulation with genetic variation
+#' landscape_genetic <- create_fractal_landscape(
+#'   cells_per_row = 5,
+#'   fractality = 0.5,
+#'   min_value = 0.35,
+#'   max_value = 0.64,
+#'   return_as_landscape_params = TRUE
+#' )
 #' result <- twolife_simulation(
 #'   landscape_params = landscape,
 #'   individual_params = list(
-#'     initial_population_size = 25,
-#'     base_birth_rate = 0.5,
-#'     base_mortality_rate = 0.1
+#'     initial_population_size = 15,
+#'     base_birth_rate = 0.4,
+#'     base_mortality_rate = 0.15
+#'   ),
+#'   simulation_params = list(max_events = 5),
+#'   master_seed = 123
+#' )
+#' result_genetic <- twolife_simulation(
+#'   landscape_params = landscape_genetic,
+#'   individual_params = list(
+#'     initial_population_size = 15,
+#'     base_birth_rate = 0.4,
+#'     base_mortality_rate = 0.15
 #'   ),
 #'   genetic_params = list(
-#'     genotype_means = runif(25, 0.4, 0.6),
-#'     genotype_sds = 0.2
+#'     genotype_means = rnorm(15, mean = 0.5, sd = 0.15),
+#'     genotype_sds = 0.15
 #'   ),
-#'   simulation_params = list(max_events = 250),
-#'   master_seed = 789
+#'   simulation_params = list(max_events = 5),
+#'   master_seed = 456
 #' )
-#'
-#' # Validate genotype matching
-#' validation_data <- check_habitat_match(
-#'   result,
-#'   color_by = "genotype"
-#' )
-#'
-#' # Examine data
-#' head(validation_data)
-#'
-#' # Check correlation
-#' if (!is.null(validation_data) && nrow(validation_data) > 0) {
-#'   cat("Correlation:", cor(validation_data$genotype, validation_data$habitat_value), "\n")
+#' validation <- check_habitat_match(result)
+#' validation_genetic <- check_habitat_match(result_genetic, color_by = "genotype")
+#' head(validation)
+#' head(validation_genetic)
+#' if (!is.null(validation_genetic) && nrow(validation_genetic) > 0) {
+#'   cor_value <- cor(validation_genetic$genotype, validation_genetic$habitat_value)
+#'   cat("Genotype-habitat correlation:", round(cor_value, 3), "\n")
 #' }
-#'
-#' \donttest{
-#' # Compare with plasticity
-#' result_plastic <- twolife_simulation(
-#'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 10),
-#'   genetic_params = list(
-#'     genotype_means = runif(10, 0, 1),
-#'     plasticities = 0.5,
-#'     sampling_points = 5
-#'   ),
-#'   simulation_params = list(max_events = 150),
-#'   master_seed = 999
-#' )
-#'
-#' # Validate phenotype matching (should show stronger correlation)
-#' check_habitat_match(
-#'   result_plastic,
-#'   color_by = "phenotype",
-#'   main = "Phenotype Matching (with Plasticity)"
-#' )
-#' }
-#'
 #' @seealso \code{\link{habitat_mismatch}} for fitness-based analysis
 #'
 #' @export
@@ -2329,18 +2466,17 @@ check_habitat_match <- function(simulation_result,
   is_uniform <- z_range[1] == z_range[2]
   is_binary <- all(habitat_grid %in% c(0, 1))
   
-  if (landscape_colors == "habitat") {
-    if (is_binary) {
-      # Binary landscapes: 0 = white (matrix), 1 = green (habitat)
-      color_palette <- c("white", "#228B22")
-      if (is_uniform) {
-        color_palette <- if (z_range[1] == 0) "white" else "#228B22"
-      }
-    } else {
-      color_palette <- colorRampPalette(c("#F5F5DC", "#90EE90", "#228B22", "#006400"))(100)
+  # FIXED: Force habitat colors for binary landscapes
+  if (is_binary) {
+    # Binary landscapes: always use habitat colors (0 = white, 1 = green)
+    color_palette <- c("white", "#228B22")
+    if (is_uniform) {
+      color_palette <- if (z_range[1] == 0) "white" else "#228B22"
     }
+  } else if (landscape_colors == "habitat") {
+    color_palette <- colorRampPalette(c("#F5F5DC", "#90EE90", "#228B22", "#006400"))(100)
   } else {
-    n_colors <- if (is_binary && !is_uniform) 2 else if (is_uniform) 1 else 100
+    n_colors <- if (is_uniform) 1 else 100
     color_palette <- switch(landscape_colors,
                             "terrain" = terrain.colors(n_colors),
                             "viridis" = {
@@ -2358,7 +2494,7 @@ check_habitat_match <- function(simulation_result,
     trait_normalized <- pmax(0, pmin(1, trait_normalized))
     
     if (is_binary) {
-      color_indices <- ifelse(trait_normalized < 0.5, 1, 2)
+      color_indices <- ifelse(trait_normalized < 0.5, 1, 2)  # FIXED: was (2, 1)
     } else {
       color_indices <- pmax(1, pmin(100, round(trait_normalized * 99) + 1))
     }
@@ -2515,61 +2651,55 @@ check_habitat_match <- function(simulation_result,
 #'   and greater probability of leaving offspring.
 #'
 #' @examples
-#' # Create landscape
-#' set.seed(456)
+#' set.seed(100)
 #' landscape <- create_fractal_landscape(
 #'   cells_per_row = 5,
 #'   fractality = 0.5,
 #'   habitat_proportion = 0.6,
 #'   return_as_landscape_params = TRUE
 #' )
-#'
-#' # Run simulation
+#' landscape_genetic <- create_fractal_landscape(
+#'   cells_per_row = 5,
+#'   fractality = 0.5,
+#'   min_value = 0.35,
+#'   max_value = 0.64,
+#'   return_as_landscape_params = TRUE
+#' )
 #' result <- twolife_simulation(
 #'   landscape_params = landscape,
 #'   individual_params = list(
-#'     initial_population_size = 25,
-#'     base_birth_rate = 0.5,
-#'     base_mortality_rate = 0.1
+#'     initial_population_size = 15,
+#'     base_birth_rate = 0.4,
+#'     base_mortality_rate = 0.15
+#'   ),
+#'   simulation_params = list(max_events = 5),
+#'   master_seed = 123
+#' )
+#' result_genetic <- twolife_simulation(
+#'   landscape_params = landscape_genetic,
+#'   individual_params = list(
+#'     initial_population_size = 15,
+#'     base_birth_rate = 0.4,
+#'     base_mortality_rate = 0.15
 #'   ),
 #'   genetic_params = list(
-#'     genotype_means = runif(25, 0.4, 0.6),
-#'     genotype_sds = 0.2
+#'     genotype_means = rnorm(15, mean = 0.5, sd = 0.15),
+#'     genotype_sds = 0.15
 #'   ),
-#'   simulation_params = list(max_events = 250),
-#'   master_seed = 567
+#'   simulation_params = list(max_events = 5),
+#'   master_seed = 456
 #' )
-#'
-#' # Calculate fitness statistics
-#' fitness_stats <- habitat_mismatch(result)
-#'
-#' # Print formatted output
-#' print(fitness_stats)
-#'
-#' # Access specific metrics
-#' cat("Mean fitness:", fitness_stats$mean_fitness, "\n")
-#' cat("Correlation:", fitness_stats$correlation, "\n")
-#' cat("% high fitness:", fitness_stats$percent_high_fitness, "\n")
-#'
-#' \donttest{
-#' # Compare with neutral scenario
-#' result_neutral <- twolife_simulation(
-#'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 10),
-#'   genetic_params = list(genotype_means = runif(10, 0, 1)),
-#'   simulation_params = list(max_events = 1500, neutral_mode = TRUE),
-#'   master_seed = 888
-#' )
-#'
-#' fitness_neutral <- habitat_mismatch(result_neutral)
-#'
-#' # Compare
-#' cat("With selection - Mean fitness:", fitness_stats$mean_fitness, "\n")
-#' cat("Neutral - Mean fitness:", fitness_neutral$mean_fitness, "\n")
-#' cat("With selection - Correlation:", fitness_stats$correlation, "\n")
-#' cat("Neutral - Correlation:", fitness_neutral$correlation, "\n")
-#' }
-#'
+#' mismatch <- habitat_mismatch(result)
+#' mismatch_genetic <- habitat_mismatch(result_genetic)
+#' print(mismatch)
+#' print(mismatch_genetic)
+#' cat("\nNo genetic variation:\n")
+#' cat("  Mean fitness:", mismatch$mean_fitness, "\n")
+#' cat("  Correlation:", mismatch$correlation, "\n")
+#' cat("\nWith genetic variation:\n")
+#' cat("  Mean fitness:", mismatch_genetic$mean_fitness, "\n")
+#' cat("  Correlation:", mismatch_genetic$correlation, "\n")
+#' cat("  % high fitness:", mismatch_genetic$percent_high_fitness, "\n")
 #' @seealso \code{\link{check_habitat_match}} for visual validation
 #'
 #' @export

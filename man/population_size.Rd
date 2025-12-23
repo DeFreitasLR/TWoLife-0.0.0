@@ -13,41 +13,86 @@ Must contain \code{$events$times} and \code{$events$types} components.}
 \value{
 A data frame with two columns:
   \describe{
-    \item{time}{Numeric. Event times in chronological order}
-    \item{population_size}{Integer. Population size at each event time (cumulative sum of births and deaths)}
+    \item{time}{Numeric. Event times in chronological order (in simulation time units)}
+    \item{population_size}{Integer. Population size at each event time, calculated
+      as cumulative sum of demographic changes}
   }
 }
 \description{
-Computes population size at each event time from simulation results.
-Works with all history_detail levels (only requires event times and types).
-Useful for analyzing population dynamics, detecting extinctions, and
-identifying critical time points.
+Computes population size at each event time from simulation results by 
+tracking the cumulative effects of demographic events. Essential for 
+analyzing population dynamics, growth rates, extinction risk, and 
+identifying critical demographic transitions. Compatible with all 
+history_detail levels.
 }
 \details{
-Event types and their effects on population size:
+## Algorithm
+
+Population size at time \eqn{t} is calculated using:
+
+\deqn{N(t) = N_0 + \sum_{i=1}^{t} \Delta N_i}
+
+Where:
 \itemize{
-  \item -1 (initial): +1 to population
-  \item 0 (death): -1 from population
-  \item 1 (birth): +1 to population
-  \item 2 (movement): no change to population
-  \item 3 (emigration): -1 from population (only occurs with absorbing boundaries)
+  \item \eqn{N(t)} = population size at time t
+  \item \eqn{N_0} = initial population size
+  \item \eqn{\Delta N_i} = population change from event i
 }
 
-Note: Emigration events (type 3) only occur when boundary_condition = 2 (absorbing).
-With reflective boundaries (1), individuals bounce back. With periodic boundaries (3),
-individuals wrap around.
+## Event Types and Population Change
+
+Each event type contributes differently to \eqn{\Delta N}:
+
+\itemize{
+  \item **-1 (initial)**: \eqn{\Delta N = +1}. Records each founding individual
+  \item **0 (death)**: \eqn{\Delta N = -1}. Mortality event
+  \item **1 (birth)**: \eqn{\Delta N = +1}. Successful reproduction
+  \item **2 (movement/dispersal)**: \eqn{\Delta N = 0}. Spatial redistribution only
+  \item **3 (emigration)**: \eqn{\Delta N = -1}. Individual crosses absorbing boundary
+}
+
+## Boundary Condition Effects
+
+Emigration events (type 3) only occur with **boundary_condition = 2** (absorbing):
+\itemize{
+  \item boundary_condition = 1 (reflective): Individuals bounce back, no emigration
+  \item boundary_condition = 2 (absorbing): Crossing boundary causes emigration (\eqn{\Delta N = -1})
+  \item boundary_condition = 3 (periodic): Individuals wrap around, no emigration
+}
+
+## Time Scaling
+
+Event times follow the Gillespie algorithm (see \code{\link{twolife_simulation}} Details).
+Time intervals between events are exponentially distributed with rate proportional 
+to total demographic rates. Faster dynamics (higher birth/death rates) compress 
+more events into less time.
+
+## Analysis Applications
+
+This function enables:
+\itemize{
+  \item **Population viability analysis**: Detect extinction times and probabilities
+  \item **Growth rate estimation**: Calculate \eqn{r = \frac{1}{t}\log\frac{N(t)}{N_0}}
+  \item **Demographic transitions**: Identify when population stabilizes or crashes
+  \item **Density-dependent effects**: Compare trajectories with different density parameters
+  \item **Animation frames**: Provides time points for \code{\link{snapshot_at_time}}
+}
 }
 \examples{
-# Quick example
-set.seed(300)
+set.seed(100)
 landscape <- create_fractal_landscape(
   cells_per_row = 5,
   fractality = 0.5,
   habitat_proportion = 0.6,
   return_as_landscape_params = TRUE
 )
-
-# Run simulation
+landscape_genetic <- create_fractal_landscape(
+  cells_per_row = 5,
+  fractality = 0.5,
+  min_value = 0.35,
+  max_value = 0.64,
+  return_as_landscape_params = TRUE
+)
 result <- twolife_simulation(
   landscape_params = landscape,
   individual_params = list(
@@ -55,26 +100,30 @@ result <- twolife_simulation(
     base_birth_rate = 0.4,
     base_mortality_rate = 0.15
   ),
-  simulation_params = list(max_events = 150),
-  master_seed = 789
+  simulation_params = list(max_events = 5),
+  master_seed = 123
 )
-
-# Calculate trajectory
+result_genetic <- twolife_simulation(
+  landscape_params = landscape_genetic,
+  individual_params = list(
+    initial_population_size = 15,
+    base_birth_rate = 0.4,
+    base_mortality_rate = 0.15
+  ),
+  genetic_params = list(
+    genotype_means = rnorm(15, mean = 0.5, sd = 0.15),
+    genotype_sds = 0.15
+  ),
+  simulation_params = list(max_events = 5),
+  master_seed = 456
+)
 trajectory <- population_size(result)
-head(trajectory)
-
-# Plot population over time
-plot(trajectory$time, trajectory$population_size,
-     type = "l",
-     xlab = "Time",
-     ylab = "Population Size",
-     main = "Population Dynamics")
-
-# Find peak population
-peak_time <- trajectory$time[which.max(trajectory$population_size)]
-peak_size <- max(trajectory$population_size)
-cat("Peak population:", peak_size, "at time", peak_time, "\n")
-
+trajectory_genetic <- population_size(result_genetic)
+ylim_max <- max(trajectory$population_size, trajectory_genetic$population_size)
+plot(trajectory, main = "No Genetic Variation", ylim = c(0, ylim_max))
+plot(trajectory_genetic, main = "With Genetic Variation", ylim = c(0, ylim_max))
+cat("Final size (no variation):", tail(trajectory$population_size, 1), "\n")
+cat("Final size (with variation):", tail(trajectory_genetic$population_size, 1), "\n")
 }
 \seealso{
 \code{\link{twolife_simulation}} for running simulations,
