@@ -38,7 +38,7 @@ If NULL, displays interactively in the active graphics device.}
   \item "terrain" - R's built-in terrain.colors() palette (green-brown-white gradient).
     General-purpose landscape visualization.
   \item "viridis" - Perceptually uniform viridis color scale (requires viridisLite package).
-    Best for continuous habitat quality gradients and colorblind-friendly displays.
+    Best for continuous habitat value gradients and colorblind-friendly displays.
 }}
 
 \item{show_legend}{Logical. If TRUE, displays color legend showing mapping between
@@ -54,7 +54,7 @@ habitat values and colors.}
 NULL, invisibly. Function is called for its side effect (creating a plot).
 }
 \description{
-Visualizes landscape habitat quality in the world coordinate system used by 
+Visualizes landscape habitat values in the world coordinate system used by 
 TWoLife simulations. Displays proper axis scaling, centered origin, and 
 optional grid overlay. Essential for understanding spatial context of 
 simulation results and verifying landscape structure.

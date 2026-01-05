@@ -38,10 +38,10 @@ and clumping:
 
 Higher fractality → more smoothing iterations → stronger spatial autocorrelation.}
 
-\item{min_value}{Numeric. Minimum habitat quality for continuous landscapes.
+\item{min_value}{Numeric. Minimum habitat value for continuous landscapes.
 Only used when habitat_proportion = NULL. Typically 0.0.}
 
-\item{max_value}{Numeric. Maximum habitat quality for continuous landscapes.
+\item{max_value}{Numeric. Maximum habitat value for continuous landscapes.
 Only used when habitat_proportion = NULL. Must be > min_value. Typically 1.0.}
 
 \item{habitat_proportion}{Numeric between 0 and 1, or NULL. Controls landscape type:

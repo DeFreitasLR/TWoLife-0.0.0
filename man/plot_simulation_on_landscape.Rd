@@ -50,18 +50,18 @@ The input simulation_result object, invisibly. Allows for piping/chaining operat
 }
 \description{
 Creates a comprehensive visualization showing the spatial distribution of
-surviving individuals on the habitat landscape. Displays habitat quality
+surviving individuals on the habitat landscape. Displays habitat values
 as background colors with survivors as colored points, enabling assessment
 of habitat selection, spatial clustering, and genotype-environment matching.
 }
 \details{
 ## Visualization Components
 
-1. **Background Layer**: Landscape habitat quality
+1. **Background Layer**: Landscape habitat values
    \itemize{
-     \item Color intensity represents habitat quality
+     \item Color intensity represents habitat values
      \item Binary: white (matrix) vs green (habitat)
-     \item Continuous: gradient from low to high quality
+     \item Continuous: gradient from low to high values
    }
 
 2. **Foreground Layer**: Surviving individuals

@@ -45,8 +45,8 @@ NULL
 #'     \item{neighbor_radius}{Numeric. Distance (in world units) within which other individuals are counted as neighbors for local density calculations. Only used when density_type = 1 (local). See Details section 'Density Calculations' for formula.}
 #'     \item{vision_angle}{Numeric. Angular range (in radians) within which an individual can change direction during random walk dispersal (sampling_points = 0). See Details section 'Habitat Selection' for movement formulas.}
 #'     \item{step_length}{Numeric. Maximum distance (in world units) an individual moves during each dispersal event. For random walk (sampling_points = 0), individual moves exactly this distance in chosen direction. For habitat selection (sampling_points > 0), defines the radius for sampling candidate locations. See Details section 'Habitat Selection' for formulas.}
-#'     \item{base_dispersal_rate}{Numeric. Baseline probability per time unit that a dispersal event occurs (usual range: 0-1). Modified by habitat quality for perfect specialists (genotype_sds = 0) via matrix_dispersal_multiplier.}
-#'     \item{base_birth_rate}{Numeric. Baseline probability per time unit that a birth event occurs (usual range: 0-1). Modified by density-dependence (see birth_density_slope) and by habitat quality for perfect specialists (specialists cannot reproduce in non-optimal habitat). See Details section 'Birth Rate Calculations' for formulas.}
+#'     \item{base_dispersal_rate}{Numeric. Baseline probability per time unit that a dispersal event occurs (usual range: 0-1). Modified by habitat suitability for perfect specialists (genotype_sds = 0) via matrix_dispersal_multiplier.}
+#'     \item{base_birth_rate}{Numeric. Baseline probability per time unit that a birth event occurs (usual range: 0-1). Modified by density-dependence (see birth_density_slope) and by habitat suitability for perfect specialists (specialists cannot reproduce in non-optimal habitat). See Details section 'Birth Rate Calculations' for formulas.}
 #'     \item{base_mortality_rate}{Numeric. Baseline probability per time unit that a mortality event occurs (usual range: 0-1). Mathematical application shown in matrix_mortality_multiplier parameter.}
 #'     \item{birth_density_slope}{Numeric. Controls the strength of negative density-dependence on birth rate. Higher values cause birth rate to decrease more rapidly as local density increases. See Details section 'Birth Rate Calculations' for formula.}
 #'     \item{mortality_density_slope}{Numeric. Controls the strength of positive density-dependence on mortality rate. Higher values cause mortality rate to increase more rapidly as local density increases. See Details sections 'Matrix Mortality Multiplier' and 'Density Calculations' for formulas.}
@@ -209,7 +209,7 @@ NULL
 #'   }
 #'
 #' Matrix Mortality Multiplier:
-#'   The matrix_mortality_multiplier controls how mortality scales with habitat quality:
+#'   The matrix_mortality_multiplier controls how mortality scales with habitat suitability:
 #'   
 #'   For perfect specialists (genotype_sds = 0):
 #'   \itemize{
@@ -275,7 +275,7 @@ NULL
 #'   }
 #'
 #' Birth Rate Calculations:
-#'   Birth rates vary with density and habitat quality:
+#'   Birth rates vary with density and habitat suitability:
 #'   
 #'   For perfect specialists (genotype_sds = 0):
 #'   \itemize{
@@ -924,7 +924,7 @@ population_size <- function(result) {
 #' 
 #' When show_plot = TRUE:
 #' \itemize{
-#'   \item **Background**: Habitat quality from landscape matrix
+#'   \item **Background**: Habitat values from landscape matrix
 #'   \item **Points**: Individual positions colored by selected trait
 #'   \item **Title**: Shows target_time and number of individuals alive
 #'   \item **Legend**: Maps colors to trait values (if color_by != "none")
@@ -1273,9 +1273,9 @@ snapshot_at_time <- function(simulation_result,
 #'   
 #'   Higher fractality → more smoothing iterations → stronger spatial autocorrelation.
 #'   
-#' @param min_value Numeric. Minimum habitat quality for continuous landscapes.
+#' @param min_value Numeric. Minimum habitat value for continuous landscapes.
 #'   Only used when habitat_proportion = NULL. Typically 0.0.
-#' @param max_value Numeric. Maximum habitat quality for continuous landscapes.
+#' @param max_value Numeric. Maximum habitat value for continuous landscapes.
 #'   Only used when habitat_proportion = NULL. Must be > min_value. Typically 1.0.
 #' @param habitat_proportion Numeric between 0 and 1, or NULL. Controls landscape type:
 #'   \itemize{
@@ -1553,7 +1553,7 @@ create_fractal_landscape <- function(cells_per_row,
 
 #' Plot Landscape with World Coordinates
 #'
-#' Visualizes landscape habitat quality in the world coordinate system used by 
+#' Visualizes landscape habitat values in the world coordinate system used by 
 #' TWoLife simulations. Displays proper axis scaling, centered origin, and 
 #' optional grid overlay. Essential for understanding spatial context of 
 #' simulation results and verifying landscape structure.
@@ -1577,7 +1577,7 @@ create_fractal_landscape <- function(cells_per_row,
 #'     \item "terrain" - R's built-in terrain.colors() palette (green-brown-white gradient).
 #'       General-purpose landscape visualization.
 #'     \item "viridis" - Perceptually uniform viridis color scale (requires viridisLite package).
-#'       Best for continuous habitat quality gradients and colorblind-friendly displays.
+#'       Best for continuous habitat value gradients and colorblind-friendly displays.
 #'   }
 #' @param show_legend Logical. If TRUE, displays color legend showing mapping between
 #'   habitat values and colors.
@@ -1757,7 +1757,7 @@ plot_landscape <- function(landscape_data,
 #' Visualize Simulation Results Overlaid on Landscape
 #'
 #' Creates a comprehensive visualization showing the spatial distribution of
-#' surviving individuals on the habitat landscape. Displays habitat quality
+#' surviving individuals on the habitat landscape. Displays habitat values
 #' as background colors with survivors as colored points, enabling assessment
 #' of habitat selection, spatial clustering, and genotype-environment matching.
 #'
@@ -1786,11 +1786,11 @@ plot_landscape <- function(landscape_data,
 #' @details
 #' ## Visualization Components
 #'
-#' 1. **Background Layer**: Landscape habitat quality
+#' 1. **Background Layer**: Landscape habitat values
 #'    \itemize{
-#'      \item Color intensity represents habitat quality
+#'      \item Color intensity represents habitat values
 #'      \item Binary: white (matrix) vs green (habitat)
-#'      \item Continuous: gradient from low to high quality
+#'      \item Continuous: gradient from low to high values
 #'    }
 #'
 #' 2. **Foreground Layer**: Surviving individuals
@@ -2232,10 +2232,11 @@ plot.twolife_result <- function(x, ...) {
 
 #' Validate Habitat Matching for Simulation Results
 #'
-#' Visualizes and quantifies whether surviving individuals are positioned
-#' in habitat matching their genotype or phenotype values. Calculates
-#' correlation between individual trait values and habitat environmental values to assess
-#' effectiveness of habitat selection or adaptation.
+#' Creates side-by-side visualizations to assess whether surviving individuals are positioned
+#' in habitat matching their genotype or phenotype values. The left plot displays the
+#' landscape with habitat values, while the right plot shows survivor locations
+#' colored by their trait values. Calculates correlation between individual trait values
+#' and habitat environmental values to quantify effectiveness of habitat selection or adaptation.
 #'
 #' @param simulation_result A 'twolife_result' object from \code{\link{twolife_simulation}}
 #' @param main Character. Plot title. If NULL, automatically generated.
@@ -2260,7 +2261,7 @@ plot.twolife_result <- function(x, ...) {
 #'     \item{y}{Numeric. Y coordinate in world space}
 #'     \item{genotype}{Numeric. Genotype value}
 #'     \item{phenotype}{Numeric. Phenotype value}
-#'     \item{habitat_value}{Numeric. Habitat quality at individual's location}
+#'     \item{habitat_value}{Numeric. Habitat value at individual's location}
 #'     \item{row_index}{Integer. Landscape row index (for debugging)}
 #'     \item{col_index}{Integer. Landscape column index (for debugging)}
 #'   }
@@ -2270,8 +2271,8 @@ plot.twolife_result <- function(x, ...) {
 #'   This function tests whether individuals are found in habitats matching their trait
 #'   values. Perfect matching would show:
 #'   \itemize{
-#'     \item Individuals with trait value 0.8 in habitats with quality ~0.8
-#'     \item Individuals with trait value 0.2 in habitats with quality ~0.2
+#'     \item Individuals with trait value 0.8 in habitats with values ~0.8
+#'     \item Individuals with trait value 0.2 in habitats with values ~0.2
 #'     \item Strong positive correlation (r close to 1.0)
 #'   }
 #'
@@ -2283,7 +2284,7 @@ plot.twolife_result <- function(x, ...) {
 #'   Where:
 #'   \itemize{
 #'     \item \eqn{X} = trait values (genotype or phenotype) of survivors
-#'     \item \eqn{H} = habitat quality values at survivor locations
+#'     \item \eqn{H} = habitat values at survivor locations
 #'     \item \eqn{\sigma_X}, \eqn{\sigma_H} = standard deviations
 #'     \item \eqn{r} ranges from -1 (perfect negative) to +1 (perfect positive correlation)
 #'   }
@@ -2293,21 +2294,23 @@ plot.twolife_result <- function(x, ...) {
 #' Visualization Components:
 #'   Creates a two-panel plot:
 #'
-#'   Left panel - Spatial distribution:
+#'   Left panel - Landscape visualization:
 #'   \itemize{
-#'     \item Shows landscape with habitat quality as background color
-#'     \item Survivor locations as colored points (color = trait value)
-#'     \item Good matching: point colors visually match background colors
-#'     \item Poor matching: points of one color scattered across all background colors
+#'     \item Displays the spatial landscape with habitat values as background colors
+#'     \item X and Y axes show world coordinates
+#'     \item Color intensity represents habitat values (darker/greener = higher values)
+#'     \item Binary landscapes (0/1 values): white = matrix, green = habitat
+#'     \item Continuous landscapes: color gradient shows habitat values variation
 #'   }
 #'
-#'   Right panel - Correlation plot:
+#'   Right panel - Survivor distribution:
 #'   \itemize{
-#'     \item X-axis: habitat value at individual location (0 to 1)
-#'     \item Y-axis: trait value (genotype or phenotype)
-#'     \item Each point = one surviving individual
-#'     \item Best-fit line and Pearson r displayed
-#'     \item Perfect matching would show points along diagonal (r = 1.0)
+#'     \item Shows coordinates of all surviving individuals as points
+#'     \item Each point represents one survivor's position
+#'     \item Point color represents the individual's trait value (genotype or phenotype)
+#'     \item Color mapping matches landscape color scheme for visual comparison
+#'     \item Good matching: point colors should match the background colors in left panel
+#'     \item Poor matching: points show colors different from their corresponding landscape locations
 #'   }
 #'
 #' Connection to Simulation Parameters:
@@ -2511,7 +2514,7 @@ check_habitat_match <- function(simulation_result,
   
   image(x = x_coords, y = y_coords, z = z,
         col = color_palette,
-        main = "Landscape (Habitat Quality)",
+        main = "Landscape (Habitat Values)",
         xlab = "X (World Coordinates)",
         ylab = "Y (World Coordinates)",
         asp = 1,
@@ -2600,7 +2603,7 @@ check_habitat_match <- function(simulation_result,
 #' Fitness Calculation:
 #'   This function uses the same fitness formula that determines demographic rates during
 #'   the simulation. Fitness quantifies how well an individual's phenotype matches the
-#'   habitat quality at its location.
+#'   habitat value at its location.
 #'
 #'   For generalists (niche_width > 0):
 #'
@@ -2610,7 +2613,7 @@ check_habitat_match <- function(simulation_result,
 #'   \itemize{
 #'     \item \eqn{f} = fitness (ranges 0 to 1)
 #'     \item \eqn{p} = phenotype (individual's expressed trait value)
-#'     \item \eqn{h} = habitat quality at individual's location (0 to 1)
+#'     \item \eqn{h} = habitat value at individual's location (0 to 1)
 #'     \item \eqn{\sigma} = niche_width (genotype_sds parameter, tolerance to mismatch)
 #'   }
 #'
@@ -2627,7 +2630,7 @@ check_habitat_match <- function(simulation_result,
 #'
 #' Fitness Interpretation:
 #'   \itemize{
-#'     \item fitness = 1.0: Perfect match. Phenotype exactly equals habitat quality.
+#'     \item fitness = 1.0: Perfect match. Phenotype exactly equals habitat value.
 #'     \item fitness > 0.8: High fitness. Within ~1 niche width of optimum.
 #'     \item fitness = 0.5-0.8: Medium fitness. 1-2 niche widths from optimum.
 #'     \item fitness < 0.5: Low fitness. More than 2 niche widths from optimum.

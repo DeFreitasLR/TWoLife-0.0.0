@@ -53,7 +53,7 @@ providing comprehensive statistics on habitat matching quality and population fi
 Fitness Calculation:
   This function uses the same fitness formula that determines demographic rates during
   the simulation. Fitness quantifies how well an individual's phenotype matches the
-  habitat quality at its location.
+  habitat value at its location.
 
   For generalists (niche_width > 0):
 
@@ -63,7 +63,7 @@ Fitness Calculation:
   \itemize{
     \item \eqn{f} = fitness (ranges 0 to 1)
     \item \eqn{p} = phenotype (individual's expressed trait value)
-    \item \eqn{h} = habitat quality at individual's location (0 to 1)
+    \item \eqn{h} = habitat value at individual's location (0 to 1)
     \item \eqn{\sigma} = niche_width (genotype_sds parameter, tolerance to mismatch)
   }
 
@@ -80,7 +80,7 @@ Fitness Calculation:
 
 Fitness Interpretation:
   \itemize{
-    \item fitness = 1.0: Perfect match. Phenotype exactly equals habitat quality.
+    \item fitness = 1.0: Perfect match. Phenotype exactly equals habitat value.
     \item fitness > 0.8: High fitness. Within ~1 niche width of optimum.
     \item fitness = 0.5-0.8: Medium fitness. 1-2 niche widths from optimum.
     \item fitness < 0.5: Low fitness. More than 2 niche widths from optimum.

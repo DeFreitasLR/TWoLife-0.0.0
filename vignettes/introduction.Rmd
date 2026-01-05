@@ -2,17 +2,18 @@
 title: "TWoLife: Simulating Populations with Individual Variation in Heterogeneous Landscapes"
 author: "Lucas Freitas"
 date: "`r Sys.Date()`"
-output: 
+output:
   rmarkdown::html_vignette:
     toc: true
     toc_depth: 3
+    number_sections: true
 bibliography: references.bib
 vignette: >
   %\VignetteEncoding{UTF-8}
   %\VignetteIndexEntry{TWoLife: Simulating Populations with Individual Variation in Heterogeneous Landscapes}
   %\VignetteEngine{knitr::rmarkdown}
-editor_options: 
-  markdown: 
+editor_options:
+  markdown:
     wrap: 72
 ---
 
@@ -29,21 +30,73 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-Understanding population dynamics in spatially heterogeneous environments—where environmental conditions vary across space—requires modeling both landscape structure (the spatial arrangement of environmental conditions) and individual variation (differences among individuals in traits affecting fitness) [@Turner1989; @Bolnick2011]. Existing approaches typically simplify one or both dimensions: agent-based models (computational simulations tracking individual organisms) often assume discrete habitat types (categorical suitable/unsuitable classifications) [@Grimm2005], while analytical models (mathematical equations) treat individuals as identical units [@Levins1969; @Hanski1999]. **TWoLife** integrates these dimensions by simulating populations as collections of genetically variable individuals inhabiting spatially complex landscapes.
+The **TWoLife** package implements individual-based simulations of
+populations inhabiting spatially heterogeneous landscapes. Unlike
+traditional models that assume genetic uniformity within populations,
+TWoLife explicitly represents individual variation in traits that
+determine ecological outcomes. As a consequence, the package allows
+researchers to investigate how preexisting genetic diversity interacts
+with landscape structure to influence population persistence
+[@Bolnick2003; @Lynch1998].
 
-The package enables researchers to:
+The package addresses a fundamental limitation of ecological theory: the
+assumption that individuals within a population perceive and exploit
+environments in identical ways. This assumption, while simplifying
+mathematical analysis, may not depict biologically realistic scenarios
+[@Chesson2000; @Wiens1976]. In reality, individuals differ in their
+optimal environmental conditions, tolerance ranges, and behavioral
+strategies. This in turn means that environmental changes may favor some
+individuals to the detriment of others, with consequences for
+population-level outcomes that cannot be predicted from species-level
+averages alone.
 
-1.  Generate landscapes with **continuous environmental gradients** (smoothly varying conditions across space) or **discrete habitat patches** (distinct areas of suitable vs. unsuitable habitat)
-2.  Model **individual genetic variation** in optimal environmental values (conditions where fitness is maximized), tolerance ranges (breadth of survivable conditions), and behavioral strategies (e.g., habitat selection decisions)
-3.  Implement **evolutionary and adaptive mechanisms** including mutation (random genetic changes transmitted to offspring), phenotypic plasticity (within-generation adjustment to environmental conditions), and natural selection (differential survival based on trait-environment matching)
-4.  Track **phenotype-environment interactions** (how well individual traits match local conditions) that determine fitness and spatial distribution
-5.  Analyze **emergent population dynamics** (population-level patterns arising from individual decisions and fates) from individual-level processes (birth, death, dispersal, and trait evolution)
+TWoLife enables researchers to:
 
-This vignette demonstrates TWoLife's capabilities through two complementary analyses. We begin with a simplified example showing basic workflow and discrete habitat structure, then proceed to the main analysis showcasing individual genetic variation in continuous environmental gradients—the core innovation of TWoLife.
+1.  Generate landscapes with **continuous environmental gradients**
+    representing variation in conditions across space, or **discrete
+    habitat patches** embedded in unsuitable matrix
+2.  Model **individual genetic variation** in optimal environmental
+    values, tolerance ranges (niche width), and behavioral strategies
+    such as habitat selection
+3.  Implement **evolutionary and adaptive mechanisms** including
+    mutation (heritable genetic changes), phenotypic plasticity
+    (non-heritable developmental noise), and natural selection through
+    differential survival
+4.  Track **phenotype-environment interactions** where fitness emerges
+    dynamically from the match between individual traits and local
+    conditions, rather than being pre-assigned by habitat type
+5.  Analyze **emergent population dynamics** arising from
+    individual-level processes of birth, death, dispersal, and trait
+    evolution
+
+This vignette demonstrates TWoLife's capabilities through two
+complementary analyses that progressively build understanding of the
+package's functionality and scientific applications:
+
+**Part 1: Basic Workflow Demonstration** (Section 5) introduces the main
+function structure and parameter organization using discrete
+habitat-matrix landscapes. This simpler scenario—where space is divided
+into suitable habitat and unsuitable matrix—allows readers to grasp
+input requirements and output structure before confronting the added
+complexity of continuous environmental variation.
+
+**Part 2: Main Analysis** (Section 6) showcases TWoLife's core
+innovation: modeling populations where fitness emerges from
+phenotype-environment matching along continuous gradients. Through a
+progressive five-scenario comparison, we isolate the effects of genetic
+diversity, tolerance, evolution, and behavior on population outcomes.
+This analysis demonstrates how the package can address questions about
+which mechanisms are necessary for persistence under environmental
+heterogeneity.
+
+Together, these analyses illustrate both fundamental usage patterns and
+the package's capacity to investigate eco-evolutionary dynamics in
+spatially structured populations.
 
 # Package Setup
 
-Before using TWoLife functions, we load the package and set a seed for reproducibility:
+Before executing any simulations, we load the package and establish a
+seed for reproducibility:
 
 ```{r load-package}
 library(TWoLife)
@@ -52,121 +105,545 @@ library(TWoLife)
 set.seed(42)
 ```
 
+# Key Concepts
+
+## Landscapes
+
+Spatial environments in TWoLife are represented as numeric matrices
+where each cell contains an environmental value. The package supports
+two fundamentally different landscape types that determine how
+environmental variation structures individual fitness:
+
+-   **Continuous landscapes**: Environmental values vary along
+    gradients, typically ranging from 0.0 to 1.0. These values represent
+    continuous variation in conditions such as temperature (e.g., 0°C to
+    30°C rescaled to 0-1), soil moisture (0% to 100%), or resource
+    availability. In continuous landscapes, no locations are inherently
+    unsuitable. Rather, suitability emerges dynamically from the
+    interaction between individual phenotypes and local environmental
+    values through Gaussian matching (explained in the Fitness section
+    below). This means that a cell with value 0.3 is not intrinsically
+    "better" or "worse" than a cell with value 0.7—suitability depends
+    on whether individuals in the population possess phenotypes adapted
+    to those particular values.
+
+-   **Discrete landscapes**: Space is divided into binary categories
+    where each cell is classified as either suitable habitat (value=1)
+    or unsuitable matrix (value=0). This representation is common in
+    fragmented landscapes where habitat patches are embedded in a
+    surrounding matrix that cannot support populations. In discrete
+    landscapes, individuals can persist only in habitat cells, while
+    matrix cells are immediately lethal regardless of individual traits.
+    This binary classification corresponds to the traditional
+    patch-matrix paradigm in landscape ecology [@Fahrig2003].
+
+Landscapes are generated using `create_fractal_landscape()`, which
+produces realistic spatial patterns with self-similar structure across
+scales [@Justeau-Allaire2022]. The fractal algorithm ensures that
+pattern complexity—the degree of patchiness versus smoothness—remains
+similar whether the landscape is viewed at fine resolution (individual
+cells) or coarse resolution (blocks of cells). This property mimics
+natural spatial processes where environmental structure often exhibits
+scale-invariant patterns.
+
+## Fitness: How Traits Determine Survival
+
+Survival probability in TWoLife is determined by Gaussian matching—a
+mathematical function that quantifies how well an individual's phenotype
+matches local environmental conditions. This fitness framework differs
+fundamentally from models where habitat quality is pre-assigned by
+location type (e.g., habitat cells support survival, matrix cells do
+not). Instead, fitness emerges dynamically from trait-environment
+interactions:
+
+$$\text{fitness} = \exp\left(-\frac{(\text{phenotype} - \text{environment})^2}{2 \times \text{genotype\_sd}^2}\right)$$
+
+where:
+
+-   **phenotype** is the individual's expressed trait value
+    (genotype_mean plus developmental noise determined by the plasticity
+    parameter, sampled once at birth)
+-   **environment** is the environmental value at the cell where the
+    individual currently resides (ranging from 0 to 1 in continuous
+    landscapes, or 0/1 in binary landscapes)
+-   **genotype_sd** is the individual's tolerance parameter (niche
+    width)
+
+This Gaussian function produces a bell-shaped fitness curve centered on
+the individual's phenotype. When phenotype perfectly matches the local
+environment, the numerator equals zero and fitness equals 1.0,
+representing maximum survival probability. As the phenotype-environment
+mismatch increases in either direction, fitness declines exponentially.
+The rate of decline is controlled by genotype_sd:
+
+-   **Narrow tolerance** (small genotype_sd, e.g., 0.05): Fitness drops
+    rapidly with small mismatches. An individual with genotype_sd=0.05
+    retains fitness ≈0.6 when mismatch is 0.05, but fitness falls to
+    ≈0.14 when mismatch reaches 0.1. These specialists require close
+    phenotype-environment matches to survive, performing well only in
+    narrow environmental ranges.
+
+-   **Broad tolerance** (large genotype_sd, e.g., 0.3): Fitness declines
+    gradually even with substantial mismatches. An individual with
+    genotype_sd=0.3 maintains fitness ≈0.95 when mismatch is 0.05, and
+    retains fitness ≈0.61 even when mismatch reaches 0.1. These
+    generalists survive across wide environmental ranges, though they
+    may not achieve the maximum fitness values that specialists attain
+    in optimal conditions.
+
+This fitness framework has important implications for how populations
+respond to environmental heterogeneity. In models with pre-assigned
+habitat quality, fitness depends solely on location type—habitat cells
+are "good" and matrix cells are "bad" for all individuals equally. In
+TWoLife, fitness depends on the match between individual-specific
+phenotypes and local conditions. This means that different individuals
+perceive the same landscape differently, and spatial heterogeneity can
+maintain genetic variation by favoring different phenotypes in different
+locations [@Levins1968].
+
+## Individuals
+
+Each individual in TWoLife is a simulated organism characterized by
+heritable genetic traits. Unlike models where fitness is
+location-dependent but individual-independent, fitness in TWoLife
+emerges from phenotype-environment matching as described above. As a
+consequence, populations can contain diverse individuals who differ in
+their ecological niches and respond differently to environmental change.
+
+Individuals are characterized by five genetic attributes that together
+determine ecological and evolutionary outcomes:
+
+-   **`genotype_mean`** (Optimal environmental value): The environmental
+    condition at which the individual achieves maximum fitness,
+    representing the genetically-determined optimal niche position.
+    Values typically range from 0 to 1, matching the landscape's
+    environmental scale. For example, an individual with
+    genotype_mean=0.3 is genetically adapted to environmental value 0.3
+    (e.g., cool temperatures if the gradient represents temperature).
+    When an individual's phenotype (genotype_mean plus noise from
+    plasticity) exactly matches the local environmental value, fitness
+    equals to its maximum. This parameter thus determines where on the
+    environmental gradient each individual performs best.
+
+-   **`genotype_sd`** (Niche width/tolerance): The breadth of
+    environmental conditions the individual can tolerate, represented
+    mathematically as the standard deviation (σ) in the Gaussian fitness
+    function described above. This parameter controls how steeply
+    fitness declines as environmental conditions deviate from the
+    optimum. Smaller values (e.g., genotype_sd=0.05) indicate
+    specialists with narrow tolerance ranges—fitness drops rapidly with
+    small environmental mismatches, making these individuals vulnerable
+    to environmental change but highly efficient in optimal conditions.
+    Larger values (e.g., genotype_sd=0.3) indicate generalists with
+    broad tolerance—fitness declines gradually even with substantial
+    environmental mismatches, allowing these individuals to persist
+    across diverse conditions albeit with lower peak fitness. A
+    genotype_sd of 0.15 means approximately 95% of fitness is retained
+    within ±0.3 units of the optimal value (±2σ in statistical terms).
+
+-   **`plasticity`** (Phenotypic plasticity): Controls non-heritable
+    phenotypic variation arising from developmental or environmental
+    noise. This parameter determines the standard deviation (ψ) of
+    random variation added to an individual's genotype at birth to
+    produce its phenotype, which then remains fixed for the individual's
+    lifetime. Importantly, the phenotype (not genotype) determines
+    fitness and habitat selection, while only the genotype is
+    transmitted to offspring. This distinction allows modeling of
+    developmental variation that affects individual ecology but is not
+    inherited. Mathematically, the relationship can be expressed as:
+    $p = g + \varepsilon_{\text{plasticity}}$ where
+    $\varepsilon_{\text{plasticity}} \sim N(0, \psi)$ and $\psi$ =
+    plasticity parameter.
+
+    -   plasticity=0: No phenotypic variation—phenotype equals genotype
+        exactly. All individuals with the same genotype_mean express
+        identical phenotypes and experience identical fitness
+        landscapes.
+    -   plasticity=0.1: Moderate variation—phenotype varies around
+        genotype with standard deviation 0.1. An individual with
+        genotype_mean=0.5 might express phenotype=0.52 or
+        phenotype=0.47, sampled once at birth and fixed thereafter.
+    -   plasticity=0.2: High variation—phenotype can deviate
+        substantially from genotype. An individual with
+        genotype_mean=0.5 might express phenotype=0.3 or phenotype=0.7
+        (±2σ contains approximately 95% of values).
+
+-   **`mutation_rate`** (Mutation rate): Controls heritable genetic
+    variation transmitted across generations. This parameter determines
+    the standard deviation (μ_r) of mutations added to the offspring's
+    genotype at each birth event. Unlike plasticity, which affects
+    phenotype but not inheritance, mutations modify the genotype itself
+    and these modifications are passed to future generations. This
+    enables evolutionary adaptation—populations can shift their genetic
+    composition in response to selection pressures. The underlying
+    mathematical model is: $g_{\text{offspring}} = g_{\text{parent}} +
+    \varepsilon_{\text{mutation}}$ where $\varepsilon_{\text{mutation}}
+    \sim N(0, \mu_r)$ and $\mu_r$ = mutation_rate parameter.
+
+    -   mutation_rate=0: No evolution—offspring genotype exactly equals
+        parent genotype. All descendants retain identical genotype_mean
+        values, preventing evolutionary adaptation even under strong
+        selection.
+    -   mutation_rate=0.05: Moderate evolution—offspring genotype varies
+        from parent genotype with standard deviation 0.05. An offspring
+        from a parent with genotype_mean=0.5 might have
+        genotype_mean=0.52 or 0.48, allowing gradual evolutionary
+        change.
+    -   mutation_rate=0.1: High evolution—substantial genetic variation
+        between parent and offspring. An offspring from a parent with
+        genotype_mean=0.5 might have genotype_mean=0.3 or 0.7 (±2σ
+        contains approximately 95% of values), facilitating rapid
+        evolutionary responses.
+
+-   **`sampling_points`** (Habitat selection intensity): The number of
+    potential dispersal locations an individual evaluates before
+    deciding where to move. This parameter controls habitat selection
+    behavior and has direct implications for computational cost:
+
+    -   sampling_points**≤**1: Random dispersal with no habitat
+        selection. The individual moves to a randomly chosen location
+        without evaluation, representing passive dispersal mechanisms
+        such as wind-dispersed seeds or organisms with limited sensory
+        capabilities.
+    -   sampling_points=10: Moderate selectivity. The individual
+        evaluates 10 random locations and selects among them using a
+        softmax function weighted by expected fitness at each location.
+        This represents organisms with limited but non-zero habitat
+        assessment capacity.
+    -   sampling_points=100: High selectivity. The individual evaluates
+        100 locations, enabling sophisticated habitat selection that
+        approaches optimal placement. This represents organisms with
+        strong habitat assessment abilities, such as birds evaluating
+        multiple potential territories before settling.
+
+    The sampling_points value thus represents assessment capacity rather
+    than dispersal distance. Typical values span a biological continuum:
+    1 corresponds to passive dispersal, 10-20 to limited assessment,
+    50-100 to moderate-to-sophisticated assessment, and 100-200 to
+    near-optimal placement. Higher values increase computation time
+    linearly—each dispersal with sampling_points=100 evaluates 100
+    locations versus 1 location with sampling_points=1. The softmax
+    selection process means individuals prefer high-fitness locations
+    but retain some randomness, preventing unrealistic determinism where
+    all individuals always select the single best available cell.
+
+All five attributes are heritable, enabling evolutionary dynamics and
+potential local adaptation over multiple generations.
+
 # Package Overview
 
 ## Main Function
 
-TWoLife simulations are executed through a single main function that accepts five components: three parameter lists controlling different aspects of the simulation, plus master seed for reproducibility. The function structure is:
+TWoLife simulations are executed through a single main function that
+accepts five components organized to separate spatial, demographic,
+genetic, temporal, and stochastic aspects of the model. This
+organization reflects the structure of individual-based models more
+generally, where populations are defined by their environment
+(landscape), initial configuration (individuals), heritable variation
+(genetics), and temporal dynamics (simulation parameters), with
+stochasticity controlled through seeding [@Grimm2005].
+
+The four parameter lists are:
+
+-   **landscape_params**: A list containing spatial environment
+    configuration, specifically the habitat matrix and optionally
+    environmental values
+-   **individual_params**: A list containing population initialization
+    settings (starting population size, positions, and ages)
+-   **genetic_params**: An optional list specifying individual variation
+    in genetic traits (optimal values, tolerance, mutation rates,
+    plasticity, and behavior)
+-   **simulation_params**: A list containing simulation control and
+    stopping conditions (duration limits)
+
+The fifth component is **master_seed**, an integer value that ensures
+complete reproducibility by controlling all random processes in the
+simulation, from initial individual placement to demographic event
+ordering to mutation directions.
+
+The function structure is:
 
 ```{r eval=FALSE}
 twolife_simulation(
-  landscape_params,     # List: spatial environment configuration
-  individual_params,    # List: population initialization settings
-  genetic_params,       # List: individual variation (optional)
-  simulation_params,    # List: simulation control and stopping conditions
-  master_seed           # Integer: ensures complete reproducibility
+  landscape_params,
+  individual_params,
+  genetic_params,
+  simulation_params,
+  master_seed
 )
 ```
 
-Each parameter list is a standard R list containing named elements. The `landscape_params` list must include a habitat matrix. The `individual_params` list specifies initial population size and optional starting configurations. The `genetic_params` list is optional—when omitted, individuals use default genetic values (all identical with genotype=0.5, no tolerance, no evolution). The `simulation_params` list controls simulation duration through `max_events` or `max_time`. The `master_seed` ensures all random processes (initialization, demographic events, mutations) produce identical results when re-run.
+Each parameter list is a standard R list containing named elements. The
+`landscape_params` list must include a habitat matrix defining the
+spatial environment. The `individual_params` list specifies initial
+population size and optional starting configurations.
 
-## Key Concepts
+**Important note on genetic_params**: This list is optional. When
+`genetic_params` is omitted, TWoLife applies default values designed
+specifically for binary landscapes where habitat=1 and matrix=0. Under
+these defaults, all individuals have genotype_mean=1 (matching habitat
+value), genotype_sd=0 (zero tolerance, requiring exact environmental
+matches), mutation_rate=0 (no evolution), plasticity=0 (no phenotypic
+noise), and sampling_points=1 (random dispersal with no habitat
+selection). These defaults work well for exploring habitat-matrix
+simulations without genetic complications, as they create genetically
+uniform populations that survive in habitat cells but not matrix cells.
+However, these same defaults typically produce extinction in continuous
+landscapes where exact environmental matches are rare. As a consequence,
+explicit genetic_params specification is essential when working with
+continuous environmental gradients (demonstrated in Section 6).
 
-**Landscapes**
-
-Spatial environments are represented as numeric matrices where each cell contains an environmental value. TWoLife supports two landscape types that differ fundamentally in how environmental variation is represented:
-
-- **Continuous landscapes**: Environmental values vary smoothly across space along gradients. Values typically range from 0.0 to 1.0, representing continuous variation in conditions such as temperature (e.g., 0°C to 30°C rescaled to 0-1), moisture (e.g., 0% to 100% soil moisture), or resource availability. In continuous landscapes, fitness depends on the match between individual phenotypes and local environmental values through Gaussian matching. No locations are inherently "unsuitable"—suitability emerges from the interaction between individual traits and local conditions.
-
-- **Discrete landscapes**: Space is divided into binary categories where each cell is classified as either suitable habitat (value=1) or unsuitable matrix (value=0). This representation is common in fragmented landscapes where habitat patches are embedded in a surrounding matrix that cannot support populations. In discrete landscapes, individuals can only survive in habitat cells (value=1), and matrix cells (value=0) are immediately lethal.
-
-Landscapes are generated using `create_fractal_landscape()`, which produces realistic spatial patterns with self-similar structure across spatial scales. The fractal algorithm ensures that pattern complexity (patchiness vs. smoothness) is similar whether the landscape is viewed at fine resolution (individual cells) or coarse resolution (blocks of cells), mimicking natural spatial processes.
-
-**Individuals**
-
-Each individual in TWoLife is a simulated organism (computational agent) with heritable genetic traits. Unlike models where fitness is pre-assigned by location type, fitness in TWoLife emerges dynamically from phenotype-environment matching: how well an individual's expressed traits align with local environmental conditions determines survival probability.
-
-Individuals are characterized by five genetic attributes that together determine ecological and evolutionary outcomes:
-
--   **`genotype_mean`** (Optimal environmental value): The environmental condition at which the individual achieves maximum fitness (survival probability = 1.0). This represents the genetically-determined optimal niche position. Values typically range from 0 to 1, matching the landscape's environmental scale. For example, an individual with genotype_mean=0.3 is genetically adapted to environmental value 0.3 (e.g., cool temperatures if the gradient represents temperature). When an individual occupies a location with environmental value exactly matching its genotype_mean (adjusted by plasticity), fitness equals 1.0.
-
--   **`genotype_sd`** (Niche width/tolerance): The breadth of environmental conditions the individual can tolerate, represented mathematically as the standard deviation (σ) in the Gaussian fitness function. This parameter controls how steeply fitness declines as environmental conditions deviate from the optimum. Smaller values (e.g., genotype_sd=0.05) indicate specialists with narrow tolerance ranges who perform well only near their optimal value—fitness drops rapidly with small environmental mismatches. Larger values (e.g., genotype_sd=0.3) indicate generalists with broad tolerance who maintain high fitness across a wide range of conditions—fitness declines gradually even with substantial environmental mismatches. A genotype_sd of 0.15 means approximately 95% of fitness is retained within ±0.3 units of the optimal value (±2σ).
-
--   **`plasticity`** (Phenotypic plasticity rate): The rate at which an individual's expressed phenotype can shift toward local environmental values within its lifetime. This parameter controls within-generation acclimation capacity. Values range from 0 to 1:
-    - plasticity=0: No plasticity—the expressed phenotype permanently equals genotype_mean regardless of local environment. The individual cannot adjust.
-    - plasticity=0.3: Moderate plasticity—each time step, the phenotype shifts 30% of the distance from its current value toward the local environmental value. This represents partial, gradual acclimation.
-    - plasticity=1.0: Complete plasticity—the phenotype immediately adjusts to perfectly match the local environmental value (within tolerance limits set by genotype_sd). This represents instantaneous, perfect acclimation.
-    
-    Plasticity represents reversible acclimation or behavioral thermoregulation, not genetic change. If an individual with plasticity=0.5, genotype_mean=0.4, and current phenotype=0.4 moves to a location with environment=0.6, its phenotype shifts to 0.4 + 0.5×(0.6-0.4) = 0.5. Plasticity enables individuals to improve fitness in sub-optimal conditions but cannot exceed the limits set by tolerance (genotype_sd).
-
--   **`mutation_rate`**: The probability that offspring inherit a genotype_mean different from the parent value. When mutation occurs (tested at each birth event), offspring genotype_mean is drawn from a normal distribution centered on the parent's genotype_mean with standard deviation determined by the mutation rate. Typical values range from 0 (no evolution) to 0.1 (10% chance per reproduction). For example, with mutation_rate=0.05, each offspring has a 5% chance of receiving a mutated genotype_mean drawn from Normal(parent_genotype_mean, σ_mutation). This parameter enables evolutionary adaptation across generations as beneficial mutations (those increasing fitness in current conditions) accumulate and spread through the population via natural selection.
-
--   **`sampling_points`** (Habitat selection intensity): The number of potential dispersal locations an individual evaluates before deciding where to move. This parameter controls habitat selection behavior:
-    - sampling_points=1: Random dispersal with no habitat selection. The individual moves to a randomly chosen location without evaluation, representing passive dispersal (e.g., wind-dispersed seeds).
-    - sampling_points=10: Moderate selectivity. The individual evaluates 10 random locations and selects among them using a softmax function weighted by expected fitness at each location, representing limited assessment capacity.
-    - sampling_points=100: High selectivity. The individual evaluates 100 locations, enabling sophisticated habitat selection that approaches optimal placement, representing organisms with strong habitat assessment abilities (e.g., birds evaluating multiple territories).
-    
-    Higher sampling_points values allow individuals to locate more suitable microhabitats, but at computational cost. The softmax selection process means individuals prefer high-fitness locations but retain some randomness, preventing unrealistic determinism.
-
-All five attributes are heritable with modification (subject to mutation), enabling evolutionary dynamics and potential local adaptation over multiple generations. For example, if populations persist in heterogeneous landscapes, natural selection may favor individuals with broader tolerance (larger genotype_sd) or higher plasticity.
-
-**Fitness**
-
-Survival probability is determined by Gaussian matching—a mathematical function that quantifies the match between an individual's phenotype and local environmental conditions:
-
-$$\text{fitness} = \exp\left(-\frac{(\text{phenotype} - \text{environment})^2}{2 \times \text{tolerance}^2}\right)$$
-
-where:
-- **phenotype** is the individual's expressed trait value, which equals genotype_mean initially but can shift through plasticity toward local environmental values
-- **environment** is the environmental value at the cell where the individual currently resides (ranges from 0 to 1 in continuous landscapes, or 0/1 in binary landscapes)
-- **tolerance** is the individual's genotype_sd (niche width parameter)
-
-This Gaussian function produces a bell-shaped fitness curve centered on the phenotype. When phenotype perfectly matches the local environment, the numerator equals zero and fitness equals 1.0 (maximum survival probability). As the mismatch increases, fitness declines exponentially. The tolerance parameter controls the rate of decline:
-
-- **Narrow tolerance** (small genotype_sd, e.g., 0.05): Fitness drops rapidly with small mismatches. An individual with genotype_sd=0.05 has fitness ≈0.6 when mismatch is 0.05, and fitness ≈0.14 when mismatch is 0.1. These specialists require close matches to survive.
-
-- **Broad tolerance** (large genotype_sd, e.g., 0.3): Fitness declines gradually even with substantial mismatches. An individual with genotype_sd=0.3 maintains fitness ≈0.95 when mismatch is 0.05, and fitness ≈0.61 when mismatch is 0.1. These generalists survive across wide environmental ranges.
-
-This fitness framework differs fundamentally from models with pre-assigned habitat quality, where fitness depends only on location type (e.g., habitat=suitable, matrix=unsuitable). In TWoLife, fitness emerges dynamically from trait-environment interactions, allowing investigation of adaptive matching, local adaptation, and niche evolution without assuming fitness landscapes a priori.
+The `simulation_params` list controls simulation duration through
+`max_time` (maximum simulation duration in time units). The
+`master_seed` ensures all random processes—initial placement when
+positions aren't specified, which individual reproduces/dies/disperses
+next, mutation direction and magnitude, plasticity noise, and habitat
+selection decisions when sampling_points\>1—produce identical results
+when re-run with the same seed value. Using identical master_seed with
+identical parameters produces exactly identical results, while using
+different seeds with identical parameters produces independent
+realizations. This distinction is analogous to experimental trials: the
+processes are identical but random outcomes differ, allowing
+quantification of outcome variability under fixed conditions.
 
 ## Simulation Output
 
-Simulations return a list object containing four components that provide different levels of detail about population outcomes:
+Simulations return a list object containing four components that provide
+different levels of detail about population outcomes. This structure
+balances the need for quick summaries (summary component), detailed
+individual-level data (survivors component), complete demographic
+records (events component), and reproducibility (parameters component):
 
--   **`summary`**: A list of final population statistics including `final_population_size` (number surviving at simulation end), `total_births` (cumulative birth events), `total_deaths` (cumulative death events), `total_dispersals` (cumulative dispersal events), and `final_time` (simulation duration). This component provides a quick overview of population outcomes.
+-   **`summary`**: A list of final population statistics including
+    `final_population_size` (number surviving at simulation end),
+    `total_births` (cumulative birth events), `total_deaths` (cumulative
+    death events), `total_dispersals` (cumulative dispersal events), and
+    `final_time` (simulation duration). This component provides quick
+    assessment of population outcomes without requiring data processing.
 
--   **`survivors`**: A data frame where each row represents one surviving individual at simulation end. Columns include `individual_id`, `genotype` (genotype_mean value), `genotype_sd`, `phenotype` (current expressed value), `x` and `y` (spatial coordinates), `habitat_quality` (local environmental value), and `fitness` (current survival probability). This component enables analysis of trait distributions, spatial patterns, and phenotype-environment matching among survivors.
+-   **`survivors`**: A data frame where each row represents one
+    surviving individual at simulation end. Columns include
+    `individual_id`, `genotype` (genotype_mean value), `genotype_sd`,
+    `phenotype` (current expressed value), `x` and `y` (spatial
+    coordinates), `habitat_quality` (local environmental value), and
+    `fitness` (current survival probability). This component enables
+    analysis of trait distributions, spatial patterns, and
+    phenotype-environment matching among survivors. When populations go
+    extinct, this component may be NULL or an empty dataframe.
 
--   **`events`**: A data frame recording every demographic event that occurred during the simulation. Each row documents one event with columns: `time` (when event occurred), `event_type` ("birth", "death", or "dispersal"), `individual_id`, `parent_id` (for births), `x` and `y` (location), and relevant trait values. This complete history enables analysis of population dynamics, demographic rates over time, and lineage tracking.
+-   **`events`**: A data frame recording every demographic event that
+    occurred during the simulation. Each row documents one event with
+    columns: `time` (when event occurred), `event_type` ("birth",
+    "death", or "dispersal"), `individual_id`, `parent_id` (for births),
+    `x` and `y` (location), and relevant trait values. This complete
+    history enables analysis of population dynamics, demographic rates
+    over time, and lineage tracking.
 
--   **`parameters`**: A list storing all input parameters (landscape_params, individual_params, genetic_params, simulation_params, master_seed). This ensures complete reproducibility—simulations can be exactly replicated by re-running with stored parameters. It also enables systematic comparison across parameter combinations.
+-   **`parameters`**: A list storing all input parameters
+    (landscape_params, individual_params, genetic_params,
+    simulation_params, master_seed). This ensures complete
+    reproducibility—simulations can be exactly replicated by re-running
+    with stored parameters. It also enables systematic comparison across
+    simulations with different parameter configurations.
 
-## Basic Workflow
+To demonstrate this output structure, we create a minimal example
+consisting of a 10×10 uniform habitat with 20 individuals running for
+100 demographic events:
 
-A typical TWoLife analysis follows five steps:
+```{r create-example-sim}
+# Create simple example: 10×10 uniform habitat, 20 individuals, 100 events
+example_sim <- twolife_simulation(
+  landscape_params = list(habitat = matrix(1, nrow = 10, ncol = 10)),
+  individual_params = list(initial_population_size = 20),
+  simulation_params = list(max_events = 100),
+  master_seed = 1
+)
+```
 
-1.  **Create landscape**: Use `create_fractal_landscape()` to generate spatial environments with desired properties (continuous vs. discrete, spatial autocorrelation level, habitat proportion)
-2.  **Configure parameters**: Prepare the three parameter lists (landscape_params, individual_params, genetic_params) specifying landscape, initial population, and genetic attributes
-3.  **Run simulation**: Execute `twolife_simulation()` with parameters and master_seed
-4.  **Extract results**: Access components of the output list directly (e.g., `sim$summary$final_population_size`) or use helper functions like `population_size()` to extract time series
-5.  **Visualize**: Use built-in plotting functions (`plot_landscape()`, `check_habitat_match()`) or create custom visualizations from survivors and events data
+## Accessing Summary Statistics
 
-This workflow enables rapid iteration through parameter combinations, facilitating both exploratory analysis and systematic hypothesis testing.
+The `summary` component contains high-level population outcomes as a
+named list, providing quick assessment of simulation results without
+requiring detailed data processing:
+
+```{r accessing-summary}
+# Population-level outcomes
+example_sim$summary
+```
+
+The summary includes `final_population_size` (integer: number
+surviving), `total_births` (integer: cumulative birth events),
+`total_deaths` (integer: cumulative death events), `total_dispersals`
+(integer: cumulative dispersal events), and `final_time` (numeric:
+simulation duration in time units). Together, these statistics
+characterize demographic processes and population outcomes at the
+coarsest scale.
+
+## Accessing Individual-Level Data
+
+The `survivors` component is a data frame where each row represents one
+surviving individual at simulation end. This structure enables analysis
+of trait distributions, spatial patterns, and phenotype-environment
+relationships among survivors—questions that require individual-level
+resolution but not complete demographic histories.
+
+The survivors data frame contains the following columns:
+
+-   **individual_id**: Unique identifier assigned to each individual at
+    birth
+-   **genotype**: The genotype_mean value representing the individual's
+    genetic optimum
+-   **genotype_sd**: Tolerance or niche width parameter
+-   **phenotype**: Current expressed value (may differ from genotype
+    through plasticity noise added at birth)
+-   **x, y**: Spatial coordinates indicating current location in the
+    landscape matrix
+-   **habitat_quality**: Environmental value at the individual's current
+    location
+-   **fitness**: Current survival probability based on
+    phenotype-environment match as calculated by the Gaussian fitness
+    function
+
+This data structure enables diverse analyses including trait
+distribution statistics (mean, variance, range of genotypes and
+phenotypes), spatial pattern analysis (clustering, dispersion, spatial
+autocorrelation), phenotype-environment correlation (strength of
+matching), and fitness distribution (population viability indicators,
+variance in individual quality).
+
+We examine the survivors data as follows:
+
+```{r accessing-survivors}
+# Individual-level data showing traits and locations
+# Check survivors exist (simulations can produce extinction where survivors is NULL/empty)
+if (isTRUE(!is.null(example_sim$survivors) && is.data.frame(example_sim$survivors) && nrow(example_sim$survivors) > 0)) {
+  # Display first three survivors
+  head(example_sim$survivors, 3)
+}
+```
+
+## Accessing Event History
+
+The `events` component is a data frame recording every demographic event
+that occurred during the simulation. This complete history enables
+analysis of population dynamics over time, demographic rates, and
+detailed process tracking—questions that require temporal resolution
+beyond simple summary statistics.
+
+The events data frame contains the following columns:
+
+-   **time**: When the event occurred (in simulation time units, which
+    accumulate according to exponential waiting times)
+-   **event_type**: The type of demographic event ("birth", "death", or
+    "dispersal")
+-   **individual_id**: Which individual experienced the event (births
+    create new IDs, deaths remove IDs from the population, dispersals
+    modify existing individual locations)
+-   **parent_id**: For birth events, identifies which individual
+    reproduced (NA for deaths and dispersals, enabling lineage tracking)
+-   **x, y**: Location coordinates where the event occurred
+-   Additional columns containing trait values (genotype, phenotype,
+    fitness) at the time of the event
+
+This complete event record enables temporal analysis including
+birth/death/dispersal rates over time (how demographic processes change
+as populations grow or decline), population growth trajectory
+reconstruction (plotting population size versus time), lineage tracking
+through parent-offspring relationships, spatial dynamics showing where
+events concentrate, and analysis of how demographic rates vary
+throughout simulation duration.
+
+We examine the event history as follows:
+
+```{r accessing-events}
+# Event history showing complete demographic record
+if (isTRUE(!is.null(example_sim$events) && is.data.frame(example_sim$events) && nrow(example_sim$events) > 0)) {
+  # Display first three events
+  head(example_sim$events, 3)
+
+  # Event counts by type
+  table(example_sim$events$event_type)
+}
+```
+
+## Accessing Parameters
+
+The `parameters` component stores all input parameters, ensuring
+complete reproducibility. Any simulation can be exactly replicated by
+re-running with stored parameters, which is essential for computational
+research where reproducibility is a fundamental requirement
+[@Grimm2005]:
+
+```{r accessing-parameters}
+# Parameters storage for reproducibility
+if (!is.null(example_sim$parameters)) {
+  # Show structure (not full content—would be verbose)
+  str(example_sim$parameters, max.level = 1)
+
+  # Example: extract landscape parameters
+  names(example_sim$parameters$landscape_params)
+
+  # Parameters include:
+  # landscape_params: landscape matrix and configuration
+  # individual_params: initial population settings
+  # genetic_params: trait values used (or NULL if defaults applied)
+  # simulation_params: duration and stopping conditions
+  # master_seed: ensures reproducibility
+}
+```
+
+This complete parameter storage facilitates comparison across
+simulations (identify parameter differences driving outcome variation),
+replication (re-run with identical settings), and archiving (store
+complete simulation specification for long-term reproducibility).
 
 # Basic Workflow Demonstration
 
-Before exploring TWoLife's core capabilities (individual variation in continuous landscapes), we demonstrate basic workflow using a simpler scenario: discrete habitat/matrix landscapes—where suitable habitat patches are embedded in an unsuitable matrix (the unsuitable areas between patches). This introductory example shows the main function structure, parameter organization, and output format using the classic SLOSS (Single Large or Several Small) conservation debate: whether a single large habitat reserve better supports populations than several small reserves with the same total area [@Diamond1975].
+Before exploring TWoLife's core capabilities (individual variation in
+continuous landscapes), we demonstrate basic workflow using a simpler
+scenario: discrete habitat-matrix landscapes where suitable habitat
+patches are embedded in an unsuitable matrix (the areas between patches
+that cannot support populations). This introductory example demonstrates
+the main function structure, parameter organization, and output format
+using the classic SLOSS (Single Large or Several Small) conservation
+debate: whether a single large habitat reserve better supports
+populations than several small reserves with the same total area
+[@Diamond1975]. This question has substantial implications for
+conservation planning in fragmented landscapes [@Fahrig2003].
 
 ## Creating Landscapes
 
-TWoLife provides `create_fractal_landscape()` for generating spatial patterns with realistic spatial structure. The fractal algorithm creates landscapes where pattern complexity is self-similar across spatial scales—patchiness looks similar whether viewing individual cells or large regions. This mimics natural processes like topography or vegetation patterns.
+TWoLife provides `create_fractal_landscape()` for generating spatial
+patterns with realistic spatial structure. The fractal algorithm creates
+landscapes where pattern complexity is self-similar across spatial
+scales—meaning the degree of patchiness appears similar whether viewing
+individual cells or blocks of cells, mimicking natural environmental
+processes that often generate scale-invariant patterns [@Milne1992].
 
-The function accepts four key parameters for binary (discrete) landscapes:
+The function accepts several key parameters that control landscape
+properties. For binary (discrete) landscapes, the most important are:
 
-- `cells_per_row`: Landscape resolution (e.g., 15 produces a 15×15 grid = 225 total cells)
-- `fractality`: Controls spatial autocorrelation (the degree to which nearby cells have similar values). Values near 0 produce high local variation with patchy patterns, while values near 1 produce smooth, homogeneous landscapes. We use 0.5 for intermediate spatial structure.
-- `habitat_proportion`: For binary landscapes, this specifies the fraction of cells classified as suitable habitat (value=1). The remaining fraction becomes matrix (value=0). Setting this to 1.0 creates 100% habitat (pristine landscape), while 0.2 creates 20% habitat embedded in 80% matrix.
-- `min_value` and `max_value`: Not used for binary landscapes (always 0 and 1), but important for continuous landscapes (discussed later).
+-   `cells_per_row`: Landscape resolution, determining the total number
+    of cells (e.g., 15 produces a 15×15 grid = 225 total cells)
+-   `fractality`: Controls spatial autocorrelation through the power
+    spectrum of the fractal algorithm. Values near 0 produce patchy,
+    fine-grained heterogeneity with high small-scale variation—many
+    small patches scattered throughout the landscape. Values near 1
+    produce smooth gradients with broad-scale patterns—large contiguous
+    areas of similar conditions. The intermediate value of 0.5 creates
+    self-similar structure where pattern complexity is similar across
+    spatial scales, typical of many natural environmental patterns. For
+    most applications, fractality between 0.3-0.7 produces realistic
+    heterogeneity that balances local variation with regional structure.
+-   `habitat_proportion`: For binary landscapes, this specifies the
+    fraction of cells classified as suitable habitat (value=1). The
+    remaining fraction becomes matrix (value=0). Setting this to 1.0
+    creates 100% habitat (pristine landscape with no matrix), while 0.2
+    creates 20% habitat embedded in 80% matrix (highly fragmented
+    landscape).
+-   `min_value` and `max_value`: Not used for binary landscapes (which
+    always range from 0 to 1), but important for continuous landscapes
+    (discussed later in Section 6).
 
 We create three landscape configurations to test the SLOSS question:
 
@@ -175,133 +652,216 @@ We create three landscape configurations to test the SLOSS question:
 set.seed(100)
 pristine_landscape <- create_fractal_landscape(
   cells_per_row = 15,      # 15×15 = 225 total cells
-  fractality = 0.5,        # Intermediate spatial structure  
+  fractality = 0.5,        # Intermediate spatial structure
   habitat_proportion = 1.0 # 100% habitat (no matrix)
 )
 
 # Pre-configured SLOSS landscapes from package data
-# Both have identical habitat area (20%) but different spatial configurations
+# Both have nearly the same habitat area (~20%) but different spatial configurations
 single_large_patch <- single_large      # 20% coverage concentrated in 1 large patch
 several_small_patches <- several_small  # 20% coverage distributed across multiple small patches
 ```
 
-The figure below visualizes these three landscape configurations. Dark green indicates suitable habitat (value=1), while white indicates unsuitable matrix (value=0). All three configurations will be initialized with 100 individuals to test how spatial arrangement affects population outcomes:
+The figure below visualizes these three landscape configurations. Dark
+green indicates suitable habitat (value=1), while white indicates
+unsuitable matrix (value=0). In the pristine landscape (left),
+continuous green coverage provides habitat everywhere—individuals can
+move freely across the entire landscape without encountering matrix. In
+single large (center), approximately 20% of cells form one contiguous
+patch in the landscape center, creating a core area with minimal edge.
+This configuration provides continuous habitat within the patch but
+requires dispersal across matrix to reach it. In several small (right),
+approximately 20% of cells are distributed across multiple isolated
+patches, creating numerous edges and requiring dispersal between
+fragments. These spatial differences have demographic consequences:
+single large patches support reproduction within continuous habitat,
+while several small patches require successful inter-patch dispersal for
+population persistence. All three will be initialized with 100
+individuals to test how spatial arrangement affects population outcomes
+when habitat amount differs (pristine versus fragmented) and when
+habitat amount is held constant but configuration varies (single large
+versus several small):
 
 ```{r visualize-sloss, fig.width=9, fig.height=3, echo=FALSE}
 par(mfrow = c(1, 3), mar = c(4, 4, 3, 2))
-plot_landscape(pristine_landscape, 
-                            main = "Pristine\n(100% habitat)", 
+plot_landscape(pristine_landscape,
+                            main = "Pristine\n(100% habitat)",
                             colors = "habitat")
-plot_landscape(single_large_patch, 
-                            main = "Single Large\n(20% habitat)", 
+plot_landscape(single_large_patch,
+                            main = "Single Large\n(20% habitat)",
                             colors = "habitat")
-plot_landscape(several_small_patches, 
-                            main = "Several Small\n(20% habitat)", 
+plot_landscape(several_small_patches,
+                            main = "Several Small\n(20% habitat)",
                             colors = "habitat")
 par(mfrow = c(1, 1), mar = c(5, 4, 4, 2))
 ```
 
 ## Running Simulations
 
-The core `twolife_simulation()` function requires three parameter lists plus a master seed. Each list is a standard R list containing named elements that control different simulation aspects:
+The core `twolife_simulation()` function requires four parameter lists
+plus a master seed. Each list is a standard R list containing named
+elements that control different simulation aspects:
 
-**landscape_params**: A list containing the habitat matrix and optional environmental values. For this basic example, we provide only the habitat component—a matrix where 1=suitable habitat and 0=unsuitable matrix. The function interprets this binary matrix as a discrete landscape where individuals can only survive in habitat cells.
+**landscape_params**: A list containing the habitat matrix and optional
+environmental values. For this basic example, we provide only the
+habitat component—a matrix where 1 represents suitable habitat and 0
+represents unsuitable matrix. The function interprets this binary matrix
+as a discrete landscape where individuals can survive only in habitat
+cells.
 
-**individual_params**: A list controlling initial population configuration. The `initial_population_size` element specifies how many individuals to place at simulation start (here, 100). Additional optional elements include `initial_positions` (custom starting locations; default is random placement in habitat cells) and `initial_ages` (age distribution; default is all age 0).
+**individual_params**: A list controlling initial population
+configuration. The `initial_population_size` element specifies how many
+individuals to place at simulation start (here, 100). Additional
+optional elements include `initial_positions` (custom starting
+locations; default is random placement in habitat cells) and
+`initial_ages` (age distribution; default is all age 0). For this
+example, we use only the population size and accept default random
+placement and ages.
 
-**genetic_params**: A list specifying individual trait values. When omitted (as in this basic example), all individuals use default values: genotype_mean=0.5, genotype_sd=0.1, mutation_rate=0, plasticity=0, sampling_points=1. These defaults create a genetically uniform population with moderate tolerance, no evolution, and random dispersal—appropriate for testing landscape effects without genetic complications.
+**genetic_params**: A list specifying individual trait values. When
+omitted (as in this basic example), all individuals use the default
+values described earlier: genotype_mean=1 (matching habitat cells),
+genotype_sd=0 (zero tolerance, requiring exact matches), mutation_rate=0
+(no evolution), plasticity=0 (no noise), sampling_points=0 (random
+dispersal). These defaults create a genetically uniform population with
+zero tolerance and random dispersal—appropriate for testing landscape
+effects in binary habitat-matrix simulations without genetic
+complications. However, as we will see in Section 6, these same defaults
+produce extinction in continuous landscapes.
 
-**simulation_params**: A list controlling simulation duration and stopping conditions. The `max_events` element specifies how many demographic events (births, deaths, dispersals combined) to execute before stopping. Here we use 300 events, sufficient to observe population dynamics without excessive computation. Alternatively, `max_time` could specify simulation duration in time units.
+**simulation_params**: A list controlling simulation duration and
+stopping conditions. The `max_events` element specifies how many
+demographic events (births, deaths, dispersals combined) to execute
+before stopping. Here we use 300 events, sufficient to observe
+population dynamics without excessive computation. Alternatively,
+`max_time` could specify simulation duration in time units rather than
+number of events. The choice between max_events and max_time depends on
+research questions: max_events ensures comparable demographic histories
+across simulations, while max_time ensures comparable temporal scales.
 
-**master_seed**: An integer ensuring reproducibility. All random processes (initial placement, birth/death/dispersal events, mutations, habitat selection) use this seed, guaranteeing identical results when the simulation is re-run with the same seed. Different seeds produce different random realizations while keeping all mechanisms identical.
+**master_seed**: An integer that controls all random processes (initial
+placement when positions aren't specified, which individual
+reproduces/dies/disperses next, mutation direction and magnitude when
+mutation_rate\>0, plasticity noise when plasticity\>0, and habitat
+selection decisions when sampling_points\>1). Using identical
+master_seed with identical parameters produces exactly identical
+results—every demographic event occurs in the same sequence at the same
+time. Using different seeds with identical parameters produces
+independent realizations—the demographic processes (birth rates, death
+rates, dispersal patterns) are identical but specific outcomes differ
+due to stochasticity. This is analogous to experimental trials: using
+the same seed is like recording a single trial repeatedly, while using
+different seeds simulates multiple independent trials under the same
+experimental conditions. This distinction enables quantifying outcome
+variability under fixed conditions.
 
-We run three simulations, one per landscape configuration, using identical population and simulation parameters. Only the landscape differs, isolating its effect:
-
-```{r sloss-simulations}
+```{r run-sloss-sims}
+# Simulate pristine landscape (baseline: 100% habitat)
 sim_pristine <- twolife_simulation(
   landscape_params = list(habitat = pristine_landscape),
   individual_params = list(initial_population_size = 100),
+  # genetic_params omitted: uses defaults appropriate for binary landscapes
   simulation_params = list(max_events = 300),
-  master_seed = 42
+  master_seed = 10
 )
 
+# Simulate single large patch (20% habitat, aggregated)
 sim_single_large <- twolife_simulation(
   landscape_params = list(habitat = single_large_patch),
   individual_params = list(initial_population_size = 100),
+  # genetic_params omitted: uses defaults
   simulation_params = list(max_events = 300),
-  master_seed = 43  # Different seed for independent realization
+  master_seed = 20
 )
 
+# Simulate several small patches (20% habitat, fragmented)
 sim_several_small <- twolife_simulation(
   landscape_params = list(habitat = several_small_patches),
   individual_params = list(initial_population_size = 100),
+  # genetic_params omitted: uses defaults
   simulation_params = list(max_events = 300),
-  master_seed = 44  # Different seed for independent realization
+  master_seed = 30
 )
 ```
 
-Note that we use different master seeds (42, 43, 44) for the three simulations. This ensures independent random realizations—each simulation experiences different sequences of demographic events. Using identical seeds would make comparisons less meaningful because differences could arise from particular random events rather than landscape structure.
+## Comparing Outcomes
 
-## Extracting Results
+We can compare final population sizes across the three landscape
+configurations to assess how habitat amount and spatial configuration
+influence population outcomes:
 
-Simulation objects are lists containing multiple components (summary, survivors, events, parameters). The `summary` component provides aggregated statistics about final population outcomes. We extract final population sizes to compare configurations:
-
-```{r sloss-results}
-# Extract final population sizes from summary component
+```{r compare-sloss}
 final_pops <- c(
   Pristine = sim_pristine$summary$final_population_size,
   Single_Large = sim_single_large$summary$final_population_size,
   Several_Small = sim_several_small$summary$final_population_size
 )
-final_pops
 
-# Population trajectories using helper function
-# population_size() extracts time series from events component
-trajectory_pristine <- population_size(sim_pristine)
-head(trajectory_pristine, 3)
+final_pops
 ```
 
-The `population_size()` helper function processes the events component to compute population size at each time point. It returns a data frame with `time` and `population_size` columns, enabling visualization of population dynamics over simulation duration.
+To visualize population dynamics over time, we use the
+`population_size()` helper function, which processes the events
+dataframe to calculate population size at each time point. This function
+returns a dataframe with 'time' and 'population_size' columns suitable
+for plotting, enabling visualization of population trajectories rather
+than just endpoint comparisons:
 
-The figure below compares final population sizes (left panel) and population dynamics over time (right panel) across the three landscape configurations. The left panel shows that reducing habitat from 100% (pristine) to 20% causes substantial population decline. The right panel reveals temporal dynamics: populations may grow initially, decline due to deaths exceeding births, or fluctuate around equilibrium depending on landscape carrying capacity:
+```{r sloss-dynamics, fig.width=9, fig.height=5}
+par(mfrow = c(1, 2), mar = c(5, 4, 3, 2))
 
-```{r sloss-comparison, fig.width=8, fig.height=4, echo=FALSE}
-par(mfrow = c(1, 2), mar = c(4, 4, 3, 2))
-
-# Barplot of final population sizes
-barplot(final_pops, 
+# Final population sizes comparison
+barplot(final_pops,
         main = "Final Population Sizes",
         ylab = "Population Size (N)",
-        col = c("darkgreen", "blue", "red"),
+        col = c("darkgreen", "steelblue", "coral"),
         las = 1)
-text(x = seq(0.7, by = 1.2, length.out = 3), 
-     y = final_pops + max(final_pops) * 0.05,
-     labels = final_pops, cex = 1.1, font = 2)
+abline(h = 100, lty = 2, col = "gray50")
+text(0.7, 105, "Initial N=100", pos = 4, cex = 0.8, col = "gray50")
 
 # Population trajectories over time
+trajectory_pristine <- population_size(sim_pristine)
 trajectory_single <- population_size(sim_single_large)
 trajectory_several <- population_size(sim_several_small)
 
-plot(trajectory_pristine$time, trajectory_pristine$population_size, 
+plot(trajectory_pristine$time, trajectory_pristine$population_size,
      type = "l", col = "darkgreen", lwd = 2,
-     main = "Population Dynamics", 
+     main = "Population Dynamics",
      xlab = "Time", ylab = "Population Size (N)",
      ylim = c(0, max(trajectory_pristine$population_size) * 1.05))
-lines(trajectory_single$time, trajectory_single$population_size, 
-      col = "blue", lwd = 2)
-lines(trajectory_several$time, trajectory_several$population_size, 
-      col = "red", lwd = 2)
-legend("topright", legend = names(final_pops), 
-       col = c("darkgreen", "blue", "red"), lwd = 2, bty = "n")
+lines(trajectory_single$time, trajectory_single$population_size,
+      col = "steelblue", lwd = 2)
+lines(trajectory_several$time, trajectory_several$population_size,
+      col = "coral", lwd = 2)
+legend("topright", legend = names(final_pops),
+       col = c("darkgreen", "steelblue", "coral"), lwd = 2, bty = "n")
 
 par(mfrow = c(1, 1), mar = c(5, 4, 4, 2))
 ```
 
 ## Summary
 
-The pristine landscape supports `r final_pops["Pristine"]` individuals at simulation end. Reducing habitat to 20% yields `r final_pops["Single_Large"]` individuals (single large configuration) versus `r final_pops["Several_Small"]` individuals (several small configuration). `r if(final_pops["Several_Small"] == 0) "The fragmented configuration experienced complete collapse, demonstrating that spatial arrangement can determine viability beyond simple area calculations. Fragmentation into multiple small patches may prevent population persistence even when total habitat area is identical." else paste0("The spatial configuration accounts for a ", abs(final_pops["Single_Large"] - final_pops["Several_Small"]), "-individual difference despite identical total habitat area (both 20%), illustrating how spatial arrangement affects population outcomes independently of habitat amount.")`
+The pristine landscape supports `r final_pops["Pristine"]` individuals
+at simulation end. Reducing habitat to 20% yields
+`r final_pops["Single_Large"]` individuals in the single large
+configuration versus `r final_pops["Several_Small"]` individuals in the
+several small configuration. Thus, spatial configuration accounts for a
+`r abs(final_pops["Single_Large"] - final_pops["Several_Small"])`-individual
+difference despite identical total habitat area (both 20%), illustrating
+how spatial arrangement affects population outcomes independently of
+habitat amount—a key finding in landscape ecology [@Fahrig2003].
+`r if(final_pops["Several_Small"] == 0) "The fragmented configuration experienced complete collapse, demonstrating that spatial arrangement can determine viability beyond simple area calculations."`
 
-This example demonstrates TWoLife's basic workflow: landscape creation, parameter configuration, simulation execution, and result extraction. The discrete landscape example introduced the function structure and basic operations. We now turn to the package's primary innovation: modeling individual genetic variation in continuous environmental gradients, where fitness emerges from trait-environment matching rather than binary habitat classification.
+This example demonstrates TWoLife's basic workflow: landscape creation
+through fractal generation, parameter configuration using list
+structures, simulation execution through the main function, and result
+extraction from the output object. The discrete landscape example
+introduced the function structure and basic operations without the added
+complexity of continuous environmental variation and genetic diversity.
+We now turn to the package's primary innovation: modeling individual
+genetic variation in continuous environmental gradients, where fitness
+emerges from trait-environment matching rather than binary habitat
+classification.
 
 ------------------------------------------------------------------------
 
@@ -309,30 +869,56 @@ This example demonstrates TWoLife's basic workflow: landscape creation, paramete
 
 ## Background and Motivation
 
-Real environments exhibit continuous variation—temperature gradients from mountain bases to peaks, moisture clines from wet to dry regions, resource density surfaces shaped by topography and soil [@Turner1989; @Wiens1976]. Real populations contain genetically variable individuals with different optimal conditions and tolerance ranges, as documented extensively in natural systems [@Bolnick2003; @Lynch1998]. Traditional models simplify these dimensions: discrete habitat models cannot represent gradual environmental transitions, while models assuming genetic uniformity cannot investigate how diversity affects population outcomes.
+Real environments exhibit continuous variation rather than simple binary
+classifications. Temperature gradients span mountain slopes, moisture
+clines traverse rainfall gradients, resource density surfaces reflect
+topography and soil chemistry [@Turner1989; @Wiens1976]. Similarly, real
+populations contain genetically variable individuals with different
+optimal conditions and tolerance ranges, as documented extensively in
+natural systems [@Bolnick2003; @Lynch1998]. Traditional models simplify
+both dimensions: discrete habitat models cannot represent gradual
+environmental transitions, while models assuming genetic uniformity
+cannot investigate how diversity affects population outcomes.
 
-TWoLife explicitly models both dimensions—continuous environmental gradients and individual genetic variation—enabling investigation of questions that are challenging for traditional approaches:
+TWoLife explicitly models both continuous environmental gradients and
+individual genetic variation, thus enabling investigation of questions
+that are challenging for traditional approaches:
 
--   **How much genetic variation is necessary** for persistence in heterogeneous landscapes? Can populations survive with genetic diversity in optimal values alone, or do other traits matter more?
--   **Is diversity in optimal values sufficient**, or must individuals also possess tolerance ranges (niche width) enabling survival across environmental conditions? Does
+-   **How much genetic variation is necessary** for persistence in
+    heterogeneous landscapes? Can populations survive with genetic
+    diversity in optimal values alone, or must tolerance ranges also
+    vary among individuals?
+-   **Is diversity in optimal values sufficient**, or must individuals
+    also possess broad tolerance (niche width) enabling survival across
+    environmental conditions? Does tolerance matter more than diversity
+    in determining which individuals survive?
+-   **What roles do evolution and behavior play** relative to standing
+    genetic variation already present in populations? Do these dynamic
+    mechanisms provide substantial additional benefits beyond initial
+    diversity, or are their effects marginal?
+-   **How do mechanisms interact**—additively (each adds independent
+    benefit) or synergistically (combined effects exceed simple
+    addition)? Understanding interaction patterns helps predict which
+    mechanisms are most critical under different conditions.
 
- tolerance trump diversity?
--   **What roles do evolution and behavior play** relative to standing genetic variation already present in populations? Do these mechanisms provide substantial additional benefits, or are their effects marginal?
--   **How do mechanisms interact**—additively (each adds independent benefit) or synergistically (combined effects exceed simple addition)? Understanding interaction patterns helps predict which mechanisms are most critical.
-
-We address these questions through progressive addition of genetic and behavioral mechanisms across five scenarios. Each scenario differs only in genetic parameters while holding all other conditions constant (landscape, initial population size, simulation duration, master seeds), allowing us to isolate each mechanism's contribution to population outcomes.
+We address these questions through progressive addition of genetic and
+behavioral mechanisms across five scenarios. Each scenario differs only
+in genetic parameters while holding all other conditions constant
+(landscape, initial population size, simulation duration, master seeds).
+As a consequence, any differences in population outcomes can be
+attributed to the specific mechanisms that differ between scenarios,
+allowing us to isolate each mechanism's contribution to persistence.
 
 ## Generating Continuous Landscapes
 
-Setting `habitat_proportion = NULL` instructs `create_fractal_landscape()` to generate continuous environmental values rather than binary habitat/matrix classification. The function produces values ranging from `min_value` to `max_value` (here, 0.0 to 1.0) with spatial structure controlled by `fractality`.
-
-The `fractality` parameter controls spatial autocorrelation—the statistical degree to which nearby locations have similar values. This determines landscape patchiness:
-
-- **fractality near 0** (e.g., 0.1): High local variation with low autocorrelation. Adjacent cells often have very different values, creating a fine-grained, highly heterogeneous mosaic. This represents environments with high small-scale variation (e.g., rocky outcrops with scattered vegetation).
-
-- **fractality near 1** (e.g., 0.9): Low local variation with high autocorrelation. Adjacent cells have very similar values, creating large homogeneous regions with smooth gradients. This represents environments with broad-scale patterns (e.g., elevation gradients with gradually changing temperatures).
-
-- **fractality = 0.5**: Intermediate spatial structure with balanced autocorrelation. Creates realistic landscapes with moderate patchiness—regions of similar values cluster together but sharp transitions also occur. This intermediate value is appropriate for many natural systems.
+Setting `habitat_proportion = NULL` instructs
+`create_fractal_landscape()` to generate continuous environmental values
+rather than binary habitat-matrix classification. The function produces
+values ranging from `min_value` to `max_value` (here, 0.0 to 1.0) with
+spatial structure controlled by `fractality` as described earlier. Thus,
+rather than categorizing cells as habitat or matrix, the function
+assigns each cell a continuous environmental value representing local
+conditions.
 
 We generate a continuous landscape for our main analysis:
 
@@ -347,54 +933,107 @@ continuous_landscape <- create_fractal_landscape(
 )
 ```
 
-The resulting landscape contains 225 cells (15×15) with environmental values ranging continuously from 0.0 to 1.0. These values represent environmental conditions (temperature, moisture, resource availability, or any relevant gradient) but carry no inherent "quality"—a value of 0.3 is not intrinsically better or worse than 0.7. Fitness depends on phenotype-environment matching: an individual with genotype_mean=0.3 performs best at 0.3, while an individual with genotype_mean=0.7 performs best at 0.7.
+The resulting landscape contains 225 cells (15×15) with environmental
+values ranging continuously from 0.0 to 1.0. These values represent
+environmental conditions (temperature, moisture, resource availability,
+or any relevant gradient) but carry no inherent "quality." A value of
+0.3 is not intrinsically better or worse than 0.7—fitness depends on
+phenotype-environment matching. An individual with genotype_mean=0.3
+performs best at 0.3, while an individual with genotype_mean=0.7
+performs best at 0.7. This represents a fundamental conceptual shift
+from habitat-matrix models, where habitat cells (value=1) are
+universally "good" and matrix cells (value=0) are universally "bad" for
+all individuals equally.
 
 ```{r visualize-continuous, fig.width=5, fig.height=4.5, echo=FALSE}
-plot_landscape(continuous_landscape, 
-                            main = "Continuous Environmental Landscape\n(fractality = 0.5)", 
+plot_landscape(continuous_landscape,
+                            main = "Continuous Environmental Landscape\n(fractality = 0.5)",
                             colors = "terrain")
 ```
 
-The visualization uses a terrain color scheme where cooler colors (blues, greens) represent low environmental values and warmer colors (yellows, reds) represent high values. Observe the intermediate-scale patchiness created by fractality=0.5—some clustering of similar values occurs, but substantial variation exists across the landscape.
+The visualization uses a terrain color scheme where cooler colors
+(blues, greens) represent low environmental values and warmer colors
+(yellows, reds) represent high values. Observe the intermediate-scale
+patchiness created by fractality=0.5—some clustering of similar values
+occurs (e.g., contiguous blue regions in lower-left, yellow regions in
+upper-right), but substantial variation exists throughout the landscape.
+This heterogeneity creates spatial structure without the abrupt
+habitat-matrix boundaries of discrete landscapes.
 
-This phenotype-environment matching framework distinguishes TWoLife from models that pre-assign habitat quality based solely on location type. Here, fitness emerges dynamically from the interaction between individual traits and local conditions, allowing investigation of adaptive matching, local adaptation trajectories, and niche evolution without assuming fitness landscapes a priori.
+This phenotype-environment matching framework distinguishes TWoLife from
+models that pre-assign habitat quality based solely on location type.
+Here, fitness emerges dynamically from the interaction between
+individual-specific traits and local conditions. As a consequence, the
+package allows investigation of adaptive matching, local adaptation
+trajectories, and niche evolution without assuming fitness landscapes a
+priori—the fitness landscape emerges from genetic variation and
+environmental structure rather than being imposed by the modeler
+[@Levins1968].
 
 ## Experimental Design: Progressive Mechanisms
 
-We implement five scenarios that differ only in genetic parameters, with all other conditions held constant. This factorial design allows us to isolate each mechanism's contribution to population outcomes:
+We implement five scenarios that differ only in genetic parameters, with
+all other conditions held constant. This factorial design allows us to
+isolate each mechanism's contribution to population outcomes. The order
+of mechanism addition follows a biological hierarchy from fundamental to
+facultative: (1) genetic diversity in optimal values is the most basic
+requirement—populations need variation to span environmental gradients;
+(2) tolerance (niche width) enables each genotype to survive across a
+range of conditions rather than requiring exact matches; (3) evolution
+(mutation + plasticity) allows populations to generate new variation and
+fine-tune existing variation through natural selection; (4) behavior
+(habitat selection) enables individuals to actively locate suitable
+microhabitats rather than dispersing randomly. This progression tests
+whether "higher" mechanisms compensate for lacking "lower" ones
+(suggesting functional redundancy) or whether mechanisms are obligately
+sequential (suggesting hierarchical requirements for persistence):
 
 | Scenario | Genetic Diversity | Niche Width | Evolution | Behavior | Configuration |
-|----------|------------------|-------------|-----------|----------|---------------|
-| 1. Uniform specialists | No (all genotype=1.0) | No (sds=0) | No | No | Default parameters |
-| 2. Variable specialists | Yes (genotypes 0.3-0.7) | No (sds=0) | No | No | genotype_means only |
-| 3. Generalists | Yes | **Yes (sds=0.15)** | No | No | Add genotype_sds |
-| 4. Evolution | Yes | Yes | **Yes** (mutation + plasticity) | No | Add mutation, plasticity |
-| 5. Habitat selection | Yes | Yes | Yes | **Yes** (sampling=100) | Add sampling_points |
+|------------|------------|------------|------------|------------|------------|
+| 1\. Uniform specialists | No (all genotype=1.0) | No (sds=0) | No | No | Default parameters |
+| 2\. Variable specialists | Yes (genotypes 0.3-0.7) | No (sds=0) | No | No | genotype_means only |
+| 3\. Generalists | Yes | **Yes (sds=0.15)** | No | No | Add genotype_sds |
+| 4\. Evolution | Yes | Yes | **Yes** (mutation + plasticity) | No | Add mutation, plasticity |
+| 5\. Habitat selection | Yes | Yes | Yes | **Yes** (sampling=100) | Add sampling_points |
 
-All scenarios use identical conditions except genetic parameters:
-- Same landscape (continuous_landscape generated above)
-- Same initial population size (40 individuals)
-- Same simulation duration (250 demographic events)
-- Different but comparable master seeds (45-49)
+All scenarios use identical conditions except genetic parameters: - Same
+landscape (continuous_landscape generated above with the same spatial
+structure) - Same initial population size (40 individuals, representing
+a moderate starting population) - Same simulation duration (250
+demographic events, sufficient to observe dynamics without excessive
+computation) - Different but comparable master seeds (45-49, ensuring
+independent realizations while maintaining similar stochastic
+properties)
 
-The progressive design means each scenario builds on the previous one by adding a single mechanism. This allows us to attribute population changes to specific mechanisms and test whether mechanisms interact additively or synergistically.
+The progressive design means each scenario builds on the previous one by
+adding a single mechanism. As a consequence, we can attribute population
+changes to specific mechanisms and test whether mechanisms interact
+additively (each adds independent benefit) or synergistically (combined
+effects exceed simple addition). This design also reveals whether
+mechanisms show diminishing returns (later additions provide smaller
+benefits) or accelerating returns (later additions provide larger
+benefits, possibly through synergistic interactions).
 
-Before running scenarios, we pre-generate genotype_mean values for Scenarios 2-5 to ensure comparability. Using the same genotype distribution across scenarios isolates the effects of tolerance, evolution, and behavior without confounding by different starting genetic compositions:
+Before running scenarios, we pre-generate genotype_mean values for
+Scenarios 2-5 to ensure comparability. Using the same genotype
+distribution across scenarios isolates the effects of tolerance,
+evolution, and behavior without confounding by different starting
+genetic compositions:
 
 ```{r pre-generate-genotypes}
 # Pre-generate genotypes for Scenarios 2-5
-# Uniform distribution from 0.3 to 0.7 captures environmental range
+# Uniform distribution from 0.3 to 0.7 captures most environmental range
 set.seed(300)
 initial_genotypes <- runif(40, 0.3, 0.7)
 ```
 
 ## Scenario 1: Uniform Perfect Specialists
 
-**Configuration:** All individuals genetically identical (genotype_mean=1.0, the default value) with zero tolerance (genotype_sd=0, also default). This represents a population of perfect specialists requiring exact environmental match for survival. Since default parameters apply when genetic_params is omitted, we simply exclude that argument.
-
-**Hypothesis:** The population will rapidly collapse because the landscape lacks environmental values of exactly 1.0, and zero tolerance means individuals cannot survive any environmental mismatch, however slight. Even if a cell has value 0.999, individuals with genotype 1.0 and tolerance 0 will die because the Gaussian fitness function yields near-zero fitness for any mismatch when tolerance approaches zero.
-
-**Rationale:** This extreme scenario establishes a baseline showing that genetic uniformity combined with perfect specialization is incompatible with environmental heterogeneity in continuous landscapes. It demonstrates the necessity of either genetic diversity or tolerance for persistence.
+This example demonstrates default behavior when `genetic_params` is
+omitted. All individuals have identical genotype_mean=1.0 and
+genotype_sd=0 (zero tolerance). Thus, the population is genetically
+uniform and individuals are perfect specialists requiring exact
+environmental matches.
 
 ```{r scenario1}
 sim_s1 <- twolife_simulation(
@@ -408,17 +1047,25 @@ sim_s1 <- twolife_simulation(
 (pop_s1 <- sim_s1$summary$final_population_size)
 ```
 
-**Result:** N = `r pop_s1` (extinct, as hypothesized). The landscape's environmental values range from `r sprintf("%.2f", min(continuous_landscape))` to `r sprintf("%.2f", max(continuous_landscape))` with mean `r sprintf("%.2f", mean(continuous_landscape))`. No cells contain the value 1.0 required by the genetically uniform population. Even the maximum value (`r sprintf("%.2f", max(continuous_landscape))`) fails to support individuals with genotype=1.0 and tolerance=0, because the fitness function yields exp(-(1.0-max)²/(2×0²)) which approaches 0 for any mismatch.
-
-**Interpretation:** This demonstrates that genetic uniformity combined with perfect specialization is incompatible with environmental heterogeneity in continuous landscapes. In nature, such populations would face extinction unless environments were unrealistically homogeneous. The result establishes that some form of physiological flexibility—either genetic diversity in optimal values or tolerance enabling survival across conditions—is necessary for persistence in heterogeneous environments.
+The simulation results in N = `r pop_s1` (extinction). This outcome
+occurs because zero tolerance means individuals require exact
+environmental matches (value=1.0) that don't exist in the continuous
+landscape (range: `r sprintf("%.2f", min(continuous_landscape))` to
+`r sprintf("%.2f", max(continuous_landscape))`). Even if cells near 1.0
+exist, the Gaussian fitness function with genotype_sd=0 produces
+effectively zero fitness for any mismatch, no matter how small. This
+demonstrates that genetic uniformity combined with specialist strategies
+is incompatible with persistence in heterogeneous continuous
+environments.
 
 ## Scenario 2: Variable Specialists
 
-**Configuration:** Different genotype_mean values uniformly distributed from 0.3 to 0.7 (capturing most of the landscape's environmental range), but tolerance remains zero (genotype_sd=0). This represents genetic diversity in optimal values without physiological flexibility—40 different genotypes but all are perfect specialists.
-
-**Hypothesis:** Despite substantial genetic diversity spanning much of the environmental range, the population will still collapse. The issue is that continuous landscapes rarely provide exact matches to specific genotype values. The probability of a cell having value exactly 0.4573 (for instance) is essentially zero in continuous space. Without tolerance, individuals require exact matches that do not exist.
-
-**Rationale:** This scenario tests whether genetic diversity alone suffices for persistence, or whether tolerance (niche width) is also necessary. Many classical population genetic models assume individuals differ in optimal values but do not explicitly model tolerance ranges. This scenario tests that assumption's adequacy for spatially heterogeneous environments.
+This example demonstrates genetic diversity in optimal values
+(genotype_mean) without tolerance. Each of 40 individuals has a
+different genotype_mean sampled uniformly from 0.3 to 0.7, but
+genotype_sd remains at 0 (perfect specialists). Thus, the population
+contains genetic diversity spanning the environmental range, but
+individuals still require exact matches.
 
 ```{r scenario2}
 sim_s2 <- twolife_simulation(
@@ -435,17 +1082,22 @@ sim_s2 <- twolife_simulation(
 (pop_s2 <- sim_s2$summary$final_population_size)
 ```
 
-**Result:** N = `r pop_s2` (extinct, confirming hypothesis). Even with 40 different genotypes distributed across the environmental range (0.3-0.7), the probability of exact phenotype-environment matches remains negligible in continuous space. Each individual requires a cell with environmental value precisely matching its genotype_mean. While the landscape contains values throughout the 0-1 range, the probability that any specific cell has value exactly 0.4573, 0.5128, etc. (the 40 genotype values) is effectively zero.
-
-**Interpretation:** Genetic diversity in optimal values alone is insufficient for persistence in continuous heterogeneous landscapes. Individuals also need tolerance ranges (niche width) enabling survival across a spectrum of conditions near their optimum. This result has important implications for conservation: maintaining genetic diversity may be necessary but is not sufficient—populations also need physiological flexibility to cope with environmental variation. The finding challenges models that represent individual variation solely through optimal values without explicit tolerance parameters.
+The simulation results in N = `r pop_s2` (extinction). Despite having 40
+different genotypes spanning the environmental range (0.3-0.7), zero
+tolerance means individuals still require exact environmental matches.
+In continuous space, exact matches rarely occur—even if an individual
+has genotype_mean=0.5 and a cell has environment=0.5, plasticity noise
+(absent here with plasticity=0) or slight mismatches produce effectively
+zero fitness when genotype_sd=0. This demonstrates that genetic
+diversity alone is insufficient without tolerance enabling survival
+across a range of conditions.
 
 ## Scenario 3: Generalists (Niche Width)
 
-**Configuration:** Same genotype diversity as Scenario 2 (genotype_means from 0.3-0.7), but now add genotype_sd=0.15 for all individuals. This creates tolerance ranges of approximately ±2σ = ±0.30 around each optimal value, converting narrow specialists into generalists capable of surviving across a range of conditions.
-
-**Hypothesis:** Niche width will enable persistence by allowing individuals to survive across a spectrum of conditions rather than requiring exact matches. An individual with genotype_mean=0.5 and genotype_sd=0.15 can now survive reasonably well from approximately 0.2 to 0.8 (within ±2σ), dramatically expanding the portion of landscape that is effectively habitable.
-
-**Rationale:** This scenario tests whether tolerance (niche width) is the critical mechanism enabling persistence in heterogeneous landscapes. The hypothesis predicts that tolerance is both necessary (Scenarios 1-2 failed without it) and sufficient (this scenario should succeed with it alone, without requiring evolution or behavior). If confirmed, this would establish tolerance as the fundamental determinant of persistence, with other mechanisms providing secondary enhancements.
+This example demonstrates the effect of adding tolerance (genotype_sd).
+Each individual has the same genotype_mean as Scenario 2 (maintaining
+identical genetic diversity), but now with genotype_sd=0.15, enabling
+survival across a range of conditions around their optima.
 
 ```{r scenario3}
 sim_s3 <- twolife_simulation(
@@ -462,9 +1114,20 @@ sim_s3 <- twolife_simulation(
 (pop_s3 <- sim_s3$summary$final_population_size)
 ```
 
-**Result:** N = `r pop_s3` (`r sprintf("%.1f%%", pop_s3/40*100)` survival). This marks the **critical transition** from extinction (Scenarios 1-2: N=0) to viability (Scenario 3: N>0). The addition of tolerance alone, without evolution or behavior, enables population persistence.
+The simulation results in N = `r pop_s3`
+(`r sprintf("%.1f%%", pop_s3/40*100)` survival), compared to N=0 in
+Scenarios 1-2. Adding tolerance enables population persistence by
+allowing individuals to survive in cells where their phenotype does not
+exactly match the local environment. With genotype_sd=0.15, individuals
+retain substantial fitness (\>0.5) within approximately ±0.15 of their
+optimum, and non-zero fitness extends further. This tolerance interacts
+with genetic diversity: because different individuals have different
+optima (genotype_means from 0.3 to 0.7), collectively they can utilize
+most of the environmental gradient. However, individuals still disperse
+randomly (sampling_points=1) and genetic composition cannot change over
+time (mutation_rate=0).
 
-We can examine survivor trait distributions to verify that tolerance enables persistence by expanding effective habitat:
+Survivor genotype distribution reveals which individuals persisted:
 
 ```{r scenario3-analysis}
 # Examine survivor trait distribution
@@ -472,26 +1135,20 @@ if (pop_s3 > 0) {
   survivor_summary <- c(
     Mean_genotype = mean(sim_s3$survivors$genotype),
     SD_genotype = sd(sim_s3$survivors$genotype),
-    Range = paste0("[", sprintf("%.2f", min(sim_s3$survivors$genotype)), 
+    Range = paste0("[", sprintf("%.2f", min(sim_s3$survivors$genotype)),
                    ", ", sprintf("%.2f", max(sim_s3$survivors$genotype)), "]")
   )
   survivor_summary
 }
 ```
 
-The survivor genotype distribution shows which optimal values were favored by selection. If survivors span most of the initial genotype range (0.3-0.7), this indicates that diverse optimal values can persist when coupled with tolerance. Narrow survivor distributions would suggest strong environmental filtering even with tolerance.
-
-**Mechanism explanation:** An individual with genotype_mean=0.5 and genotype_sd=0.15 achieves fitness using the Gaussian formula: fitness = exp(-(phenotype-environment)²/(2×0.15²)). When this individual occupies a cell with environment=0.5, fitness=1.0 (perfect match). At environment=0.3 or 0.7 (±0.2 units away), fitness remains ≈0.45—reduced but sufficient for survival. At environment=0.2 or 0.8 (±0.3 units), fitness ≈0.14—marginal but possible. This tolerance range transforms previously unusable portions of the landscape into accessible habitat. Previously, only exact matches (probability ≈0) enabled survival; now, a continuous range of conditions (±0.3 units ≈ 60% of landscape range) supports reasonable fitness.
-
-**Interpretation:** Niche width (tolerance) is the key mechanism enabling persistence in heterogeneous environments. This single parameter—genotype_sd—determines the breadth of conditions an individual can survive, directly controlling how much of a heterogeneous landscape is effectively habitable. The transition from S2 (extinct) to S3 (viable) demonstrates that tolerance is both necessary (required for any persistence) and sufficient (enables persistence without additional mechanisms). This finding has important ecological implications: tolerance may be more critical than genetic diversity in optimal values for population persistence in variable environments.
-
 ## Scenario 4: Evolution (Mutation + Plasticity)
 
-**Configuration:** Same as Scenario 3 (genotype diversity + tolerance), but add evolutionary mechanisms: mutation_rate=0.05 (5% probability of genetic change per reproduction event) and plasticity=0.02 (phenotypes can shift 2% per timestep toward local environmental values). These parameters enable both across-generation evolution (via mutation and selection) and within-generation acclimation (via plasticity).
-
-**Hypothesis:** Evolutionary mechanisms will enhance persistence through dual-timescale adaptation. Plasticity provides rapid within-generation adjustment to local conditions, improving fitness immediately upon dispersal to new environments. Mutation enables gradual across-generation evolution as beneficial genotypes (those matching common environmental conditions) increase in frequency through natural selection. The combined effect should increase population size relative to Scenario 3.
-
-**Rationale:** This scenario tests whether evolution provides substantial additional benefit beyond standing genetic variation and tolerance. If the population increase is large, evolution is important. If the increase is small or absent, standing variation and tolerance alone may suffice. The dual-timescale mechanisms (plasticity for immediate adjustment, mutation for long-term evolution) are biologically realistic and commonly invoked in adaptation theory.
+This example demonstrates adding evolutionary mechanisms (mutation and
+plasticity) to the diversity and tolerance from Scenario 3. Mutation
+(mutation_rate=0.05) enables heritable genetic change across
+generations, while plasticity (plasticity=0.02) enables non-heritable
+phenotypic variation within lifetimes.
 
 ```{r scenario4}
 sim_s4 <- twolife_simulation(
@@ -501,7 +1158,7 @@ sim_s4 <- twolife_simulation(
     genotype_means = initial_genotypes,
     genotype_sds = rep(0.15, 40),
     mutation_rates = rep(0.05, 40),   # Enable evolution across generations
-    plasticities = rep(0.02, 40)      # Enable plasticity within generations
+    plasticities = rep(0.02, 40)      # Enable phenotypic variation
   ),
   simulation_params = list(max_events = 250),
   master_seed = 48
@@ -511,21 +1168,26 @@ sim_s4 <- twolife_simulation(
 (delta_evolution <- pop_s4 - pop_s3)
 ```
 
-**Result:** N = `r pop_s4` (change: `r sprintf("%+d", delta_evolution)` individuals from Scenario 3). Evolution `r if(delta_evolution > 0) paste0("enhanced survival by ", delta_evolution, " individuals, representing a ", sprintf("%.1f%%", delta_evolution/pop_s3*100), " increase over tolerance alone") else if(delta_evolution == 0) "maintained equivalent survival to tolerance alone, suggesting that standing variation and tolerance suffice for this landscape" else paste0("resulted in ", abs(delta_evolution), " fewer survivors than tolerance alone, likely due to demographic stochasticity rather than mechanism effects—this could represent chance variation given the short simulation duration")`.
-
-**Mechanism explanation—Plasticity:** When an individual with plasticity=0.02 and genotype_mean=0.4 moves to a location with environment=0.6, its phenotype (initially equal to genotype_mean=0.4) begins shifting toward 0.6 at rate 0.02 per timestep. After one timestep: phenotype = 0.4 + 0.02×(0.6-0.4) = 0.404. After 10 timesteps: phenotype ≈ 0.438 (shifted 38% of the distance). This gradual adjustment improves fitness in sub-optimal locations without requiring genetic change, providing within-generation acclimation.
-
-**Mechanism explanation—Mutation:** When an individual with mutation_rate=0.05 reproduces, offspring have 5% probability of receiving a mutated genotype_mean rather than exact parental value. If mutation occurs, offspring genotype_mean is drawn from a distribution centered on the parent value. Over multiple generations, beneficial mutations (those improving fitness given landscape conditions) increase in frequency through differential reproduction, causing gradual evolution of population mean genotype_mean toward prevalent environmental conditions.
-
-**Interpretation:** Evolution and plasticity `r if(delta_evolution > 0) "provide measurable additional benefit beyond standing tolerance, though the effect is modest relative to tolerance's dramatic enabling effect (S2→S3 transition). These mechanisms enhance but cannot replace fundamental tolerance" else "appear to have limited additional effect beyond standing tolerance in this short simulation, suggesting tolerance is the dominant mechanism. Longer simulations might reveal greater evolutionary effects"`. The key insight is that evolution operates on top of—but cannot compensate for lack of—basic physiological flexibility (tolerance). Populations need tolerance first, then evolution can optimize trait distributions. This hierarchical importance has implications for conservation: protecting tolerant genotypes may be more critical than preserving evolvability.
+The simulation results in N = `r pop_s4` (change:
+`r sprintf("%+d", delta_evolution)` from Scenario 3). Evolution provides
+`r ifelse(delta_evolution > 0, "additional benefit", ifelse(delta_evolution < 0, "reduced performance", "no net effect"))`
+beyond static genetic diversity and tolerance. Mutation allows the
+population to explore genetic space beyond the initial genotype
+distribution (0.3-0.7), potentially adapting to local environmental
+conditions if selection favors particular genotypes. Plasticity allows
+phenotypes to deviate from genotypes, which can be beneficial if it
+increases variance in trait-environment matching, though it can also be
+detrimental if it moves phenotypes away from local optima. The net
+effect depends on the balance between these processes over the
+simulation duration.
 
 ## Scenario 5: Habitat Selection (Behavioral Optimization)
 
-**Configuration:** Same as Scenario 4 (diversity + tolerance + evolution), but add sampling_points=100. Individuals now evaluate 100 potential dispersal locations before deciding where to move, selecting using softmax weighting by expected fitness at each location. This represents active habitat selection rather than random dispersal.
-
-**Hypothesis:** Behavioral habitat selection will optimize spatial distribution and amplify the benefits of genetic variation by enabling individuals to actively seek conditions matching their phenotypes. Individuals with genotype_mean=0.3 should preferentially settle in low-value regions, while those with genotype_mean=0.7 should seek high-value regions. This active sorting should improve average fitness and increase population size relative to Scenario 4's random dispersal.
-
-**Rationale:** This scenario tests whether behavior provides substantial additional benefit beyond genetics, tolerance, and evolution. Habitat selection is widespread in nature and has been hypothesized to facilitate local adaptation by ensuring individuals occupy suitable environments. If the population increase is substantial, behavior is an important mechanism deserving explicit modeling. If the increase is modest, passive processes (dispersal, selection on tolerance) may suffice.
+This example demonstrates adding habitat selection behavior
+(sampling_points=100) to all mechanisms from Scenario 4. Individuals
+evaluate 100 potential dispersal locations and preferentially select
+high-fitness sites through softmax weighting, representing sophisticated
+habitat assessment.
 
 ```{r scenario5}
 sim_s5 <- twolife_simulation(
@@ -547,28 +1209,36 @@ sim_s5 <- twolife_simulation(
 (cumulative_gain <- pop_s5 - pop_s2)
 ```
 
-**Result:** N = `r pop_s5` (change: `r sprintf("%+d", delta_behavior)` individuals from Scenario 4). Cumulative improvement from the extinct baseline (Scenario 2, variable specialists without tolerance): **`r cumulative_gain` individuals gained** through sequential addition of tolerance (S2→S3), evolution (S3→S4), and behavior (S4→S5).
-
-**Mechanism explanation:** With sampling_points=100, each dispersal event involves evaluating 100 randomly chosen locations. For each location j, expected fitness F_j is calculated using the individual's phenotype and that location's environmental value. The individual selects among locations using softmax probability: P_j = exp(F_j/τ) / Σ_k exp(F_k/τ), where τ is a temperature parameter controlling selection strength. This means individuals strongly prefer high-fitness locations but retain some probability of choosing sub-optimal sites, preventing unrealistic determinism. The result is that individuals with genotype_mean=0.3 tend to accumulate in low-value regions (better matches), while those with genotype_mean=0.7 accumulate in high-value regions.
-
-**Interpretation:** Habitat selection provides `r if(delta_behavior > 0) paste0("additional enhancement (", delta_behavior, " individuals, ", sprintf("%.1f%%", delta_behavior/pop_s4*100), " increase) by enabling active spatial sorting. However, like evolution, behavior operates on top of—rather than replacing—fundamental tolerance") else "limited additional benefit in this scenario, suggesting that tolerance and evolution may be more important than active habitat selection, at least over short timescales"`. The cumulative gain analysis reveals the relative importance of mechanisms: tolerance (S2→S3) accounts for `r pop_s3-pop_s2` individuals (the transition from extinction to viability), while evolution and behavior together add `r pop_s5-pop_s3` individuals—substantial but secondary to tolerance's enabling effect.
+The simulation results in N = `r pop_s5` (change:
+`r sprintf("%+d", delta_behavior)` from Scenario 4). Habitat selection
+provides
+`r ifelse(delta_behavior > 0, "additional benefit", ifelse(delta_behavior < 0, "reduced performance", "no net effect"))`
+beyond evolution and tolerance. Cumulative gain from Scenario 2 (extinct
+baseline with diversity but no tolerance): `r cumulative_gain`
+individuals. This cumulative perspective reveals that tolerance
+(Scenario 3) was the critical transition enabling persistence, while
+evolution and behavior provided
+`r ifelse(cumulative_gain - pop_s3 > 0, "additional incremental benefits", "marginal effects")`.
 
 ## Comparative Analysis
 
-The table below summarizes population outcomes across all five scenarios. The "Change" column shows each mechanism's incremental contribution, revealing relative importance:
+The table below summarizes population outcomes across all five
+scenarios. The "Change" column shows each mechanism's incremental
+contribution, revealing relative importance and potential interaction
+effects:
 
 ```{r comparative-summary}
 # Summary table showing progressive mechanism effects
 results_summary <- data.frame(
-  Scenario = c("S1: Uniform", "S2: Diversity", "S3: Tolerance", 
+  Scenario = c("S1: Uniform", "S2: Diversity", "S3: Tolerance",
                "S4: Evolution", "S5: Behavior"),
   Final_N = c(pop_s1, pop_s2, pop_s3, pop_s4, pop_s5),
-  Change = c("—", 
+  Change = c("—",
              sprintf("%+d", pop_s2 - pop_s1),
              sprintf("%+d", pop_s3 - pop_s2),
              sprintf("%+d", pop_s4 - pop_s3),
              sprintf("%+d", pop_s5 - pop_s4)),
-  Mechanism_Added = c("None (baseline)", 
+  Mechanism_Added = c("None (baseline)",
                       "Genetic diversity in optima",
                       "Tolerance (niche width)",
                       "Mutation + plasticity",
@@ -577,9 +1247,16 @@ results_summary <- data.frame(
 results_summary
 ```
 
-The S2→S3 transition (adding tolerance) accounts for `r pop_s3 - pop_s2` individuals—the largest and most critical contribution representing the fundamental shift from extinction to viability. This single parameter change (adding genotype_sd=0.15) enables population persistence. Subsequent mechanisms provide incremental effects: evolution adds `r pop_s4 - pop_s3` individuals (`r sprintf("%.1f%%", (pop_s4-pop_s3)/pop_s3*100)` increase over tolerance alone), and behavior adds `r pop_s5 - pop_s4` individuals (`r sprintf("%.1f%%", (pop_s5-pop_s4)/pop_s4*100)` further increase).
-
-The figure below shows population trajectories over time (left panel) and final population sizes (right panel) across scenarios. Note that Scenarios 1-2 (red bars, extinct) differ fundamentally from Scenarios 3-5 (yellow-green gradient, viable). The trajectory panel reveals temporal dynamics: S3 shows initial decline then stabilization, while S4-S5 show enhanced dynamics from evolutionary and behavioral mechanisms:
+The figure below shows population trajectories over time (left panel)
+and final population sizes (right panel) across scenarios. Note that
+Scenarios 1-2 (red bars, extinct) differ fundamentally from Scenarios
+3-5 (green bars, viable), suggesting tolerance is a critical threshold
+parameter. The trajectory panel reveals temporal dynamics: Scenario 3
+shows initial decline then stabilization (demographic adjustment to
+carrying capacity), while Scenarios 4-5 show
+`r ifelse(pop_s4 > pop_s3 | pop_s5 > pop_s4, "enhanced dynamics", "similar patterns")`
+from evolutionary and behavioral mechanisms. All scenarios started with
+N=40 (black horizontal line in left panel):
 
 ```{r comparative-visualization, fig.width=9, fig.height=4.5, echo=FALSE}
 par(mfrow = c(1, 2), mar = c(5, 4, 3, 2))
@@ -592,24 +1269,24 @@ traj_s5 <- population_size(sim_s5)
 # Population dynamics over time (only viable scenarios shown)
 max_pop <- max(c(traj_s3$population_size, traj_s4$population_size, traj_s5$population_size))
 plot(traj_s3$time, traj_s3$population_size, type = "l", col = "blue", lwd = 2,
-     main = "Population Trajectories\n(Viable Scenarios Only)", 
+     main = "Population Trajectories\n(Viable Scenarios Only)",
      xlab = "Time", ylab = "Population Size (N)",
      ylim = c(0, max_pop * 1.05))
 lines(traj_s4$time, traj_s4$population_size, col = "darkgreen", lwd = 2)
 lines(traj_s5$time, traj_s5$population_size, col = "purple", lwd = 2)
-abline(h = 40, lty = 2, col = "gray50", lwd = 1)
-text(max(traj_s3$time)*0.02, 42, "Initial N=40", pos = 4, cex = 0.8, col = "gray50")
+abline(h = 40, lty = 1, col = "black", lwd = 1.5)
+text(max(traj_s3$time)*0.02, 40, "Initial N=40", pos = 3, cex = 0.9, font = 2)
 legend("topright", legend = c("S3: Tolerance", "S4: Evolution", "S5: Behavior"),
        col = c("blue", "darkgreen", "purple"), lwd = 2, bty = "n", cex = 0.85)
 
-# Final population sizes (all scenarios)
+# Final population sizes (all scenarios) with clearer color scheme
 barplot(c(pop_s1, pop_s2, pop_s3, pop_s4, pop_s5),
         names.arg = c("S1", "S2", "S3", "S4", "S5"),
-        main = "Final Population Sizes\n(All Scenarios)",
+        main = "Final Population Sizes\n(Red=Extinct, Green=Viable)",
         ylab = "Population Size (N)",
-        col = c("red", "red", "yellow", "lightgreen", "darkgreen"),
+        col = c("red", "red", "lightgreen", "green", "darkgreen"),
         las = 1)
-text(x = seq(0.7, by = 1.2, length.out = 5), 
+text(x = seq(0.7, by = 1.2, length.out = 5),
      y = c(pop_s1, pop_s2, pop_s3, pop_s4, pop_s5) + max(c(1, pop_s3, pop_s4, pop_s5)) * 0.05,
      labels = c(pop_s1, pop_s2, pop_s3, pop_s4, pop_s5),
      cex = 1.1, font = 2)
@@ -620,282 +1297,181 @@ par(mfrow = c(1, 1), mar = c(5, 4, 4, 2))
 
 ## Verifying Phenotype-Environment Matching
 
-The `check_habitat_match()` function provides diagnostic visualization to verify that survivors occupy environmentally suitable locations. Each panel shows: (left) the landscape with survivor positions colored by their phenotypes, and (right) a histogram showing the distribution of local environmental values where survivors are found. Effective phenotype-environment matching is indicated when individuals with similar phenotypes cluster spatially in regions with similar environmental values, and when the histogram of occupied environmental values matches the distribution of phenotypes.
+The `check_habitat_match()` function visualizes phenotype-environment
+matching by comparing survivor trait values with their occupied
+locations. It produces two side-by-side panels: (left) the landscape
+showing environmental values as a colored gradient, and (right) survivor
+positions as colored dots where each dot's color represents its
+phenotype (or genotype) value. Both panels share the same color scale,
+so effective habitat matching appears as dot colors matching the
+background landscape colors—for example, individuals with low phenotypes
+(cool colors: blues, greens) occupying low-value regions (also
+blue/green background), and individuals with high phenotypes (warm
+colors: yellows, reds) occupying high-value regions (also yellow/red
+background).
+
+**Interpreting matching quality**: Strong phenotype-environment matching
+is indicated when dot colors in the right panel match their underlying
+background colors from the left panel—visually, this appears as colored
+dots "blending in" with the landscape gradient. Poor matching appears as
+color mismatches, such as blue dots (low phenotypes) sitting on
+yellow/red backgrounds (high environmental values), or red dots (high
+phenotypes) sitting on blue backgrounds (low environmental values).
+
+**Scenario 3 (Tolerance only):** We expect moderate
+phenotype-environment matching from passive processes. Without evolution
+or active habitat selection, matching occurs only through differential
+survival—individuals with poor phenotype-environment matches die,
+leaving survivors in locations where their traits happen to fit well.
+This passive filtering should produce some spatial structure but not the
+strong segregation possible with active habitat selection.
 
 ```{r validation-s3, fig.width=8, fig.height=4}
-# Scenario 3: Tolerance only
-# Expect moderate phenotype-environment matching from passive processes
 if (pop_s3 > 0) {
-  check_habitat_match(sim_s3, 
-                           color_by = "phenotype", 
+  check_habitat_match(sim_s3,
+                           color_by = "phenotype",
                            landscape_colors = "terrain",
                            point_size = 1.5,
-                           show_legend = FALSE)
+                           show_legend = TRUE)
 }
 ```
 
-In Scenario 3 (tolerance only, no habitat selection), survivors should show moderate spatial sorting. Individuals with low phenotypes (cool colors—blue/green) should tend to occupy low-value regions (also cool colors on landscape), while high phenotypes (warm colors—yellow/red) should occupy high-value regions. This matching arises passively from differential survival: individuals experience higher fitness when phenotype-environment mismatch is small, so natural selection favors occupation of matching environments even without active habitat selection.
+The plots show the landscape environmental gradient (left) and survivor
+locations colored by their phenotypes (right). When dot colors match the
+background colors of the landscape, this indicates good
+phenotype-environment matching. Individuals with low phenotypes (cool
+colors: blues, greens) tend to occupy low-value regions (also shown in
+cool colors on the landscape), while high phenotypes (warm colors:
+yellows, reds) occupy high-value regions (also warm colors). This
+suggests differential survival has filtered the population such that
+remaining individuals match their local environments reasonably well,
+even without active habitat selection.
+
+**Scenario 4 (Evolution added):** We expect similar or slightly improved
+matching compared to Scenario 3. Evolution through mutation enables
+gradual genetic shifts toward better local adaptation, but the process
+is slow relative to the simulation duration (250 events may not provide
+sufficient generations for substantial evolutionary change). The primary
+matching mechanism remains differential survival from tolerance
+(genotype_sd=0.15), though evolution may fine-tune genotype
+distributions toward locally abundant environmental values.
 
 ```{r validation-s4, fig.width=8, fig.height=4}
-# Scenario 4: Evolution added
-# Expect similar or slightly improved matching from evolutionary optimization
 if (pop_s4 > 0) {
-  check_habitat_match(sim_s4, 
-                           color_by = "phenotype", 
+  check_habitat_match(sim_s4,
+                           color_by = "phenotype",
                            landscape_colors = "terrain",
                            point_size = 1.5,
-                           show_legend = FALSE)
+                           show_legend = TRUE)
 }
 ```
 
-Scenario 4 (evolution added) should show similar or slightly enhanced matching compared to S3. Plasticity enables individuals to adjust phenotypes toward local conditions, potentially improving matches. Mutation allows evolutionary shifts in genotype_mean toward commonly experienced environmental values. The combined effect should be modest enhancement of the matching pattern established by tolerance alone.
+The plots should show similar spatial patterns to Scenario 3, with
+survivor dots (right panel) matching the colors of their underlying
+landscape locations (left panel). Good matching appears as dots
+"blending in" with the background gradient—blue dots on blue regions,
+yellow/red dots on yellow/red regions. Any improvement in color matching
+over Scenario 3 would suggest evolution has shifted genotype
+distributions toward locally favored values, though the short simulation
+duration may limit such effects.
+
+**Scenario 5 (Habitat selection added):** We expect the strongest
+phenotype-environment matching due to active spatial optimization. With
+sampling_points=100, dispersing individuals evaluate many potential
+locations and preferentially select sites where their phenotype matches
+the local environment. This behavioral mechanism produces clear spatial
+segregation: low-phenotype individuals concentrate in low-value regions
+(blue areas of the landscape), high-phenotype individuals in high-value
+regions (yellow-red areas). This active matching should exceed the
+passive filtering of Scenarios 3-4.
 
 ```{r validation-s5, fig.width=8, fig.height=4}
-# Scenario 5: Habitat selection added
-# Expect strongest phenotype-environment matching from active spatial optimization
 if (pop_s5 > 0) {
-  check_habitat_match(sim_s5, 
-                           color_by = "phenotype", 
+  check_habitat_match(sim_s5,
+                           color_by = "phenotype",
                            landscape_colors = "terrain",
                            point_size = 1.5,
-                           show_legend = FALSE)
+                           show_legend = TRUE)
 }
 ```
 
-Scenario 5 (habitat selection added) should show the strongest phenotype-environment matching. Active habitat selection (sampling_points=100) enables individuals to evaluate many locations and preferentially settle where fitness is high. This behavioral mechanism should produce clear spatial segregation: low-phenotype individuals concentrated in low-value regions, high-phenotype individuals in high-value regions, with minimal occupancy of mismatching environments.
-
-```{r compute-correlations, echo=FALSE}
-# Quantify phenotype-environment matching using correlation
-# High positive correlation indicates strong matching
-if (pop_s3 > 0 && "phenotype" %in% names(sim_s3$survivors) &&
-    "habitat_quality" %in% names(sim_s3$survivors)) {
-  cor_s3 <- cor(sim_s3$survivors$phenotype, 
-                sim_s3$survivors$habitat_quality, 
-                use = "complete.obs")
-} else {
-  cor_s3 <- NA
-}
-
-if (pop_s4 > 0 && "phenotype" %in% names(sim_s4$survivors) &&
-    "habitat_quality" %in% names(sim_s4$survivors)) {
-  cor_s4 <- cor(sim_s4$survivors$phenotype, 
-                sim_s4$survivors$habitat_quality, 
-                use = "complete.obs")
-} else {
-  cor_s4 <- NA
-}
-
-if (pop_s5 > 0 && "phenotype" %in% names(sim_s5$survivors) &&
-    "habitat_quality" %in% names(sim_s5$survivors)) {
-  cor_s5 <- cor(sim_s5$survivors$phenotype, 
-                sim_s5$survivors$habitat_quality, 
-                use = "complete.obs")
-} else {
-  cor_s5 <- NA
-}
-```
-
-The visualizations confirm phenotype-environment matching across all viable scenarios, validating TWoLife's implementation of the fitness model. Quantitatively, survivor phenotypes correlate positively with occupied environmental values: S3 (r = `r if(!is.na(cor_s3)) sprintf("%.2f", cor_s3) else "NA"`), S4 (r = `r if(!is.na(cor_s4)) sprintf("%.2f", cor_s4) else "NA"`), S5 (r = `r if(!is.na(cor_s5)) sprintf("%.2f", cor_s5) else "NA"`). `r if(!is.na(cor_s5) && !is.na(cor_s3) && cor_s5 > cor_s3) paste0("The correlation increases from S3 (tolerance only, r=", sprintf("%.2f", cor_s3), ") to S5 (with habitat selection, r=", sprintf("%.2f", cor_s5), "), confirming that active habitat selection enhances spatial matching beyond passive processes.") else if(!is.na(cor_s3)) paste0("The strong correlations across scenarios (all r>", sprintf("%.2f", min(cor_s3, cor_s4, cor_s5, na.rm=TRUE)), ") verify correct implementation of phenotype-environment matching.") else "These strong positive correlations verify that TWoLife correctly implements the phenotype-environment matching mechanism."`
-
-# Understanding Simulation Output
-
-## Object Structure
-
-Simulation objects are returned as lists containing four components providing different levels of analytical detail. Understanding this structure enables efficient data extraction and analysis:
-
-```{r output-structure}
-# Examine top-level structure
-names(sim_s5)
-
-# Summary component provides aggregated final statistics
-sim_s5$summary
-```
-
-The `summary` component is a list containing final population statistics: `final_population_size` (integer: number surviving at simulation end), `total_births` (integer: cumulative birth events), `total_deaths` (integer: cumulative death events), `total_dispersals` (integer: cumulative dispersal events), and `final_time` (numeric: simulation duration in time units). This component provides quick overview of population outcomes without requiring processing of detailed data.
-
-## Accessing Individual-Level Data
-
-The `survivors` component is a data frame where each row represents one surviving individual at simulation end. This enables analysis of trait distributions, spatial patterns, and phenotype-environment relationships among survivors:
-
-```{r accessing-survivors}
-# Individual-level data showing traits and locations
-if (isTRUE(!is.null(sim_s5$survivors) && is.data.frame(sim_s5$survivors) && nrow(sim_s5$survivors) > 0)) {
-  # Display first three survivors
-  head(sim_s5$survivors, 3)
-  
-  # Columns include:
-  # individual_id: unique identifier
-  # genotype: genotype_mean value (genetic optimum)
-  # genotype_sd: tolerance (niche width)
-  # phenotype: current expressed value (can differ from genotype via plasticity)
-  # x, y: spatial coordinates
-  # habitat_quality: environmental value at current location
-  # fitness: current survival probability based on phenotype-environment match
-}
-```
-
-This data frame enables diverse analyses: trait distribution statistics (mean, variance, range of genotypes), spatial pattern analysis (clustering, dispersion), phenotype-environment correlation (matching strength), and fitness distribution (population viability indicators).
-
-## Accessing Event History
-
-The `events` component is a data frame recording every demographic event that occurred during the simulation. This complete history enables analysis of population dynamics, demographic rates over time, and detailed process tracking:
-
-```{r accessing-events}
-# Event history showing complete demographic record
-if (isTRUE(!is.null(sim_s5$events) && is.data.frame(sim_s5$events) && nrow(sim_s5$events) > 0)) {
-  # Display first three events
-  head(sim_s5$events, 3)
-  
-  # Columns include:
-  # time: when event occurred
-  # event_type: "birth", "death", or "dispersal"
-  # individual_id: which individual (births create new IDs, deaths remove IDs)
-  # parent_id: for births, which individual reproduced (NA for deaths/dispersals)
-  # x, y: location where event occurred
-  # Plus trait values at time of event
-  
-  # Event counts by type
-  table(sim_s5$events$event_type)
-}
-```
-
-The events data enables temporal analysis: birth/death/dispersal rates over time, population growth trajectory reconstruction, lineage tracking (parent-offspring relationships), spatial dynamics (where events occur), and demographic rate variation over simulation duration.
-
-## Accessing Parameters
-
-The `parameters` component stores all input parameters, ensuring complete reproducibility. Any simulation can be exactly replicated by re-running with stored parameters:
-
-```{r accessing-parameters}
-# Parameters storage for reproducibility
-if (!is.null(sim_s5$parameters)) {
-  # Show structure (not full content—would be verbose)
-  str(sim_s5$parameters, max.level = 1)
-  
-  # Example: extract landscape parameters
-  names(sim_s5$parameters$landscape_params)
-  
-  # Parameters include:
-  # landscape_params: landscape matrix and configuration
-  # individual_params: initial population settings
-  # genetic_params: trait values used
-  # simulation_params: duration and stopping conditions
-  # master_seed: ensures reproducibility
-}
-```
-
-This complete parameter storage facilitates comparison across simulations (identify parameter differences), replication (re-run with identical settings), and archiving (store complete simulation specification).
-
-# Parameters Reference
-
-This comprehensive reference documents all parameters accepted by TWoLife functions, organized by parameter list. Each parameter includes description, valid values, defaults, and interpretation guidance.
-
-## Landscape Parameters (`landscape_params` list)
-
-- **habitat** (required): Numeric matrix of environmental values. For binary landscapes, use 0=matrix (unsuitable) and 1=habitat (suitable). For continuous landscapes, use values typically 0-1 representing environmental conditions (temperature, moisture, etc.). Dimensions determine landscape size (e.g., 15×15 matrix = 225 cells).
-
-## Individual Parameters (`individual_params` list)
-
-- **initial_population_size** (required): Integer specifying starting number of individuals. Must be positive. Typical values: 20-200. Larger populations reduce extinction risk but increase computation time.
-
-- **initial_positions** (optional): Two-column matrix specifying starting (x,y) coordinates for each individual. If NULL (default), individuals are randomly placed in habitat cells (for binary landscapes) or random cells (for continuous landscapes). Custom placement enables testing specific initial configurations.
-
-- **initial_ages** (optional): Vector of ages for initial individuals. If NULL (default), all start at age 0. Custom ages enable simulating populations with age structure.
-
-## Genetic Parameters (`genetic_params` list, optional)
-
-All genetic parameters accept either:
-- Single value (applied to all individuals): e.g., `genotype_means = 0.5`
-- Vector of length `initial_population_size` (individual-specific): e.g., `genotype_means = runif(40, 0.3, 0.7)`
-
-- **genotype_means** (optional): Optimal environmental values. Range: typically 0-1 matching landscape range. Default: 0.5 for all individuals. Interpretation: environmental value where fitness is maximized (fitness=1.0 when phenotype matches environment).
-
-- **genotype_sds** (optional): Niche widths/tolerance ranges. Range: >0, typically 0.05-0.3. Default: 0.1. Interpretation: standard deviation (σ) in Gaussian fitness function. Smaller values create specialists (narrow tolerance), larger values create generalists (broad tolerance). Value of 0.15 means ±0.3 (±2σ) range retains 95% of fitness.
-
-- **mutation_rates** (optional): Probability of genetic change per reproduction. Range: 0-1, typically 0-0.1. Default: 0 (no evolution). Interpretation: per-birth probability that offspring genotype_mean differs from parent. Enables evolutionary adaptation when >0.
-
-- **plasticities** (optional): Rate of phenotypic adjustment toward local environment. Range: 0-1. Default: 0 (no plasticity). Interpretation: per-timestep rate of phenotype shift toward local environmental value. 0=no adjustment (phenotype=genotype_mean), 1=complete immediate adjustment (phenotype=local environment within tolerance), 0.3=30% adjustment per step.
-
-- **sampling_points** (optional): Habitat selection intensity. Range: ≥1 (integer). Default: 1 (random dispersal). Interpretation: number of locations evaluated before dispersal. 1=random movement (no selection), 10=moderate selectivity, 100=high selectivity (approaching optimal placement). Higher values enable better habitat matching but increase computation time.
-
-## Simulation Parameters (`simulation_params` list)
-
-- **max_events** (optional): Maximum number of demographic events (births + deaths + dispersals). Must be positive integer. Typical values: 250-1000. Simulation stops when this number is reached or population goes extinct. Alternative to max_time.
-
-- **max_time** (optional): Maximum simulation duration in time units. Must be positive number. Alternative to max_events. Simulation stops when time reaches this value or population goes extinct.
-
-- **min_population_size** (optional): Extinction threshold. Default: 0 (only true extinction stops simulation). If set to positive value (e.g., 5), simulation stops when population falls below this threshold, enabling extinction risk analysis.
-
-- **max_population_size** (optional): Carrying capacity. Default: Inf (no limit). If set to finite value, prevents population from exceeding this number, implementing density dependence through recruitment limitation.
-
-## Master Seed
-
-- **master_seed** (required): Integer for reproducibility. Controls all random processes (initial placement, demographic events, mutations, habitat selection). Using identical master_seed with identical parameters produces exactly identical results. Different seeds produce independent realizations (different random events, same mechanisms).
+The plots should show the strongest phenotype-environment matching with
+clear spatial segregation visible as strong color alignment between the
+two panels. Low-phenotype individuals (blue dots in right panel) should
+concentrate in low-value regions (blue areas in left panel), while
+high-phenotype individuals (yellow/red dots) concentrate in high-value
+regions (yellow/red areas). This strong color matching—where dots
+visually "disappear" into the background gradient—indicates individuals
+successfully located suitable microhabitats through active habitat
+selection.
 
 # Computational Considerations
 
-## Performance
+## Performance Scaling
 
-Simulation speed depends on multiple factors that users can control through parameter choices:
+TWoLife's computational cost is dominated by neighbor calculations that occur
+during each demographic event (birth, death, dispersal). Understanding these
+scaling relationships helps in designing feasible simulation experiments:
 
-1. **Landscape size**: Computational cost scales quadratically with linear dimension. A 15×15 landscape (225 cells) is 4× faster than 30×30 (900 cells), which is 4× faster than 60×60 (3600 cells). Recommendation: start with smaller landscapes (15-30 cells per dimension) for exploration, increase to 50-100 for publication analyses.
+-   **Population size**: Cost scales **quadratically** (O(N²)) with population
+    size because each event requires updating neighbor lists (O(N) operation),
+    and larger populations generate proportionally more events. Doubling
+    population size increases runtime approximately 4-fold.
 
-2. **Population size**: Cost scales linearly with number of individuals tracked. 50 individuals is 2× faster than 100, which is 2× faster than 200. Recommendation: balance ecological realism (larger populations reduce extinction risk and demographic stochasticity) against computational cost.
+-   **Landscape size**: Indirectly affects cost through carrying capacity.
+    Larger landscapes support proportionally more individuals at equilibrium
+    (density = N/area). Doubling landscape dimensions increases area 4-fold,
+    supporting ~4× more individuals, which increases cost ~16-fold due to O(N²)
+    scaling.
 
-3. **Habitat selection**: Cost scales linearly with `sampling_points` value. sampling_points=100 is 100× slower than sampling_points=1 because each dispersal evaluates 100 locations vs. 1. Recommendation: use sampling_points=1 for quick exploration, increase to 10-100 when habitat selection is scientifically important.
+-   **Habitat selection**: Cost scales linearly with `sampling_points`. Use
+    sampling_points=1 for exploration, 10-100 when habitat selection mechanisms
+    are scientifically important.
 
-4. **Simulation duration**: Cost scales linearly with `max_events` or `max_time`. 1000 events takes 2× as long as 500 events. Recommendation: determine minimum duration needed for dynamics to equilibrate, then add 20-50% margin.
+-   **Simulation duration**: Cost scales linearly with `max_events` or
+    `max_time`.
 
-**Typical performance:** On standard laptop (2023):
-- Small (15×15, N=50, 500 events, sampling=1): ~1-2 seconds
-- Medium (30×30, N=100, 1000 events, sampling=10): ~5-15 seconds
-- Large (50×50, N=200, 2000 events, sampling=100): ~30-120 seconds
+**Recommendation:** Start with smaller simulations (15-30 cell landscapes, N =
+40-100, sampling_points = 1) for parameter exploration. Scale up cautiously,
+recognizing that doubling landscape dimensions costs ~16× more computation.
 
 ## Memory Usage
 
-Memory scales with event history storage, which grows linearly with `max_events`. Each event requires ~200-500 bytes depending on tracked attributes. For memory-intensive applications with very long simulations (>50,000 events), consider:
-
-1. Running shorter simulations to equilibrium rather than indefinitely
-2. Periodically extracting and saving results, then restarting
-3. Using smaller populations when scientifically justified
-
-Typical memory usage: <100 MB for most applications, <1 GB for extreme cases (very long simulations or many replicates stored in memory).
+Memory usage scales linearly with simulation duration because TWoLife stores
+complete event histories. Each event requires approximately 200-500 bytes
+depending on genetic architecture, so a simulation with 10,000 events requires
+roughly 2-5 MB. Memory is not a limiting factor for most applications, but for
+extremely long simulations (>1 million events), monitor memory usage.
 
 ## Reproducibility
 
-Complete reproducibility requires three conditions:
+Simulations are exactly reproducible if three conditions are met:
 
-1. **Identical `master_seed`**: Same seed guarantees identical random number sequences
-2. **Same TWoLife version**: Algorithm changes between versions may affect results. Check version with `packageVersion("TWoLife")`. Report version in publications.
-3. **Same R version**: Numerical precision can vary across R versions. For critical reproducibility (publications, archiving), report R version (`R.version.string`) and consider using same R version for replication.
+1.  **Same master_seed**: The `master_seed` parameter controls all
+    stochasticity
+2.  **Same TWoLife version**: Algorithm implementations may change between
+    versions
+3.  **Same R version**: Underlying random number generators may differ across R
+    versions
 
-All parameters are stored in simulation output enabling exact replication:
-
-```{r reproducibility-example, eval=FALSE}
-# Replicate a simulation exactly using stored parameters
-sim_replicate <- twolife_simulation(
-  landscape_params = sim_s5$parameters$landscape_params,
-  individual_params = sim_s5$parameters$individual_params,
-  genetic_params = sim_s5$parameters$genetic_params,
-  simulation_params = sim_s5$parameters$simulation_params,
-  master_seed = sim_s5$parameters$master_seed
-)
-
-# Results should be identical
-identical(sim_replicate$summary, sim_s5$summary)  # Should return TRUE
-```
+The `master_seed` ensures that identical parameter sets produce identical
+results, enabling rigorous hypothesis testing and debugging.
 
 ## Parallelization
 
-For parameter sweeps or Monte Carlo replication, simulations can be parallelized using R's parallel processing capabilities. Each simulation is independent, enabling perfect parallelization:
+For parameter sweeps or Monte Carlo replication, simulations can be
+parallelized using R's parallel processing capabilities. Each simulation
+is independent (given different seeds), enabling perfect parallelization
+with linear speedup up to the number of available cores:
 
 ```{r parallelization-example, eval=FALSE}
 library(parallel)
 
-# Detect available cores (leave 1 for system)
+# Detect available cores (leave 1 for system responsiveness)
 n_cores <- detectCores() - 1
 
 # Example: replicate Scenario 3 (tolerance) 100 times with different seeds
-# to estimate distribution of population outcomes
+# to estimate distribution of population outcomes under fixed conditions
 n_reps <- 100
 results <- mclapply(1:n_reps, function(i) {
   twolife_simulation(
@@ -916,50 +1492,11 @@ hist(final_sizes, breaks = 20, col = "lightblue", border = "white",
      main = "Distribution of Final Population Sizes\n(100 Replicates)",
      xlab = "Final N")
 abline(v = mean(final_sizes), col = "red", lwd = 2, lty = 2)
-text(mean(final_sizes), par("usr")[4]*0.9, 
+text(mean(final_sizes), par("usr")[4]*0.9,
      paste0("Mean = ", round(mean(final_sizes), 1)), pos = 4, col = "red")
 ```
-
-# Discussion
-
-## What TWoLife Enables
-
-**Continuous environmental representation:** Unlike most individual-based models that discretize space into categorical habitat types (suitable vs. unsuitable) [@DeAngelis2005], TWoLife handles continuous environmental gradients representing realistic spatial variation in conditions like temperature, moisture, or resource availability. This enables investigation of species responses to gradual environmental transitions, edge effects in continuous space, and adaptive matching processes that would be obscured by discrete classification.
-
-**Individual-level genetic architecture:** Each individual possesses unique genetic values for optimal conditions (genotype_mean), niche widths (genotype_sd), mutation rates, plasticity coefficients, and behavioral parameters—all heritable, mutable, and mechanistically implemented through explicit fitness calculations. This individual-level representation enables investigation of how genetic variation structures population responses to environmental heterogeneity, tracking lineages, analyzing trait evolution, and testing hypotheses about necessary genetic diversity.
-
-**Phenotype-environment matching framework:** Fitness emerges dynamically from Gaussian matching between individual traits and local conditions rather than pre-assigned habitat quality. This mechanistic approach allows investigation of matching processes, local adaptation trajectories, and niche evolution without assuming fitness landscapes a priori. The explicit fitness function (exp(-(phenotype-environment)²/(2×tolerance²))) enables quantitative predictions about survival probability given any trait-environment combination.
-
-**Flexible mechanism integration:** Users control which mechanisms operate (genetic variation, tolerance, plasticity, evolution, behavior) through parameter specification, enabling systematic hypothesis testing about mechanism necessity and sufficiency. This factorial capability supports experimental designs isolating mechanism effects, as demonstrated in our five-scenario analysis where progressive mechanism addition revealed their relative importance and interactions.
-
-**Complete transparency:** All individual traits, locations, fitness values, and demographic events are tracked throughout simulations and stored in accessible data frames. This supports validation (verify mechanisms operate correctly through phenotype-environment correlation analysis), detailed analysis of emergent patterns (spatial distributions, trait evolution), and lineage tracking (parent-offspring relationships through event history). The complete transparency distinguishes TWoLife from "black box" models where internal processes are opaque.
-
-# Conclusion
-
-**TWoLife** provides a flexible framework for simulating populations as collections of genetically variable individuals inhabiting spatially heterogeneous landscapes. Through systematic experimentation, this vignette demonstrated:
-
-**Core capabilities:**
-- Generation of discrete habitat patches and continuous environmental gradients with realistic spatial structure through fractal algorithms
-- Individual-level tracking of genetic traits (optimal values, tolerance, mutation, plasticity, behavior), phenotypes, and fitness through complete demographic histories
-- Flexible integration of evolutionary and behavioral mechanisms through parameter control, enabling factorial experimental designs
-- Complete reproducibility through parameter storage and master seed control, with computational efficiency suitable for parameter exploration (typical simulations complete in seconds to minutes)
-
-**Key findings from our simulations:**
-- Niche width (tolerance ranges, genotype_sd parameter) is necessary and sufficient for persistence in heterogeneous environments (Scenarios 1-3). The S2→S3 transition—adding tolerance while holding genetic diversity constant—enabled the shift from extinction (N=0) to viability (N=`r pop_s3`).
-- Genetic diversity in optimal values alone, without physiological flexibility (tolerance), is insufficient for viability in continuous landscapes (Scenario 2: N=0 despite 40 different genotypes). Continuous space rarely provides exact phenotype-environment matches required by specialists with zero tolerance.
-- Evolution (mutation + plasticity) and behavior (habitat selection) enhance survival but cannot compensate for lack of fundamental tolerance (Scenarios 4-5). These mechanisms add `r pop_s5 - pop_s3` individuals (`r sprintf("%.1f%%", (pop_s5-pop_s3)/pop_s3*100)` increase) beyond tolerance alone—substantial but secondary to tolerance's enabling effect.
-- Mechanisms interact in hierarchical rather than simply additive fashion: tolerance is prerequisite for viability, with evolution and behavior providing enhancements that amplify tolerance's effects rather than operating independently.
-
-**Scientific value:**
-- Enables investigation of questions that are challenging for models lacking either individual variation or continuous spatial heterogeneity: How does tolerance breadth affect habitat availability? How do phenotype-environment matching processes structure populations? When is genetic diversity necessary vs. sufficient?
-- Supports hypothesis testing about mechanism necessity and sufficiency through systematic parameter manipulation, as demonstrated by the five-scenario experimental design isolating tolerance, evolution, and behavior effects.
-- Provides quantitative predictions about population outcomes emerging from individual-level processes and trait-environment interactions, with explicit fitness functions enabling calculation of expected survival probability for any trait-environment combination.
-- Facilitates reproducible, mechanistically explicit research workflows through complete parameter storage, output transparency, and helper functions for result extraction and visualization.
-
-By integrating spatial heterogeneity and individual variation within a unified simulation framework, TWoLife advances capacity to understand population dynamics, evolutionary processes, and conservation strategies in realistic ecological contexts where environments vary continuously and individuals differ genetically in their responses to conditions.
 
 # References
 
 ::: {#refs}
 :::
-

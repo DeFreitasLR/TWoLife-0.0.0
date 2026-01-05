@@ -110,7 +110,7 @@ at discrete event times.
 
 When show_plot = TRUE:
 \itemize{
-  \item **Background**: Habitat quality from landscape matrix
+  \item **Background**: Habitat values from landscape matrix
   \item **Points**: Individual positions colored by selected trait
   \item **Title**: Shows target_time and number of individuals alive
   \item **Legend**: Maps colors to trait values (if color_by != "none")

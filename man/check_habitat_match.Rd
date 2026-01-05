@@ -45,24 +45,25 @@ Invisibly returns a data frame with columns:
     \item{y}{Numeric. Y coordinate in world space}
     \item{genotype}{Numeric. Genotype value}
     \item{phenotype}{Numeric. Phenotype value}
-    \item{habitat_value}{Numeric. Habitat quality at individual's location}
+    \item{habitat_value}{Numeric. Habitat value at individual's location}
     \item{row_index}{Integer. Landscape row index (for debugging)}
     \item{col_index}{Integer. Landscape column index (for debugging)}
   }
 }
 \description{
-Visualizes and quantifies whether surviving individuals are positioned
-in habitat matching their genotype or phenotype values. Calculates
-correlation between individual trait values and habitat environmental values to assess
-effectiveness of habitat selection or adaptation.
+Creates side-by-side visualizations to assess whether surviving individuals are positioned
+in habitat matching their genotype or phenotype values. The left plot displays the
+landscape with habitat values, while the right plot shows survivor locations
+colored by their trait values. Calculates correlation between individual trait values
+and habitat environmental values to quantify effectiveness of habitat selection or adaptation.
 }
 \details{
 What This Function Measures:
   This function tests whether individuals are found in habitats matching their trait
   values. Perfect matching would show:
   \itemize{
-    \item Individuals with trait value 0.8 in habitats with quality ~0.8
-    \item Individuals with trait value 0.2 in habitats with quality ~0.2
+    \item Individuals with trait value 0.8 in habitats with values ~0.8
+    \item Individuals with trait value 0.2 in habitats with values ~0.2
     \item Strong positive correlation (r close to 1.0)
   }
 
@@ -74,7 +75,7 @@ Mathematical Basis:
   Where:
   \itemize{
     \item \eqn{X} = trait values (genotype or phenotype) of survivors
-    \item \eqn{H} = habitat quality values at survivor locations
+    \item \eqn{H} = habitat values at survivor locations
     \item \eqn{\sigma_X}, \eqn{\sigma_H} = standard deviations
     \item \eqn{r} ranges from -1 (perfect negative) to +1 (perfect positive correlation)
   }
@@ -84,21 +85,23 @@ Mathematical Basis:
 Visualization Components:
   Creates a two-panel plot:
 
-  Left panel - Spatial distribution:
+  Left panel - Landscape visualization:
   \itemize{
-    \item Shows landscape with habitat quality as background color
-    \item Survivor locations as colored points (color = trait value)
-    \item Good matching: point colors visually match background colors
-    \item Poor matching: points of one color scattered across all background colors
+    \item Displays the spatial landscape with habitat values as background colors
+    \item X and Y axes show world coordinates
+    \item Color intensity represents habitat values (darker/greener = higher values)
+    \item Binary landscapes (0/1 values): white = matrix, green = habitat
+    \item Continuous landscapes: color gradient shows habitat values variation
   }
 
-  Right panel - Correlation plot:
+  Right panel - Survivor distribution:
   \itemize{
-    \item X-axis: habitat value at individual location (0 to 1)
-    \item Y-axis: trait value (genotype or phenotype)
-    \item Each point = one surviving individual
-    \item Best-fit line and Pearson r displayed
-    \item Perfect matching would show points along diagonal (r = 1.0)
+    \item Shows coordinates of all surviving individuals as points
+    \item Each point represents one survivor's position
+    \item Point color represents the individual's trait value (genotype or phenotype)
+    \item Color mapping matches landscape color scheme for visual comparison
+    \item Good matching: point colors should match the background colors in left panel
+    \item Poor matching: points show colors different from their corresponding landscape locations
   }
 
 Connection to Simulation Parameters:
