@@ -1,4 +1,4 @@
-# TWoLife 1.0.0
+=# TWoLife 0.1.0
 
 ## Initial Release
 
@@ -151,7 +151,6 @@ result <- twolife_simulation(
 
 - **R**: >= 4.0.0
 - **Rcpp**: C++ integration
-- **rflsgen**: Fractal landscape generation
 - **viridisLite**: Enhanced color palettes (optional)
 
 ### Platform Support

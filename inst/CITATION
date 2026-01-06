@@ -1,0 +1,16 @@
+bibentry(
+  bibtype = "Manual",
+  title = "TWoLife: Individual-Based Spatial Population Simulations with Genetic Evolution",
+  author = person("Lucas", "Freitas", 
+                  email = "rodriguesdefreitas@gmail.com",
+                  comment = c(ORCID = "0000-0002-2773-0981")),
+  year = format(Sys.Date(), "%Y"),
+  note = paste("R package version", meta$Version),
+  url = "https://github.com/DeFreitasLR/TWoLife-0.0.0",
+  textVersion = paste(
+    "Freitas, L. (", format(Sys.Date(), "%Y"), ").",
+    "TWoLife: Individual-Based Spatial Population Simulations with Genetic Evolution.",
+    "R package version", meta$Version, ".",
+    "https://github.com/DeFreitasLR/TWoLife-0.0.0"
+  )
+)

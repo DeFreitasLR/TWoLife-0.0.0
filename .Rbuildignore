@@ -2,3 +2,10 @@
 ^\.Rproj\.user$
 ^\.Rhistory$
 ^\.RData$
+^\.git$
+^\.github$
+^src/.*\.o$
+^src/.*\.dll$
+^src/.*\.so$
+^.*\.tar\.gz$
+^.*\.Rcheck$
