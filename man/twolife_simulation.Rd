@@ -16,7 +16,7 @@ twolife_simulation(
 \arguments{
 \item{landscape_params}{List containing landscape parameters:
 \describe{
-  \item{habitat}{Matrix (integer, logical or numeric). World Habitat Pixel Matrix. Matriz values should be binary (0/1) or continuous habitat values (usually from 0 to 1). Each value represents represents an environmental quality value of a pixel. Individuals experience fitness effects based on how well their phenotype matches the habitat value of the pixel they are located.  Matrix dimensions define the landscape size and grid resolution. Required.}
+  \item{habitat}{Matrix (integer, logical or numeric). World Habitat Pixel Matrix. Matriz values should be binary (0/1) or continuous habitat values (usually from 0 to 1). Each value represents an environmental value of a pixel. Individuals experience fitness effects based on how well their phenotype matches the habitat value of the pixel they are located.  Matrix dimensions define the landscape size and grid resolution. Required.}
   \item{cell_size}{Numeric. Length of the side of a landscape cell in world units. Defines the spatial resolution of the landscape. If habitat is a 100x100 matrix and cell_size = 1.0, the simulated world dimensions are 100x100 world units (world_width = 100, world_height = 100). All spatial parameters (step_length, neighbor_radius, coordinates) use these same world units. The position of individuals have are in continuous (x,y) coordinates and are not restricted to pixel centers.}
   \item{boundary_condition}{Integer. Defines what happens to individuals that reach the edges of world borders:
     \itemize{

@@ -164,8 +164,8 @@ result_genetic <- twolife_simulation(
   simulation_params = list(max_events = 5),
   master_seed = 456
 )
-state_5 <- snapshot_at_time(result, 5, show_plot = FALSE)
-state_genetic_5 <- snapshot_at_time(result_genetic, 5, show_plot = FALSE)
+state_5 <- snapshot_at_time(result, 5, show_plot = TRUE)
+state_genetic_5 <- snapshot_at_time(result_genetic, 5, show_plot = TRUE)
 cat("At time 5 (no variation):", state_5$n_alive, "individuals\n")
 cat("At time 5 (with variation):", state_genetic_5$n_alive, "individuals\n")
 if (state_genetic_5$n_alive > 0) {
