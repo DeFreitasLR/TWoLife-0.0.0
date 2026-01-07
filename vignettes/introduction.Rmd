@@ -174,22 +174,10 @@ the individual's phenotype. When phenotype perfectly matches the local
 environment, the numerator equals zero and fitness equals 1.0,
 representing maximum survival probability. As the phenotype-environment
 mismatch increases in either direction, fitness declines exponentially.
-The rate of decline is controlled by genotype_sd:
-
--   **Narrow tolerance** (small genotype_sd, e.g., 0.05): Fitness drops
-    rapidly with small mismatches. An individual with genotype_sd=0.05
-    retains fitness ≈0.6 when mismatch is 0.05, but fitness falls to
-    ≈0.14 when mismatch reaches 0.1. These specialists require close
-    phenotype-environment matches to survive, performing well only in
-    narrow environmental ranges.
-
--   **Broad tolerance** (large genotype_sd, e.g., 0.3): Fitness declines
-    gradually even with substantial mismatches. An individual with
-    genotype_sd=0.3 maintains fitness ≈0.95 when mismatch is 0.05, and
-    retains fitness ≈0.61 even when mismatch reaches 0.1. These
-    generalists survive across wide environmental ranges, though they
-    may not achieve the maximum fitness values that specialists attain
-    in optimal conditions.
+The rate of decline is controlled by genotype_sd (tolerance parameter, 
+see Individuals section for details): smaller values produce specialists 
+requiring close environmental matches, while larger values produce 
+generalists tolerating diverse conditions.
 
 This fitness framework has important implications for how populations
 respond to environmental heterogeneity. In models with pre-assigned
@@ -255,19 +243,6 @@ determine ecological and evolutionary outcomes:
     $\varepsilon_{\text{plasticity}} \sim N(0, \psi)$ and $\psi$ =
     plasticity parameter.
 
-    -   plasticity=0: No phenotypic variation—phenotype equals genotype
-        exactly. All individuals with the same genotype_mean express
-        identical phenotypes and experience identical fitness
-        landscapes.
-    -   plasticity=0.1: Moderate variation—phenotype varies around
-        genotype with standard deviation 0.1. An individual with
-        genotype_mean=0.5 might express phenotype=0.52 or
-        phenotype=0.47, sampled once at birth and fixed thereafter.
-    -   plasticity=0.2: High variation—phenotype can deviate
-        substantially from genotype. An individual with
-        genotype_mean=0.5 might express phenotype=0.3 or phenotype=0.7
-        (±2σ contains approximately 95% of values).
-
 -   **`mutation_rate`** (Mutation rate): Controls heritable genetic
     variation transmitted across generations. This parameter determines
     the standard deviation (μ_r) of mutations added to the offspring's
@@ -280,52 +255,21 @@ determine ecological and evolutionary outcomes:
     \varepsilon_{\text{mutation}}$ where $\varepsilon_{\text{mutation}}
     \sim N(0, \mu_r)$ and $\mu_r$ = mutation_rate parameter.
 
-    -   mutation_rate=0: No evolution—offspring genotype exactly equals
-        parent genotype. All descendants retain identical genotype_mean
-        values, preventing evolutionary adaptation even under strong
-        selection.
-    -   mutation_rate=0.05: Moderate evolution—offspring genotype varies
-        from parent genotype with standard deviation 0.05. An offspring
-        from a parent with genotype_mean=0.5 might have
-        genotype_mean=0.52 or 0.48, allowing gradual evolutionary
-        change.
-    -   mutation_rate=0.1: High evolution—substantial genetic variation
-        between parent and offspring. An offspring from a parent with
-        genotype_mean=0.5 might have genotype_mean=0.3 or 0.7 (±2σ
-        contains approximately 95% of values), facilitating rapid
-        evolutionary responses.
-
 -   **`sampling_points`** (Habitat selection intensity): The number of
     potential dispersal locations an individual evaluates before
-    deciding where to move. This parameter controls habitat selection
-    behavior and has direct implications for computational cost:
-
-    -   sampling_points**≤**1: Random dispersal with no habitat
-        selection. The individual moves to a randomly chosen location
-        without evaluation, representing passive dispersal mechanisms
-        such as wind-dispersed seeds or organisms with limited sensory
-        capabilities.
-    -   sampling_points=10: Moderate selectivity. The individual
-        evaluates 10 random locations and selects among them using a
-        softmax function weighted by expected fitness at each location.
-        This represents organisms with limited but non-zero habitat
-        assessment capacity.
-    -   sampling_points=100: High selectivity. The individual evaluates
-        100 locations, enabling sophisticated habitat selection that
-        approaches optimal placement. This represents organisms with
-        strong habitat assessment abilities, such as birds evaluating
-        multiple potential territories before settling.
-
-    The sampling_points value thus represents assessment capacity rather
-    than dispersal distance. Typical values span a biological continuum:
-    1 corresponds to passive dispersal, 10-20 to limited assessment,
-    50-100 to moderate-to-sophisticated assessment, and 100-200 to
-    near-optimal placement. Higher values increase computation time
-    linearly—each dispersal with sampling_points=100 evaluates 100
-    locations versus 1 location with sampling_points=1. The softmax
-    selection process means individuals prefer high-fitness locations
-    but retain some randomness, preventing unrealistic determinism where
-    all individuals always select the single best available cell.
+    deciding where to move. When sampling_points is set to 0 or 1,
+    individuals move to randomly chosen locations without evaluation,
+    representing passive dispersal mechanisms. These two values are
+    conceptually equivalent in producing passive dispersal but differ in
+    implementation—0 triggers a random walk algorithm while 1 samples a
+    single random location. As sampling_points increases, individuals
+    gain the capacity to assess and compare multiple locations before
+    settling, selecting among them using a softmax function weighted by
+    expected fitness. Higher values enable increasingly sophisticated
+    habitat selection and increase computation time linearly, but the
+    softmax process retains some randomness to prevent unrealistic
+    determinism where all individuals always select the single best
+    available cell.
 
 All five attributes are heritable, enabling evolutionary dynamics and
 potential local adaptation over multiple generations.
@@ -349,7 +293,7 @@ The four parameter lists are:
     configuration, specifically the habitat matrix and optionally
     environmental values
 -   **individual_params**: A list containing population initialization
-    settings (starting population size, positions, and ages)
+    settings (starting population size and positions)
 -   **genetic_params**: An optional list specifying individual variation
     in genetic traits (optimal values, tolerance, mutation rates,
     plasticity, and behavior)
@@ -394,11 +338,11 @@ explicit genetic_params specification is essential when working with
 continuous environmental gradients (demonstrated in Section 6).
 
 The `simulation_params` list controls simulation duration through
-`max_time` (maximum simulation duration in time units). The
+`max_events` (maximum number of demographic events). The
 `master_seed` ensures all random processes—initial placement when
 positions aren't specified, which individual reproduces/dies/disperses
-next, mutation direction and magnitude, plasticity noise, and habitat
-selection decisions when sampling_points\>1—produce identical results
+next, mutation direction and magnitude, plasticity noise, and movement
+events—produce identical results
 when re-run with the same seed value. Using identical master_seed with
 identical parameters produces exactly identical results, while using
 different seeds with identical parameters produces independent
@@ -423,21 +367,25 @@ records (events component), and reproducibility (parameters component):
 
 -   **`survivors`**: A data frame where each row represents one
     surviving individual at simulation end. Columns include
-    `individual_id`, `genotype` (genotype_mean value), `genotype_sd`,
-    `phenotype` (current expressed value), `x` and `y` (spatial
-    coordinates), `habitat_quality` (local environmental value), and
-    `fitness` (current survival probability). This component enables
-    analysis of trait distributions, spatial patterns, and
-    phenotype-environment matching among survivors. When populations go
-    extinct, this component may be NULL or an empty dataframe.
+    `individual_id`, `genotype` (genotype_mean value), `genotype_sd`
+    (niche width), `phenotype` (expressed environmental optimum), `x`
+    and `y` (spatial coordinates). This component enables analysis of
+    trait distributions, spatial patterns, and phenotype-environment
+    matching among survivors. When populations go extinct, this
+    component may be NULL or an empty dataframe.
 
 -   **`events`**: A data frame recording every demographic event that
-    occurred during the simulation. Each row documents one event with
-    columns: `time` (when event occurred), `event_type` ("birth",
-    "death", or "dispersal"), `individual_id`, `parent_id` (for births),
-    `x` and `y` (location), and relevant trait values. This complete
-    history enables analysis of population dynamics, demographic rates
-    over time, and lineage tracking.
+    occurred during the simulation. The level of detail depends on the
+    `history_detail` parameter (set in `simulation_params`). At minimum
+    (`history_detail="minimal"`), each row documents one event with
+    columns: `time` (when event occurred), `event_type` (0=death,
+    1=birth, 2=dispersal, 3=emigration, -1=initial state), and
+    `individual_id`. Standard detail (`history_detail="standard"`, the
+    default) additionally includes `patch_id`, `x` and `y` coordinates,
+    and `genotype`. Full detail (`history_detail="full"`) further adds
+    `phenotype` and `width` (genotype_sd). This complete history
+    enables analysis of population dynamics, demographic rates over
+    time, and lineage tracking.
 
 -   **`parameters`**: A list storing all input parameters
     (landscape_params, individual_params, genetic_params,
@@ -498,18 +446,12 @@ The survivors data frame contains the following columns:
     through plasticity noise added at birth)
 -   **x, y**: Spatial coordinates indicating current location in the
     landscape matrix
--   **habitat_quality**: Environmental value at the individual's current
-    location
--   **fitness**: Current survival probability based on
-    phenotype-environment match as calculated by the Gaussian fitness
-    function
 
 This data structure enables diverse analyses including trait
 distribution statistics (mean, variance, range of genotypes and
 phenotypes), spatial pattern analysis (clustering, dispersion, spatial
-autocorrelation), phenotype-environment correlation (strength of
-matching), and fitness distribution (population viability indicators,
-variance in individual quality).
+autocorrelation), and phenotype-environment correlation (strength of
+matching among survivors).
 
 We examine the survivors data as follows:
 
@@ -711,49 +653,28 @@ cells.
 
 **individual_params**: A list controlling initial population
 configuration. The `initial_population_size` element specifies how many
-individuals to place at simulation start (here, 100). Additional
-optional elements include `initial_positions` (custom starting
-locations; default is random placement in habitat cells) and
-`initial_ages` (age distribution; default is all age 0). For this
-example, we use only the population size and accept default random
-placement and ages.
+individuals to place at simulation start (here, 100). An additional
+optional element is `initial_positions` (custom starting locations;
+default is random placement in habitat cells). For this example, we use
+only the population size and accept default random placement.
 
-**genetic_params**: A list specifying individual trait values. When
-omitted (as in this basic example), all individuals use the default
-values described earlier: genotype_mean=1 (matching habitat cells),
-genotype_sd=0 (zero tolerance, requiring exact matches), mutation_rate=0
-(no evolution), plasticity=0 (no noise), sampling_points=0 (random
-dispersal). These defaults create a genetically uniform population with
-zero tolerance and random dispersal—appropriate for testing landscape
-effects in binary habitat-matrix simulations without genetic
-complications. However, as we will see in Section 6, these same defaults
-produce extinction in continuous landscapes.
+**genetic_params**: Omitted in this example, which applies default values
+appropriate for binary landscapes (see Section 4.1 for details). These
+defaults create genetically uniform populations suitable for exploring
+landscape structure effects without genetic complications.
 
 **simulation_params**: A list controlling simulation duration and
 stopping conditions. The `max_events` element specifies how many
 demographic events (births, deaths, dispersals combined) to execute
 before stopping. Here we use 300 events, sufficient to observe
-population dynamics without excessive computation. Alternatively,
-`max_time` could specify simulation duration in time units rather than
-number of events. The choice between max_events and max_time depends on
-research questions: max_events ensures comparable demographic histories
-across simulations, while max_time ensures comparable temporal scales.
+population dynamics without excessive computation.
 
-**master_seed**: An integer that controls all random processes (initial
-placement when positions aren't specified, which individual
-reproduces/dies/disperses next, mutation direction and magnitude when
-mutation_rate\>0, plasticity noise when plasticity\>0, and habitat
-selection decisions when sampling_points\>1). Using identical
-master_seed with identical parameters produces exactly identical
-results—every demographic event occurs in the same sequence at the same
-time. Using different seeds with identical parameters produces
-independent realizations—the demographic processes (birth rates, death
-rates, dispersal patterns) are identical but specific outcomes differ
-due to stochasticity. This is analogous to experimental trials: using
-the same seed is like recording a single trial repeatedly, while using
-different seeds simulates multiple independent trials under the same
-experimental conditions. This distinction enables quantifying outcome
-variability under fixed conditions.
+**master_seed**: An integer that controls all random processes (see
+Section 4.1 for details). Using identical master_seed with identical
+parameters produces exactly identical results, while different seeds
+produce independent realizations of the same scenario. Here we use
+different seeds (10, 20, 30) to ensure each landscape is an independent
+realization.
 
 ```{r run-sloss-sims}
 # Simulate pristine landscape (baseline: 100% habitat)
@@ -1048,15 +969,13 @@ sim_s1 <- twolife_simulation(
 ```
 
 The simulation results in N = `r pop_s1` (extinction). This outcome
-occurs because zero tolerance means individuals require exact
-environmental matches (value=1.0) that don't exist in the continuous
-landscape (range: `r sprintf("%.2f", min(continuous_landscape))` to
-`r sprintf("%.2f", max(continuous_landscape))`). Even if cells near 1.0
-exist, the Gaussian fitness function with genotype_sd=0 produces
-effectively zero fitness for any mismatch, no matter how small. This
-demonstrates that genetic uniformity combined with specialist strategies
-is incompatible with persistence in heterogeneous continuous
-environments.
+occurs because zero tolerance (genotype_sd=0) means individuals require
+exact environmental matches that don't exist in the continuous landscape
+(range: `r sprintf("%.2f", min(continuous_landscape))` to
+`r sprintf("%.2f", max(continuous_landscape))`). With genotype_sd=0, even
+small mismatches produce near-zero fitness. This demonstrates that
+genetic uniformity combined with specialist strategies is incompatible
+with persistence in heterogeneous continuous environments.
 
 ## Scenario 2: Variable Specialists
 
@@ -1428,8 +1347,7 @@ scaling relationships helps in designing feasible simulation experiments:
     sampling_points=1 for exploration, 10-100 when habitat selection mechanisms
     are scientifically important.
 
--   **Simulation duration**: Cost scales linearly with `max_events` or
-    `max_time`.
+-   **Simulation duration**: Cost scales linearly with `max_events`.
 
 **Recommendation:** Start with smaller simulations (15-30 cell landscapes, N =
 40-100, sampling_points = 1) for parameter exploration. Scale up cautiously,
