@@ -198,12 +198,7 @@ mortality multiplier. Fitness determines where, within this range, an
 individual’s mortality falls:
 
 $$
-\text{mortality rate}
-=
-\text{basal mortality}
-+
-\left(1 - \text{fitness}\right)
-\left(\text{maximum mortality} - \text{basal mortality}\right)
+\text{mortality rate}=\text{maximum mortality}-\text{fitness}\left(\text{maximum mortality}-\text{basal mortality}\right)
 $$
 
 Under this formulation, individuals experience minimum mortality when
