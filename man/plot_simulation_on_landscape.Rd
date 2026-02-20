@@ -93,10 +93,10 @@ of habitat selection, spatial clustering, and genotype-environment matching.
 
 When \code{color_by = "genotype"}:
 \itemize{
-  \item **Matching colors**: Point color similar to background → good habitat matching
-  \item **Contrasting colors**: Point color differs from background → potential mismatch
-  \item **Gradient tracking**: Points follow habitat gradient → successful adaptation
-  \item **Spatial sorting**: Different genotypes in different patches → local adaptation
+  \item **Matching colors**: Point color similar to background -> good habitat matching
+  \item **Contrasting colors**: Point color differs from background -> potential mismatch
+  \item **Gradient tracking**: Points follow habitat gradient -> successful adaptation
+  \item **Spatial sorting**: Different genotypes in different patches -> local adaptation
 }
 
 Visual pattern interpretation depends on:
@@ -137,57 +137,46 @@ For publications:
 }
 }
 \examples{
-set.seed(200)
+set.seed(100)
 landscape <- create_fractal_landscape(
-  cells_per_row = 10,
+  cells_per_row = 5,
   fractality = 0.5,
-  min_value = 0,
-  max_value = 1,
+  habitat_proportion = 0.6,
   return_as_landscape_params = TRUE
 )
-
-set.seed(400)
+landscape_genetic <- create_fractal_landscape(
+  cells_per_row = 5,
+  fractality = 0.5,
+  min_value = 0.35,
+  max_value = 0.64,
+  return_as_landscape_params = TRUE
+)
 result <- twolife_simulation(
   landscape_params = landscape,
   individual_params = list(
-    initial_population_size = 50,
-    base_birth_rate = 0.5,
-    base_mortality_rate = 0.2,
-    matrix_mortality_multiplier = 3.0
+    initial_population_size = 15,
+    base_birth_rate = 0.4,
+    base_mortality_rate = 0.15
+  ),
+  simulation_params = list(max_events = 5),
+  master_seed = 123
+)
+result_genetic <- twolife_simulation(
+  landscape_params = landscape_genetic,
+  individual_params = list(
+    initial_population_size = 15,
+    base_birth_rate = 0.4,
+    base_mortality_rate = 0.15
   ),
   genetic_params = list(
-    genotype_means = runif(50, min = 0, max = 1),
-    genotype_sds = 0.5,
-    sampling_points = 10,
-    habitat_selection_temperatures = 0.1
+    genotype_means = rnorm(15, mean = 0.5, sd = 0.15),
+    genotype_sds = 0.15
   ),
-  simulation_params = list(max_events = 100)
+  simulation_params = list(max_events = 5),
+  master_seed = 456
 )
-
-# Basic plot (default: colored by phenotype)
-plot_simulation_on_landscape(result)
-
-# Customize title and color by phenotype
-plot_simulation_on_landscape(
-  result,
-  main = "Survivors Colored by Phenotype",
-  color_by = "phenotype"
-)
-
-# Color by genotype
-plot_simulation_on_landscape(
-  result,
-  main = "Survivors Colored by Genotype",
-  color_by = "genotype"
-)
-
-# Customize point size
-plot_simulation_on_landscape(
-  result,
-  main = "Large Points",
-  color_by = "phenotype",
-  point_size = 3
-)
+plot_simulation_on_landscape(result, main = "No Genetic Variation")
+plot_simulation_on_landscape(result_genetic, main = "With Genetic Variation")
 }
 \seealso{
 \code{\link{twolife_simulation}} for running simulations,

@@ -17,7 +17,7 @@ A list of class 'summary.twolife_result' containing:
     \item{status}{Simulation outcome ("surviving" or "extinct")}
     \item{n_survivors}{Final population size}
     \item{initial_pop}{Starting population size}
-    \item{events}{Total number of events simulated}
+    \item{events}{Total count of demographic/movement events executed (births, deaths, movements, emigrations)}
     \item{duration}{Simulation duration in time units}
     \item{extinction_time}{Time of extinction (NA if surviving)}
     \item{landscape_size}{Dimensions of landscape (rows x columns)}
@@ -29,30 +29,25 @@ Provides detailed statistical summary of simulation outcomes including
 population dynamics, spatial patterns, and genetic characteristics.
 }
 \examples{
-set.seed(200)
 landscape <- create_fractal_landscape(
-  cells_per_row = 10,
-  fractality = 0.5,
-  min_value = 0,
-  max_value = 1,
+  cells_per_row = 5,
+  fractality = 0.7,
+  habitat_proportion = 0.4,
   return_as_landscape_params = TRUE
 )
 
-set.seed(400)
 result <- twolife_simulation(
   landscape_params = landscape,
-  individual_params = list(
-    initial_population_size = 50,
-    base_birth_rate = 0.5,
-    base_mortality_rate = 0.2
-  ),
-  genetic_params = list(
-    genotype_means = runif(50, min = 0, max = 1),
-    genotype_sds = 0.5
-  ),
-  simulation_params = list(max_events = 100)
+  individual_params = list(initial_population_size = 10),
+  simulation_params = list(max_events = 150),
+  master_seed = 456
 )
 
-# Get summary statistics
+# Get detailed summary
 summary(result)
+
+# Store summary for further use
+sim_summary <- summary(result)
+sim_summary$n_survivors
+
 }

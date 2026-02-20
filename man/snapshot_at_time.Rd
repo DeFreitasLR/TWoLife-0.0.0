@@ -89,8 +89,8 @@ Pseudocode:
 
 Reconstruction accuracy depends on event density:
 \itemize{
-  \item **High temporal resolution**: Many events per time unit → precise state reconstruction
-  \item **Low temporal resolution**: Few events per time unit → states may span long intervals
+  \item **High temporal resolution**: Many events per time unit -> precise state reconstruction
+  \item **Low temporal resolution**: Few events per time unit -> states may span long intervals
   \item Between events, individual states remain constant (positions frozen until next movement)
 }
 
@@ -126,36 +126,52 @@ To create animations:
 See Examples for complete animation code.
 }
 \examples{
-set.seed(200)
+set.seed(100)
 landscape <- create_fractal_landscape(
-  cells_per_row = 10,
+  cells_per_row = 5,
   fractality = 0.5,
-  min_value = 0,
-  max_value = 1,
+  habitat_proportion = 0.6,
   return_as_landscape_params = TRUE
 )
-
-set.seed(400)
+landscape_genetic <- create_fractal_landscape(
+  cells_per_row = 5,
+  fractality = 0.5,
+  min_value = 0.35,
+  max_value = 0.64,
+  return_as_landscape_params = TRUE
+)
 result <- twolife_simulation(
   landscape_params = landscape,
   individual_params = list(
-    initial_population_size = 50,
-    base_birth_rate = 0.5,
-    base_mortality_rate = 0.2
+    initial_population_size = 15,
+    base_birth_rate = 0.4,
+    base_mortality_rate = 0.15
+  ),
+  simulation_params = list(max_events = 5),
+  master_seed = 123
+)
+result_genetic <- twolife_simulation(
+  landscape_params = landscape_genetic,
+  individual_params = list(
+    initial_population_size = 15,
+    base_birth_rate = 0.4,
+    base_mortality_rate = 0.15
   ),
   genetic_params = list(
-    genotype_means = runif(50, min = 0, max = 1),
-    genotype_sds = 0.5
+    genotype_means = rnorm(15, mean = 0.5, sd = 0.15),
+    genotype_sds = 0.15
   ),
-  simulation_params = list(max_events = 100)
+  simulation_params = list(max_events = 5),
+  master_seed = 456
 )
-
-# Get snapshot at middle of simulation
-mid_time <- result$summary$duration / 2
-snapshot_mid <- snapshot_at_time(result, target_time = mid_time)
-
-# Get final snapshot
-snapshot_final <- snapshot_at_time(result, target_time = Inf)
+state_5 <- snapshot_at_time(result, 5, show_plot = TRUE)
+state_genetic_5 <- snapshot_at_time(result_genetic, 5, show_plot = TRUE)
+cat("At time 5 (no variation):", state_5$n_alive, "individuals\n")
+cat("At time 5 (with variation):", state_genetic_5$n_alive, "individuals\n")
+if (state_genetic_5$n_alive > 0) {
+  cat("Mean genotype:", mean(state_genetic_5$population$genotype), "\n")
+  cat("SD genotype:", sd(state_genetic_5$population$genotype), "\n")
+}
 }
 \seealso{
 \code{\link{population_size}} for population trajectories,
