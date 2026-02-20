@@ -137,46 +137,57 @@ For publications:
 }
 }
 \examples{
-set.seed(100)
+set.seed(200)
 landscape <- create_fractal_landscape(
-  cells_per_row = 5,
+  cells_per_row = 10,
   fractality = 0.5,
-  habitat_proportion = 0.6,
+  min_value = 0,
+  max_value = 1,
   return_as_landscape_params = TRUE
 )
-landscape_genetic <- create_fractal_landscape(
-  cells_per_row = 5,
-  fractality = 0.5,
-  min_value = 0.35,
-  max_value = 0.64,
-  return_as_landscape_params = TRUE
-)
+
+set.seed(400)
 result <- twolife_simulation(
   landscape_params = landscape,
   individual_params = list(
-    initial_population_size = 15,
-    base_birth_rate = 0.4,
-    base_mortality_rate = 0.15
-  ),
-  simulation_params = list(max_events = 5),
-  master_seed = 123
-)
-result_genetic <- twolife_simulation(
-  landscape_params = landscape_genetic,
-  individual_params = list(
-    initial_population_size = 15,
-    base_birth_rate = 0.4,
-    base_mortality_rate = 0.15
+    initial_population_size = 50,
+    base_birth_rate = 0.5,
+    base_mortality_rate = 0.2,
+    matrix_mortality_multiplier = 3.0
   ),
   genetic_params = list(
-    genotype_means = rnorm(15, mean = 0.5, sd = 0.15),
-    genotype_sds = 0.15
+    genotype_means = runif(50, min = 0, max = 1),
+    genotype_sds = 0.5,
+    sampling_points = 10,
+    habitat_selection_temperatures = 0.1
   ),
-  simulation_params = list(max_events = 5),
-  master_seed = 456
+  simulation_params = list(max_events = 100)
 )
-plot_simulation_on_landscape(result, main = "No Genetic Variation")
-plot_simulation_on_landscape(result_genetic, main = "With Genetic Variation")
+
+# Basic plot (default: colored by phenotype)
+plot_simulation_on_landscape(result)
+
+# Customize title and color by phenotype
+plot_simulation_on_landscape(
+  result,
+  main = "Survivors Colored by Phenotype",
+  color_by = "phenotype"
+)
+
+# Color by genotype
+plot_simulation_on_landscape(
+  result,
+  main = "Survivors Colored by Genotype",
+  color_by = "genotype"
+)
+
+# Customize point size
+plot_simulation_on_landscape(
+  result,
+  main = "Large Points",
+  color_by = "phenotype",
+  point_size = 3
+)
 }
 \seealso{
 \code{\link{twolife_simulation}} for running simulations,

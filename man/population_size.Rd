@@ -79,51 +79,38 @@ This function enables:
 }
 }
 \examples{
-set.seed(100)
+set.seed(200)
 landscape <- create_fractal_landscape(
-  cells_per_row = 5,
+  cells_per_row = 10,
   fractality = 0.5,
-  habitat_proportion = 0.6,
+  min_value = 0,
+  max_value = 1,
   return_as_landscape_params = TRUE
 )
-landscape_genetic <- create_fractal_landscape(
-  cells_per_row = 5,
-  fractality = 0.5,
-  min_value = 0.35,
-  max_value = 0.64,
-  return_as_landscape_params = TRUE
-)
+
+set.seed(300)
 result <- twolife_simulation(
   landscape_params = landscape,
   individual_params = list(
-    initial_population_size = 15,
-    base_birth_rate = 0.4,
-    base_mortality_rate = 0.15
+    initial_population_size = 50,
+    base_birth_rate = 0.5,
+    base_mortality_rate = 0.2
   ),
-  simulation_params = list(max_events = 5),
-  master_seed = 123
+  simulation_params = list(max_events = 100)
 )
-result_genetic <- twolife_simulation(
-  landscape_params = landscape_genetic,
-  individual_params = list(
-    initial_population_size = 15,
-    base_birth_rate = 0.4,
-    base_mortality_rate = 0.15
-  ),
-  genetic_params = list(
-    genotype_means = rnorm(15, mean = 0.5, sd = 0.15),
-    genotype_sds = 0.15
-  ),
-  simulation_params = list(max_events = 5),
-  master_seed = 456
-)
-trajectory <- population_size(result)
-trajectory_genetic <- population_size(result_genetic)
-ylim_max <- max(trajectory$population_size, trajectory_genetic$population_size)
-plot(trajectory, main = "No Genetic Variation", ylim = c(0, ylim_max))
-plot(trajectory_genetic, main = "With Genetic Variation", ylim = c(0, ylim_max))
-cat("Final size (no variation):", tail(trajectory$population_size, 1), "\n")
-cat("Final size (with variation):", tail(trajectory_genetic$population_size, 1), "\n")
+
+# Extract population trajectory
+pop_trajectory <- population_size(result)
+head(pop_trajectory)
+
+# Plot population over time
+plot(pop_trajectory$time, pop_trajectory$population,
+     type = "l", 
+     xlab = "Time", 
+     ylab = "Population Size",
+     main = "Population Dynamics",
+     col = "blue",
+     lwd = 2)
 }
 \seealso{
 \code{\link{twolife_simulation}} for running simulations,

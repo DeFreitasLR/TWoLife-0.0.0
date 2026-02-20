@@ -190,24 +190,33 @@ Cells at landscape edges have fewer neighbors, which can create slight edge arti
 }
 }
 \examples{
+# Binary landscape for perfect specialists
 set.seed(100)
-landscape1 <- create_fractal_landscape(
-  cells_per_row = 5,
+landscape_binary <- create_fractal_landscape(
+  cells_per_row = 10,
   fractality = 0.5,
-  habitat_proportion = 0.6,
+  habitat_proportion = 0.4,
   return_as_landscape_params = TRUE
 )
-plot_landscape(landscape1, main = "Binary Habitat Landscape")
-landscape2 <- create_fractal_landscape(
-  cells_per_row = 5,
+plot_landscape(landscape_binary, main = "Binary Landscape")
+
+# Continuous landscape for Gaussian fitness individuals
+set.seed(200)
+landscape_continuous <- create_fractal_landscape(
+  cells_per_row = 10,
   fractality = 0.5,
-  min_value = 0.35,
-  max_value = 0.64,
+  min_value = 0,
+  max_value = 1,
   return_as_landscape_params = TRUE
 )
-plot_landscape(landscape2, main = "Continuous Gradient for Genetics")
-print(landscape1)  # Binary habitat values
-print(landscape2)  # Continuous range
+plot_landscape(landscape_continuous, main = "Continuous Landscape")
+
+# Return just the matrix (not wrapped in landscape_params)
+set.seed(100)
+landscape_matrix <- create_fractal_landscape(
+  cells_per_row = 10,
+  fractality = 0.5
+)
 }
 \seealso{
 \code{\link{plot_landscape}} for visualization,

@@ -1,84 +1,119 @@
 # helper-test-functions.R
 # Test helper functions for TWoLife package
+# Updated to match CRAN-compliant examples
 
-#' Create a simple test landscape
+#' Create standard binary test landscape
 #' 
-#' Helper function to create basic landscapes for testing
+#' Creates consistent binary landscape using seed 100
 #' 
-#' @param size Integer. Size of square landscape (default: 10)
-#' @param habitat_prop Numeric. Proportion of habitat (default: 0.5)
-#' 
-#' @return A binary matrix
-create_test_landscape <- function(size = 10, habitat_prop = 0.5) {
-  landscape <- matrix(0, nrow = size, ncol = size)
-  n_habitat <- round(size * size * habitat_prop)
-  habitat_indices <- sample(size * size, n_habitat)
-  landscape[habitat_indices] <- 1
-  return(landscape)
+#' @return A landscape_params list
+create_binary_test_landscape <- function() {
+  set.seed(100)
+  create_fractal_landscape(
+    cells_per_row = 10,
+    fractality = 0.5,
+    habitat_proportion = 0.4,
+    return_as_landscape_params = TRUE
+  )
 }
 
-#' Run a simple test simulation
+#' Create standard continuous test landscape
 #' 
-#' Wrapper function to run simulations with sensible defaults for testing.
-#' This avoids the argument matching issues with the underlying C++ function.
+#' Creates consistent continuous landscape using seed 200
 #' 
-#' @param steps Integer. Maximum events to simulate
-#' @param n Integer. Initial population size
-#' @param landscape Matrix. Habitat landscape (if NULL, creates default)
+#' @return A landscape_params list
+create_continuous_test_landscape <- function() {
+  set.seed(200)
+  create_fractal_landscape(
+    cells_per_row = 10,
+    fractality = 0.5,
+    min_value = 0,
+    max_value = 1,
+    return_as_landscape_params = TRUE
+  )
+}
+
+#' Run simple test simulation
+#' 
+#' Wrapper for consistent test simulations
+#' Uses seed 300 for simple simulations
+#' 
+#' @param landscape Landscape params (default: continuous test landscape)
+#' @param population Integer. Initial population size (default: 50)
+#' @param events Integer. Maximum events (default: 100)
+#' @param seed Integer. Random seed (default: 300)
 #' @param ... Additional parameters passed to twolife_simulation
 #' 
 #' @return A twolife_result object
-run_simple_test_simulation <- function(steps = 100, 
-                                       n = 10, 
-                                       landscape = NULL,
+run_simple_test_simulation <- function(landscape = NULL,
+                                       population = 50,
+                                       events = 100,
+                                       seed = 300,
                                        ...) {
   
-  # Create default landscape if not provided
+  # Use default continuous landscape if not provided
   if (is.null(landscape)) {
-    landscape <- create_test_landscape(size = 10, habitat_prop = 0.5)
-  }
-  
-  # Prepare parameters
-  landscape_params <- list(
-    habitat = landscape,
-    cell_size = 1.0
-  )
-  
-  individual_params <- list(
-    initial_population_size = as.integer(n),
-    neighbor_radius = 2.0,
-    base_birth_rate = 0.35,
-    base_mortality_rate = 0.25
-  )
-  
-  simulation_params <- list(
-    max_events = as.integer(steps)
-  )
-  
-  # Merge with any additional parameters
-  dots <- list(...)
-  if ("landscape_params" %in% names(dots)) {
-    landscape_params <- modifyList(landscape_params, dots$landscape_params)
-    dots$landscape_params <- NULL
-  }
-  if ("individual_params" %in% names(dots)) {
-    individual_params <- modifyList(individual_params, dots$individual_params)
-    dots$individual_params <- NULL
-  }
-  if ("simulation_params" %in% names(dots)) {
-    simulation_params <- modifyList(simulation_params, dots$simulation_params)
-    dots$simulation_params <- NULL
+    landscape <- create_continuous_test_landscape()
   }
   
   # Run simulation
-  result <- do.call(twolife_simulation, c(
-    list(
-      landscape_params = landscape_params,
-      individual_params = individual_params,
-      simulation_params = simulation_params
+  set.seed(seed)
+  twolife_simulation(
+    landscape_params = landscape,
+    individual_params = list(
+      initial_population_size = population,
+      base_birth_rate = 0.5,
+      base_mortality_rate = 0.2
     ),
-    dots
-  ))
+    simulation_params = list(
+      max_events = events
+    ),
+    ...
+  )
+}
+
+#' Run genetic test simulation
+#' 
+#' Wrapper for simulations with genetic variation
+#' Uses seed 400 for genetic simulations
+#' 
+#' @param landscape Landscape params (default: continuous test landscape)
+#' @param population Integer. Initial population size (default: 50)
+#' @param events Integer. Maximum events (default: 100)
+#' @param seed Integer. Random seed (default: 400)
+#' @param ... Additional parameters passed to twolife_simulation
+#' 
+#' @return A twolife_result object
+run_genetic_test_simulation <- function(landscape = NULL,
+                                        population = 50,
+                                        events = 100,
+                                        seed = 400,
+                                        ...) {
   
-  return(result)
+  # Use default continuous landscape if not provided
+  if (is.null(landscape)) {
+    landscape <- create_continuous_test_landscape()
+  }
+  
+  # Run simulation with genetic variation
+  set.seed(seed)
+  twolife_simulation(
+    landscape_params = landscape,
+    individual_params = list(
+      initial_population_size = population,
+      base_birth_rate = 0.5,
+      base_mortality_rate = 0.2,
+      matrix_mortality_multiplier = 3.0
+    ),
+    genetic_params = list(
+      genotype_means = runif(population, min = 0, max = 1),
+      genotype_sds = 0.5,
+      sampling_points = 10,
+      habitat_selection_temperatures = 0.1
+    ),
+    simulation_params = list(
+      max_events = events
+    ),
+    ...
+  )
 }

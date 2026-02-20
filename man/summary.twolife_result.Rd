@@ -29,25 +29,30 @@ Provides detailed statistical summary of simulation outcomes including
 population dynamics, spatial patterns, and genetic characteristics.
 }
 \examples{
+set.seed(200)
 landscape <- create_fractal_landscape(
-  cells_per_row = 5,
-  fractality = 0.7,
-  habitat_proportion = 0.4,
+  cells_per_row = 10,
+  fractality = 0.5,
+  min_value = 0,
+  max_value = 1,
   return_as_landscape_params = TRUE
 )
 
+set.seed(400)
 result <- twolife_simulation(
   landscape_params = landscape,
-  individual_params = list(initial_population_size = 10),
-  simulation_params = list(max_events = 150),
-  master_seed = 456
+  individual_params = list(
+    initial_population_size = 50,
+    base_birth_rate = 0.5,
+    base_mortality_rate = 0.2
+  ),
+  genetic_params = list(
+    genotype_means = runif(50, min = 0, max = 1),
+    genotype_sds = 0.5
+  ),
+  simulation_params = list(max_events = 100)
 )
 
-# Get detailed summary
+# Get summary statistics
 summary(result)
-
-# Store summary for further use
-sim_summary <- summary(result)
-sim_summary$n_survivors
-
 }

@@ -52,6 +52,8 @@ private:
   const double matrix_mortality_multiplier;
   /** Constant that indicates how many times lower the movement rate should be on non-habitat pixels*/
   const double matrix_dispersal_multiplier;
+  /** Cost scale parameter for generalism penalty saturation curve (k parameter) */
+  const double generalism_cost_scale;
   /** Density type (0 = global, 1 = local/within an individual radius)*/
   const int density_type;
   /**The mutation rate for genetic variation between generations */
@@ -84,6 +86,16 @@ private:
   vector<double> genotype_sds;
   
   // Private Methods
+  /** Compute death rate for individuals with niche width (genotype_sds > 0)
+   * using saturation-based specialist-generalist trade-off
+   * @param habitat_x Current habitat value at individual's location
+   * @param env_optimum Vector of environmental optima (phenotype)
+   * @param niche_widths Vector of niche widths (genotype_sds)
+   * @return Death rate at current location */
+  double compute_death_rate(double habitat_x,
+                            const std::vector<double>& env_optimum,
+                            const std::vector<double>& niche_widths) const;
+  
   /** Function that generates random numbers, following an exponential distribution, corresponding to the time needed to execute the next action, taking into account the birth, death and dispersal rates. */
   void draw_next_event_time();
   
@@ -135,7 +147,9 @@ public:
     /** The number of sampling coordinates drafted at each dispersal event */
     int sampling_points,
     /** Temperature parameter for softmax habitat selection; lower = more selective, higher = more random */
-    double habitat_selection_temperature = 1.0
+    double habitat_selection_temperature,
+    /** Cost scale parameter for generalism penalty saturation curve (k parameter) */
+    double generalism_cost_scale
   );
   
   /** Copy constructor, used for generating new individuals by asexual reproduction

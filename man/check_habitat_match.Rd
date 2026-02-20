@@ -125,52 +125,55 @@ Statistical Output:
   }
 }
 \examples{
-set.seed(100)
+set.seed(200)
 landscape <- create_fractal_landscape(
-  cells_per_row = 5,
+  cells_per_row = 10,
   fractality = 0.5,
-  habitat_proportion = 0.6,
+  min_value = 0,
+  max_value = 1,
   return_as_landscape_params = TRUE
 )
-landscape_genetic <- create_fractal_landscape(
-  cells_per_row = 5,
-  fractality = 0.5,
-  min_value = 0.35,
-  max_value = 0.64,
-  return_as_landscape_params = TRUE
-)
-result <- twolife_simulation(
+
+# Simulation without habitat selection
+set.seed(500)
+result_no_selection <- twolife_simulation(
   landscape_params = landscape,
   individual_params = list(
-    initial_population_size = 15,
-    base_birth_rate = 0.4,
-    base_mortality_rate = 0.15
-  ),
-  simulation_params = list(max_events = 5),
-  master_seed = 123
-)
-result_genetic <- twolife_simulation(
-  landscape_params = landscape_genetic,
-  individual_params = list(
-    initial_population_size = 15,
-    base_birth_rate = 0.4,
-    base_mortality_rate = 0.15
+    initial_population_size = 50,
+    base_birth_rate = 0.5,
+    base_mortality_rate = 0.2
   ),
   genetic_params = list(
-    genotype_means = rnorm(15, mean = 0.5, sd = 0.15),
-    genotype_sds = 0.15
+    genotype_means = runif(50, min = 0, max = 1),
+    genotype_sds = 0.5
   ),
-  simulation_params = list(max_events = 5),
-  master_seed = 456
+  simulation_params = list(max_events = 100)
 )
-validation <- check_habitat_match(result)
-validation_genetic <- check_habitat_match(result_genetic, color_by = "genotype")
-head(validation)
-head(validation_genetic)
-if (!is.null(validation_genetic) && nrow(validation_genetic) > 0) {
-  cor_value <- cor(validation_genetic$genotype, validation_genetic$habitat_value)
-  cat("Genotype-habitat correlation:", round(cor_value, 3), "\n")
-}
+
+# Simulation with habitat selection
+set.seed(600)
+result_with_selection <- twolife_simulation(
+  landscape_params = landscape,
+  individual_params = list(
+    initial_population_size = 50,
+    base_birth_rate = 0.5,
+    base_mortality_rate = 0.2
+  ),
+  genetic_params = list(
+    genotype_means = runif(50, min = 0, max = 1),
+    genotype_sds = 0.5,
+    sampling_points = 10,
+    habitat_selection_temperatures = 0.1
+  ),
+  simulation_params = list(max_events = 100)
+)
+
+# Compare habitat matching
+check_habitat_match(result_no_selection, color_by = "phenotype")
+check_habitat_match(result_with_selection, color_by = "phenotype")
+
+# Check by genotype
+check_habitat_match(result_with_selection, color_by = "genotype")
 }
 \seealso{
 \code{\link{habitat_mismatch}} for fitness-based analysis

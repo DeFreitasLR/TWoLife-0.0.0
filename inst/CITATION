@@ -1,16 +1,15 @@
 bibentry(
   bibtype = "Manual",
   title = "TWoLife: Individual-Based Spatial Population Simulations with Genetic Evolution",
-  author = person("Lucas", "Freitas", 
-                  email = "rodriguesdefreitas@gmail.com",
-                  comment = c(ORCID = "0000-0002-2773-0981")),
-  year = format(Sys.Date(), "%Y"),
-  note = paste("R package version", meta$Version),
+  author = c(person("Lucas", "Freitas")),
+  year = "2026",
+  note = "R package version 0.1.0",
   url = "https://github.com/DeFreitasLR/TWoLife-0.0.0",
+  header = "To cite TWoLife in publications use:",
   textVersion = paste(
-    "Freitas, L. (", format(Sys.Date(), "%Y"), ").",
+    "Freitas, L. (2026).",
     "TWoLife: Individual-Based Spatial Population Simulations with Genetic Evolution.",
-    "R package version", meta$Version, ".",
+    "R package version 0.1.0.",
     "https://github.com/DeFreitasLR/TWoLife-0.0.0"
   )
 )

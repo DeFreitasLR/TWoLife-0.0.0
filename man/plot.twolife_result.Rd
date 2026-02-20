@@ -22,32 +22,33 @@ Generic plot method for twolife_result objects. Calls
 \examples{
 set.seed(200)
 landscape <- create_fractal_landscape(
-  cells_per_row = 5,
+  cells_per_row = 10,
   fractality = 0.5,
-  habitat_proportion = 0.6,
+  min_value = 0,
+  max_value = 1,
   return_as_landscape_params = TRUE
 )
 
+set.seed(400)
 result <- twolife_simulation(
   landscape_params = landscape,
   individual_params = list(
-    initial_population_size = 15,
-    base_birth_rate = 0.4,
-    base_mortality_rate = 0.15
+    initial_population_size = 50,
+    base_birth_rate = 0.5,
+    base_mortality_rate = 0.2
   ),
-  simulation_params = list(max_events = 150),
-  master_seed = 789
+  genetic_params = list(
+    genotype_means = runif(50, min = 0, max = 1),
+    genotype_sds = 0.5
+  ),
+  simulation_params = list(max_events = 100)
 )
 
-# Simple plot using S3 method
+# Plot spatial and temporal trajectories
 plot(result)
 
-# With options
-plot(result, point_size = 3, color_by = "genotype")
-
-# Equivalent to:
-plot_simulation_on_landscape(result, point_size = 3, color_by = "genotype")
-
+# Customize plot
+plot(result, main = "Simulation Results", point_size = 2)
 }
 \seealso{
 \code{\link{plot_simulation_on_landscape}} for full documentation of plotting options

@@ -75,6 +75,8 @@ private:
       const double matrix_mortality_multiplier,
       /** Constant that indicates how many times lower the movement rate should be on non-habitat pixels */
       const double matrix_dispersal_multiplier,
+      /** Cost scale parameter for generalism penalty saturation curve (k parameter) */
+      const double generalism_cost_scale,
       /** Density type (0 = global, 1 = local/within an individual radius) */
       const int density_type,
       /** FIXED: Safe vector parameters - Vector containing the x coordinates of initial individuals */
@@ -158,6 +160,8 @@ public:
     const double matrix_mortality_multiplier,
     /** Constant that indicates how many times lower the movement rate should be on non-habitat pixels */
     const double matrix_dispersal_multiplier,
+    /** Cost scale parameter for generalism penalty saturation curve (k parameter) */
+    const double generalism_cost_scale,
     /** The initial position of individuals (0 = origin, 1 = random, 2 = normally distributed with mean on origin)*/
     const int initial_placement_mode,
     /** The boundary condition type affects how individuals interact with the edges of the landscape (0= absorbing, 1= periodic (pacman), 2= reflective)*/

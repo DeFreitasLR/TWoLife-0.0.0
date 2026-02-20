@@ -125,26 +125,30 @@ When add_grid = TRUE:
 }
 }
 \examples{
-set.seed(100)
+set.seed(200)
 landscape <- create_fractal_landscape(
-  cells_per_row = 5,
+  cells_per_row = 10,
   fractality = 0.5,
-  habitat_proportion = 0.6,
+  min_value = 0,
+  max_value = 1,
   return_as_landscape_params = TRUE
 )
-plot_landscape(landscape, main = "Binary Habitat Landscape")
-landscape_genetic <- create_fractal_landscape(
-  cells_per_row = 5,
+
+# Basic plot
+plot_landscape(landscape)
+
+# Customize title
+plot_landscape(landscape, main = "Continuous Habitat Landscape")
+
+# Binary landscape
+set.seed(100)
+landscape_binary <- create_fractal_landscape(
+  cells_per_row = 10,
   fractality = 0.5,
-  min_value = 0.35,
-  max_value = 0.64,
+  habitat_proportion = 0.4,
   return_as_landscape_params = TRUE
 )
-plot_landscape(
-  landscape_genetic,
-  main = "Continuous Gradient",
-  colors = "viridis"
-)
+plot_landscape(landscape_binary, main = "Binary Landscape")
 }
 \seealso{
 \code{\link{plot_simulation_on_landscape}} to overlay simulation results,

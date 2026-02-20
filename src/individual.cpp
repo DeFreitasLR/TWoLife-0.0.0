@@ -9,6 +9,10 @@ using namespace std;
 // Initialize atomic counter
 atomic<uint64_t> Individual::MAX_ID{0};
 
+// Minimum niche width (sigma) to prevent negative mortality in raw fitness approach
+// When sigma < 1/sqrt(2*pi) ≈ 0.3989, raw fitness W > 1.0 which causes negative mortality
+const double SIGMA_MIN = 1.0 / std::sqrt(2.0 * M_PI);
+
 /** \brief Individual exception
  Displays warning messages for impossible values
  (\ref TBI). */
@@ -266,7 +270,20 @@ void Individual::update_rates(double local_density)
   else{
     
     current_birth_rate = base_birth_rate - birth_density_slope * density; // Computes the actual birth rate on habitat patch (that is influenced by the density of neighbours)
-    current_death_rate = ((matrix_mortality_multiplier * base_mortality_rate) - ((sum_normal_densities(habitat_value, environmental_optimum, genotype_sds) / normal_density(environmental_optimum[0], environmental_optimum[0], genotype_sds[0])) * ((matrix_mortality_multiplier * base_mortality_rate) - base_mortality_rate))); // Computes the actual death rate on habitat patch (that is influenced by the suitability of its current habitat)
+    
+    // Raw Fitness approach: mortality decreases with raw PDF value (no normalization)
+    // This creates specialist-generalist tradeoff: specialists (narrow σ) have lower mortality at optimum
+    // Formula: μ = μ_max - W_raw × (μ_max - μ_min)
+    double mu_max = matrix_mortality_multiplier * base_mortality_rate;
+    double mu_min = base_mortality_rate;
+    double fitness = sum_normal_densities(habitat_value, environmental_optimum, genotype_sds);
+    
+    current_death_rate = mu_max - fitness * (mu_max - mu_min);
+    
+    // Safety check: prevent negative mortality (shouldn't occur if sigma >= SIGMA_MIN ≈ 0.3989)
+    if (current_death_rate < 0) {
+      current_death_rate = 0;
+    }
     
   }
   
@@ -373,10 +390,10 @@ void Individual::select_habitat(const vector<vector<double>>& candidate_location
     
     try {
       // Calculate raw fitness based on environmental suitability
-      double raw_fitness = sum_normal_densities(env_value, environmental_optimum, genotype_sds);
+      double fitness = sum_normal_densities(env_value, environmental_optimum, genotype_sds);
       
       // Apply temperature to the fitness calculation
-      double fitness = exp(raw_fitness / habitat_selection_temperature);
+      fitness = exp(fitness / habitat_selection_temperature);
       
       // Handle potential numerical issues
       if (!isfinite(fitness)) {
