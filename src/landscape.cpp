@@ -20,7 +20,6 @@ Landscape::Landscape(double neighbor_radius,
                      int density_type,
                      double matrix_mortality_multiplier,
                      double matrix_dispersal_multiplier,
-                     double generalism_cost_scale,
                      int initial_placement_mode,
                      int boundary_condition,
                      const vector<double>& initial_x_coordinates,
@@ -103,9 +102,7 @@ Landscape::Landscape(double neighbor_radius,
     initialize_population(neighbor_radius, initial_population_size, vision_angle, step_length,
                           base_dispersal_rate, base_birth_rate, base_mortality_rate,
                           birth_density_slope, mortality_density_slope,
-                          matrix_mortality_multiplier, matrix_dispersal_multiplier,
-                          generalism_cost_scale,
-                          density_type,
+                          matrix_mortality_multiplier, matrix_dispersal_multiplier, density_type,
                           initial_x_coordinates, initial_y_coordinates, genotype_means,
                           genotype_sds, mutation_rates, plasticities, sampling_points, 
                           habitat_selection_temperatures, neutral_mode);
@@ -144,7 +141,6 @@ void Landscape::initialize_population(
     const double mortality_density_slope,
     const double matrix_mortality_multiplier,
     const double matrix_dispersal_multiplier,
-    const double generalism_cost_scale,
     const int density_type,
     const vector<double>& initial_x_coordinates,
     const vector<double>& initial_y_coordinates,
@@ -270,8 +266,7 @@ void Landscape::initialize_population(
                                   genotype, // Individual's genotype trait mean
                                   width, // Individual's genotype trait width
                                   sampling_points[i], // Number of sampling points
-                                                 habitat_selection_temperatures[i], // Habitat selection temperature
-                                                 generalism_cost_scale // Cost scale parameter for generalism penalty
+                                                 habitat_selection_temperatures[i] // Habitat selection temperature
       );
       
       population.push_back(move(individual));

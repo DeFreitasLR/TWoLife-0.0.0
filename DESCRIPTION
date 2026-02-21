@@ -2,7 +2,7 @@ Package: TWoLife
 Type: Package
 Title: Individual-Based Spatial Population Simulations with Genetic
         Evolution
-Version: 0.1.0
+Version: 0.0.0
 Authors@R: c(
     person("Lucas", "Freitas", 
            email = "rodriguesdefreitas@gmail.com", 
@@ -24,15 +24,16 @@ Encoding: UTF-8
 Language: en-US
 LazyData: true
 Depends: R (>= 4.0.0)
-Imports: Rcpp (>= 1.0.0), stats, graphics, grDevices, utils
+Imports: Rcpp (>= 1.0.0), stats, graphics, grDevices, utils, mathjaxr
 LinkingTo: Rcpp
+RdMacros: mathjaxr
 Suggests: testthat (>= 3.0.0), knitr, rmarkdown, viridisLite
 VignetteBuilder: knitr
 RoxygenNote: 7.3.3
 URL: https://github.com/DeFreitasLR/TWoLife-0.0.0
 BugReports: https://github.com/DeFreitasLR/TWoLife-0.0.0/issues
 NeedsCompilation: yes
-Packaged: 2026-02-05 17:37:12 UTC; RNGec
+Packaged: 2026-02-21 14:11:13 UTC; RNGec
 Author: Lucas Freitas [aut, cre] (<https://orcid.org/0000-0002-2773-0981>),
   piLaboratory [ctb]
 Maintainer: Lucas Freitas <rodriguesdefreitas@gmail.com>

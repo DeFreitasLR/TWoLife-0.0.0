@@ -89,8 +89,8 @@ Pseudocode:
 
 Reconstruction accuracy depends on event density:
 \itemize{
-  \item **High temporal resolution**: Many events per time unit -> precise state reconstruction
-  \item **Low temporal resolution**: Few events per time unit -> states may span long intervals
+  \item **High temporal resolution**: Many events per time unit → precise state reconstruction
+  \item **Low temporal resolution**: Few events per time unit → states may span long intervals
   \item Between events, individual states remain constant (positions frozen until next movement)
 }
 
@@ -126,51 +126,54 @@ To create animations:
 See Examples for complete animation code.
 }
 \examples{
-set.seed(100)
-landscape <- create_fractal_landscape(
+\donttest{
+set.seed(50)
+continuous_landscape <- create_fractal_landscape(
   cells_per_row = 5,
-  fractality = 0.5,
-  habitat_proportion = 0.6,
-  return_as_landscape_params = TRUE
+  fractality    = 0.5,
+  min_value     = 0.0,
+  max_value     = 100.0
 )
-landscape_genetic <- create_fractal_landscape(
-  cells_per_row = 5,
-  fractality = 0.5,
-  min_value = 0.35,
-  max_value = 0.64,
-  return_as_landscape_params = TRUE
-)
-result <- twolife_simulation(
-  landscape_params = landscape,
-  individual_params = list(
-    initial_population_size = 15,
-    base_birth_rate = 0.4,
-    base_mortality_rate = 0.15
-  ),
-  simulation_params = list(max_events = 5),
-  master_seed = 123
-)
+initial_pop_size  <- 1000
+initial_genotypes <- seq(0, 100, length.out = initial_pop_size)
 result_genetic <- twolife_simulation(
-  landscape_params = landscape_genetic,
+  landscape_params = list(
+    habitat                     = continuous_landscape,
+    cell_size                   = 1.0,
+    boundary_condition          = 1,
+    density_type                = 1,
+    matrix_mortality_multiplier = 2.0,
+    matrix_dispersal_multiplier = 0.5
+  ),
   individual_params = list(
-    initial_population_size = 15,
-    base_birth_rate = 0.4,
-    base_mortality_rate = 0.15
+    initial_population_size = initial_pop_size,
+    neighbor_radius         = 2.0,
+    vision_angle            = pi,
+    step_length             = 5.0,
+    base_dispersal_rate     = 0.4,
+    base_birth_rate         = 0.6,
+    base_mortality_rate     = 0.2,
+    birth_density_slope     = 0.02,
+    mortality_density_slope = 0.02
   ),
   genetic_params = list(
-    genotype_means = rnorm(15, mean = 0.5, sd = 0.15),
-    genotype_sds = 0.15
+    genotype_means                 = initial_genotypes,
+    genotype_sds                   = rep(0.4,   initial_pop_size),
+    mutation_rates                 = rep(0.001, initial_pop_size),
+    plasticities                   = rep(0.001, initial_pop_size),
+    sampling_points                = rep(10,    initial_pop_size),
+    habitat_selection_temperatures = rep(0.1,   initial_pop_size)
   ),
-  simulation_params = list(max_events = 5),
-  master_seed = 456
+  simulation_params = list(max_events = 100),
+  master_seed = 49
 )
-state_5 <- snapshot_at_time(result, 5, show_plot = TRUE)
-state_genetic_5 <- snapshot_at_time(result_genetic, 5, show_plot = TRUE)
-cat("At time 5 (no variation):", state_5$n_alive, "individuals\n")
-cat("At time 5 (with variation):", state_genetic_5$n_alive, "individuals\n")
-if (state_genetic_5$n_alive > 0) {
-  cat("Mean genotype:", mean(state_genetic_5$population$genotype), "\n")
-  cat("SD genotype:", sd(state_genetic_5$population$genotype), "\n")
+
+# Get snapshot at middle of simulation
+mid_time     <- result_genetic$summary$duration / 2
+snapshot_mid <- snapshot_at_time(result_genetic, target_time = mid_time)
+
+# Get final snapshot
+snapshot_final <- snapshot_at_time(result_genetic, target_time = Inf)
 }
 }
 \seealso{

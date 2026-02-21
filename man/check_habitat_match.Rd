@@ -125,51 +125,86 @@ Statistical Output:
   }
 }
 \examples{
+\donttest{
+# Simulation without habitat selection — binary landscape, no genetics
 set.seed(100)
-landscape <- create_fractal_landscape(
-  cells_per_row = 5,
-  fractality = 0.5,
-  habitat_proportion = 0.6,
-  return_as_landscape_params = TRUE
+binary_landscape <- create_fractal_landscape(
+  cells_per_row      = 5,
+  fractality         = 0.5,
+  habitat_proportion = 0.4
 )
-landscape_genetic <- create_fractal_landscape(
-  cells_per_row = 5,
-  fractality = 0.5,
-  min_value = 0.35,
-  max_value = 0.64,
-  return_as_landscape_params = TRUE
-)
-result <- twolife_simulation(
-  landscape_params = landscape,
-  individual_params = list(
-    initial_population_size = 15,
-    base_birth_rate = 0.4,
-    base_mortality_rate = 0.15
+result_no_selection <- twolife_simulation(
+  landscape_params = list(
+    habitat                     = binary_landscape,
+    cell_size                   = 1.0,
+    boundary_condition          = 1,
+    density_type                = 1,
+    matrix_mortality_multiplier = 2.0,
+    matrix_dispersal_multiplier = 0.5
   ),
-  simulation_params = list(max_events = 5),
-  master_seed = 123
-)
-result_genetic <- twolife_simulation(
-  landscape_params = landscape_genetic,
   individual_params = list(
-    initial_population_size = 15,
-    base_birth_rate = 0.4,
-    base_mortality_rate = 0.15
+    initial_population_size = 1000,
+    neighbor_radius         = 2.0,
+    vision_angle            = pi,
+    step_length             = 5.0,
+    base_dispersal_rate     = 0.4,
+    base_birth_rate         = 0.6,
+    base_mortality_rate     = 0.2,
+    birth_density_slope     = 0.02,
+    mortality_density_slope = 0.02
+  ),
+  simulation_params = list(max_events = 100),
+  master_seed = 45
+)
+
+# Simulation with habitat selection — Scenario 5
+set.seed(50)
+continuous_landscape <- create_fractal_landscape(
+  cells_per_row = 5,
+  fractality    = 0.5,
+  min_value     = 0.0,
+  max_value     = 100.0
+)
+initial_pop_size  <- 1000
+initial_genotypes <- seq(0, 100, length.out = initial_pop_size)
+result_with_selection <- twolife_simulation(
+  landscape_params = list(
+    habitat                     = continuous_landscape,
+    cell_size                   = 1.0,
+    boundary_condition          = 1,
+    density_type                = 1,
+    matrix_mortality_multiplier = 2.0,
+    matrix_dispersal_multiplier = 0.5
+  ),
+  individual_params = list(
+    initial_population_size = initial_pop_size,
+    neighbor_radius         = 2.0,
+    vision_angle            = pi,
+    step_length             = 5.0,
+    base_dispersal_rate     = 0.4,
+    base_birth_rate         = 0.6,
+    base_mortality_rate     = 0.2,
+    birth_density_slope     = 0.02,
+    mortality_density_slope = 0.02
   ),
   genetic_params = list(
-    genotype_means = rnorm(15, mean = 0.5, sd = 0.15),
-    genotype_sds = 0.15
+    genotype_means                 = initial_genotypes,
+    genotype_sds                   = rep(0.4,   initial_pop_size),
+    mutation_rates                 = rep(0.001, initial_pop_size),
+    plasticities                   = rep(0.001, initial_pop_size),
+    sampling_points                = rep(10,    initial_pop_size),
+    habitat_selection_temperatures = rep(0.1,   initial_pop_size)
   ),
-  simulation_params = list(max_events = 5),
-  master_seed = 456
+  simulation_params = list(max_events = 100),
+  master_seed = 49
 )
-validation <- check_habitat_match(result)
-validation_genetic <- check_habitat_match(result_genetic, color_by = "genotype")
-head(validation)
-head(validation_genetic)
-if (!is.null(validation_genetic) && nrow(validation_genetic) > 0) {
-  cor_value <- cor(validation_genetic$genotype, validation_genetic$habitat_value)
-  cat("Genotype-habitat correlation:", round(cor_value, 3), "\n")
+
+# Compare habitat matching
+check_habitat_match(result_no_selection,   color_by = "phenotype")
+check_habitat_match(result_with_selection, color_by = "phenotype")
+
+# Check by genotype
+check_habitat_match(result_with_selection, color_by = "genotype")
 }
 }
 \seealso{

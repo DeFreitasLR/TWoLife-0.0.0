@@ -36,7 +36,7 @@ and clumping:
     Useful for testing extreme fragmentation or strong environmental gradients.
 }
 
-Higher fractality -> more smoothing iterations -> stronger spatial autocorrelation.}
+Higher fractality → more smoothing iterations → stronger spatial autocorrelation.}
 
 \item{min_value}{Numeric. Minimum habitat value for continuous landscapes.
 Only used when habitat_proportion = NULL. Typically 0.0.}
@@ -64,7 +64,7 @@ Only used when habitat_proportion = NULL. Must be > min_value. Typically 1.0.}
 \value{
 If \code{return_as_landscape_params = FALSE}:
   \itemize{
-    \item Numeric matrix with dimensions \code{cells_per_row} x \code{cells_per_col}
+    \item Numeric matrix with dimensions \code{cells_per_row} × \code{cells_per_col}
     \item Values are either continuous ([min_value, max_value]) or binary (0, 1)
   }
 
@@ -136,7 +136,7 @@ Where:
 \itemize{
   \item \eqn{d = \sqrt{(i-i')^2 + (j-j')^2}} = distance between cells
   \item \eqn{\lambda \propto \text{fractality}} = correlation length scale
-  \item Higher fractality -> larger \eqn{\lambda} -> longer-range correlations -> bigger patches
+  \item Higher fractality → larger \eqn{\lambda} → longer-range correlations → bigger patches
 }
 
 ## Comparison to Other Methods
@@ -190,24 +190,33 @@ Cells at landscape edges have fewer neighbors, which can create slight edge arti
 }
 }
 \examples{
+# Binary landscape for perfect specialists
 set.seed(100)
-landscape1 <- create_fractal_landscape(
-  cells_per_row = 5,
-  fractality = 0.5,
-  habitat_proportion = 0.6,
+landscape_binary <- create_fractal_landscape(
+  cells_per_row      = 5,
+  fractality         = 0.5,
+  habitat_proportion = 0.4,
   return_as_landscape_params = TRUE
 )
-plot_landscape(landscape1, main = "Binary Habitat Landscape")
-landscape2 <- create_fractal_landscape(
+plot_landscape(landscape_binary, main = "Binary Landscape")
+
+# Continuous landscape for Gaussian fitness individuals
+set.seed(50)
+landscape_continuous <- create_fractal_landscape(
   cells_per_row = 5,
-  fractality = 0.5,
-  min_value = 0.35,
-  max_value = 0.64,
+  fractality    = 0.5,
+  min_value     = 0.0,
+  max_value     = 100.0,
   return_as_landscape_params = TRUE
 )
-plot_landscape(landscape2, main = "Continuous Gradient for Genetics")
-print(landscape1)  # Binary habitat values
-print(landscape2)  # Continuous range
+plot_landscape(landscape_continuous, main = "Continuous Landscape")
+
+# Return just the matrix (not wrapped in landscape_params)
+set.seed(100)
+landscape_matrix <- create_fractal_landscape(
+  cells_per_row = 5,
+  fractality    = 0.5
+)
 }
 \seealso{
 \code{\link{plot_landscape}} for visualization,

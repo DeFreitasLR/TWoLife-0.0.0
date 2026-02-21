@@ -11,8 +11,8 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // run_twolife_simulation
-List run_twolife_simulation(double neighbor_radius, int initial_population_size, double vision_angle, double step_length, double base_dispersal_rate, double base_birth_rate, double base_mortality_rate, double birth_density_slope, double mortality_density_slope, NumericMatrix habitat, double cell_size, int density_type, double matrix_mortality_multiplier, double matrix_dispersal_multiplier, double generalism_cost_scale, int initial_placement_mode, int boundary_condition, double max_events, NumericVector initial_x_coordinates, NumericVector initial_y_coordinates, NumericVector genotype_means, NumericVector genotype_sds, NumericVector mutation_rates, NumericVector plasticities, IntegerVector sampling_points, NumericVector habitat_selection_temperatures, bool neutral_mode, String history_detail, Nullable<int> master_seed, Nullable<String> output_file);
-RcppExport SEXP _TWoLife_run_twolife_simulation(SEXP neighbor_radiusSEXP, SEXP initial_population_sizeSEXP, SEXP vision_angleSEXP, SEXP step_lengthSEXP, SEXP base_dispersal_rateSEXP, SEXP base_birth_rateSEXP, SEXP base_mortality_rateSEXP, SEXP birth_density_slopeSEXP, SEXP mortality_density_slopeSEXP, SEXP habitatSEXP, SEXP cell_sizeSEXP, SEXP density_typeSEXP, SEXP matrix_mortality_multiplierSEXP, SEXP matrix_dispersal_multiplierSEXP, SEXP generalism_cost_scaleSEXP, SEXP initial_placement_modeSEXP, SEXP boundary_conditionSEXP, SEXP max_eventsSEXP, SEXP initial_x_coordinatesSEXP, SEXP initial_y_coordinatesSEXP, SEXP genotype_meansSEXP, SEXP genotype_sdsSEXP, SEXP mutation_ratesSEXP, SEXP plasticitiesSEXP, SEXP sampling_pointsSEXP, SEXP habitat_selection_temperaturesSEXP, SEXP neutral_modeSEXP, SEXP history_detailSEXP, SEXP master_seedSEXP, SEXP output_fileSEXP) {
+List run_twolife_simulation(double neighbor_radius, int initial_population_size, double vision_angle, double step_length, double base_dispersal_rate, double base_birth_rate, double base_mortality_rate, double birth_density_slope, double mortality_density_slope, NumericMatrix habitat, double cell_size, int density_type, double matrix_mortality_multiplier, double matrix_dispersal_multiplier, int initial_placement_mode, int boundary_condition, double max_events, NumericVector initial_x_coordinates, NumericVector initial_y_coordinates, NumericVector genotype_means, NumericVector genotype_sds, NumericVector mutation_rates, NumericVector plasticities, IntegerVector sampling_points, NumericVector habitat_selection_temperatures, bool neutral_mode, String history_detail, Nullable<int> master_seed, Nullable<String> output_file);
+RcppExport SEXP _TWoLife_run_twolife_simulation(SEXP neighbor_radiusSEXP, SEXP initial_population_sizeSEXP, SEXP vision_angleSEXP, SEXP step_lengthSEXP, SEXP base_dispersal_rateSEXP, SEXP base_birth_rateSEXP, SEXP base_mortality_rateSEXP, SEXP birth_density_slopeSEXP, SEXP mortality_density_slopeSEXP, SEXP habitatSEXP, SEXP cell_sizeSEXP, SEXP density_typeSEXP, SEXP matrix_mortality_multiplierSEXP, SEXP matrix_dispersal_multiplierSEXP, SEXP initial_placement_modeSEXP, SEXP boundary_conditionSEXP, SEXP max_eventsSEXP, SEXP initial_x_coordinatesSEXP, SEXP initial_y_coordinatesSEXP, SEXP genotype_meansSEXP, SEXP genotype_sdsSEXP, SEXP mutation_ratesSEXP, SEXP plasticitiesSEXP, SEXP sampling_pointsSEXP, SEXP habitat_selection_temperaturesSEXP, SEXP neutral_modeSEXP, SEXP history_detailSEXP, SEXP master_seedSEXP, SEXP output_fileSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -30,7 +30,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type density_type(density_typeSEXP);
     Rcpp::traits::input_parameter< double >::type matrix_mortality_multiplier(matrix_mortality_multiplierSEXP);
     Rcpp::traits::input_parameter< double >::type matrix_dispersal_multiplier(matrix_dispersal_multiplierSEXP);
-    Rcpp::traits::input_parameter< double >::type generalism_cost_scale(generalism_cost_scaleSEXP);
     Rcpp::traits::input_parameter< int >::type initial_placement_mode(initial_placement_modeSEXP);
     Rcpp::traits::input_parameter< int >::type boundary_condition(boundary_conditionSEXP);
     Rcpp::traits::input_parameter< double >::type max_events(max_eventsSEXP);
@@ -46,13 +45,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< String >::type history_detail(history_detailSEXP);
     Rcpp::traits::input_parameter< Nullable<int> >::type master_seed(master_seedSEXP);
     Rcpp::traits::input_parameter< Nullable<String> >::type output_file(output_fileSEXP);
-    rcpp_result_gen = Rcpp::wrap(run_twolife_simulation(neighbor_radius, initial_population_size, vision_angle, step_length, base_dispersal_rate, base_birth_rate, base_mortality_rate, birth_density_slope, mortality_density_slope, habitat, cell_size, density_type, matrix_mortality_multiplier, matrix_dispersal_multiplier, generalism_cost_scale, initial_placement_mode, boundary_condition, max_events, initial_x_coordinates, initial_y_coordinates, genotype_means, genotype_sds, mutation_rates, plasticities, sampling_points, habitat_selection_temperatures, neutral_mode, history_detail, master_seed, output_file));
+    rcpp_result_gen = Rcpp::wrap(run_twolife_simulation(neighbor_radius, initial_population_size, vision_angle, step_length, base_dispersal_rate, base_birth_rate, base_mortality_rate, birth_density_slope, mortality_density_slope, habitat, cell_size, density_type, matrix_mortality_multiplier, matrix_dispersal_multiplier, initial_placement_mode, boundary_condition, max_events, initial_x_coordinates, initial_y_coordinates, genotype_means, genotype_sds, mutation_rates, plasticities, sampling_points, habitat_selection_temperatures, neutral_mode, history_detail, master_seed, output_file));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_TWoLife_run_twolife_simulation", (DL_FUNC) &_TWoLife_run_twolife_simulation, 30},
+    {"_TWoLife_run_twolife_simulation", (DL_FUNC) &_TWoLife_run_twolife_simulation, 29},
     {NULL, NULL, 0}
 };
 

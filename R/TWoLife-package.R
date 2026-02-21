@@ -36,6 +36,10 @@
 #'     over time from simulation results}
 #'   \item{\code{\link{snapshot_at_time}}}{Reconstruct population spatial distribution
 #'     at specific time points during simulation}
+#'   \item{\code{\link{check_habitat_match}}}{Visualize trait-habitat matching for
+#'     individuals, with options to colour by genotype or phenotype}
+#'   \item{\code{\link{habitat_mismatch}}}{Quantify fitness-based genotype-habitat
+#'     mismatch statistics across the population}
 #' }
 #'
 #' @section Typical Workflow:
@@ -129,14 +133,14 @@
 #' @references
 #' Grimm, V., Berger, U., Bastiansen, F., Eliassen, S., Ginot, V., Giske, J.,
 #' Goss-Custard, J., Grand, T., Heinz, S.K., Huse, G., Huth, A., Jepsen, J.U.,
-#' Jorgensen, C., Mooij, W.M., Muller, B., Pe'er, G., Piou, C., Railsback, S.F.,
-#' Robbins, A.M., Robbins, M.M., Rossmanith, E., Ruger, N., Strand, E.,
-#' Souissi, S., Stillman, R.A., Vabo, R., Visser, U., & DeAngelis, D.L. (2006).
+#' Jørgensen, C., Mooij, W.M., Müller, B., Pe'er, G., Piou, C., Railsback, S.F.,
+#' Robbins, A.M., Robbins, M.M., Rossmanith, E., Rüger, N., Strand, E.,
+#' Souissi, S., Stillman, R.A., Vabø, R., Visser, U., & DeAngelis, D.L. (2006).
 #' A standard protocol for describing individual-based and agent-based models.
 #' \emph{Ecological Modelling}, 198(1-2), 115-126.
 #' \doi{10.1016/j.ecolmodel.2006.04.023}
 #' 
-#' Bolnick, D.I., Svanback, R., Fordyce, J.A., Yang, L.H., Davis, J.M.,
+#' Bolnick, D.I., Svanbäck, R., Fordyce, J.A., Yang, L.H., Davis, J.M.,
 #' Hulsey, C.D., & Forister, M.L. (2003). The ecology of individuals:
 #' Incidence and implications of individual specialization.
 #' \emph{The American Naturalist}, 161(1), 1-28. \doi{10.1086/343878}
@@ -151,4 +155,5 @@
 #' @aliases TWoLife-package
 #' @useDynLib TWoLife, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
+#' @importFrom mathjaxr preview_rd
 "_PACKAGE"

@@ -17,7 +17,7 @@ plot_landscape(
 \arguments{
 \item{landscape_data}{Either:
 \itemize{
-  \item A numeric matrix of habitat values (dimensions: rows x columns)
+  \item A numeric matrix of habitat values (dimensions: rows × columns)
   \item A list with a \code{$habitat} component (output from \code{\link{create_fractal_landscape}}
     or landscape creation functions)
 }}
@@ -85,16 +85,16 @@ Important notes:
 \itemize{
   \item Matrix row 1 (top) maps to positive y values
   \item Matrix column 1 (left) maps to negative x values
-  \item Each cell spans +/-cell_size/2 around its center
+  \item Each cell spans ±cell_size/2 around its center
 }
 
 ## Color Palette Details
 
 \tabular{llll}{
   \strong{Palette} \tab \strong{Range} \tab \strong{Best For} \tab \strong{Properties} \cr
-  "habitat" \tab White -> Dark Green \tab Binary landscapes \tab Clear matrix/habitat contrast \cr
-  "terrain" \tab Green -> Brown -> White \tab Natural landscapes \tab Traditional terrain visualization \cr
-  "viridis" \tab Purple -> Green -> Yellow \tab Continuous gradients \tab Perceptually uniform, colorblind-safe \cr
+  "habitat" \tab White → Dark Green \tab Binary landscapes \tab Clear matrix/habitat contrast \cr
+  "terrain" \tab Green → Brown → White \tab Natural landscapes \tab Traditional terrain visualization \cr
+  "viridis" \tab Purple → Green → Yellow \tab Continuous gradients \tab Perceptually uniform, colorblind-safe \cr
 }
 
 ## Rectangular Landscapes
@@ -125,26 +125,30 @@ When add_grid = TRUE:
 }
 }
 \examples{
+set.seed(50)
+landscape_continuous <- create_fractal_landscape(
+  cells_per_row = 5,
+  fractality    = 0.5,
+  min_value     = 0.0,
+  max_value     = 100.0,
+  return_as_landscape_params = TRUE
+)
+
+# Basic plot
+plot_landscape(landscape_continuous)
+
+# Customize title
+plot_landscape(landscape_continuous, main = "Continuous Habitat Landscape")
+
+# Binary landscape
 set.seed(100)
-landscape <- create_fractal_landscape(
-  cells_per_row = 5,
-  fractality = 0.5,
-  habitat_proportion = 0.6,
+landscape_binary <- create_fractal_landscape(
+  cells_per_row      = 5,
+  fractality         = 0.5,
+  habitat_proportion = 0.4,
   return_as_landscape_params = TRUE
 )
-plot_landscape(landscape, main = "Binary Habitat Landscape")
-landscape_genetic <- create_fractal_landscape(
-  cells_per_row = 5,
-  fractality = 0.5,
-  min_value = 0.35,
-  max_value = 0.64,
-  return_as_landscape_params = TRUE
-)
-plot_landscape(
-  landscape_genetic,
-  main = "Continuous Gradient",
-  colors = "viridis"
-)
+plot_landscape(landscape_binary, main = "Binary Landscape")
 }
 \seealso{
 \code{\link{plot_simulation_on_landscape}} to overlay simulation results,

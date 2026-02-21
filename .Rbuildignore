@@ -1,11 +1,6 @@
-^.*\.Rproj$
+^build$
 ^\.Rproj\.user$
-^\.Rhistory$
-^\.RData$
-^\.git$
+^.*\.Rproj$
+^cran-comments\.md$
+^README\.Rmd$
 ^\.github$
-^src/.*\.o$
-^src/.*\.dll$
-^src/.*\.so$
-^.*\.tar\.gz$
-^.*\.Rcheck$

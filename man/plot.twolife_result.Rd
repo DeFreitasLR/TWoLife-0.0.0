@@ -20,34 +20,52 @@ Generic plot method for twolife_result objects. Calls
 \code{\link{plot_simulation_on_landscape}} with convenient syntax.
 }
 \examples{
-set.seed(200)
-landscape <- create_fractal_landscape(
+set.seed(50)
+continuous_landscape <- create_fractal_landscape(
   cells_per_row = 5,
-  fractality = 0.5,
-  habitat_proportion = 0.6,
-  return_as_landscape_params = TRUE
+  fractality    = 0.5,
+  min_value     = 0.0,
+  max_value     = 100.0
 )
-
-result <- twolife_simulation(
-  landscape_params = landscape,
-  individual_params = list(
-    initial_population_size = 15,
-    base_birth_rate = 0.4,
-    base_mortality_rate = 0.15
+initial_pop_size  <- 1000
+initial_genotypes <- seq(0, 100, length.out = initial_pop_size)
+result_genetic <- twolife_simulation(
+  landscape_params = list(
+    habitat                     = continuous_landscape,
+    cell_size                   = 1.0,
+    boundary_condition          = 1,
+    density_type                = 1,
+    matrix_mortality_multiplier = 2.0,
+    matrix_dispersal_multiplier = 0.5
   ),
-  simulation_params = list(max_events = 150),
-  master_seed = 789
+  individual_params = list(
+    initial_population_size = initial_pop_size,
+    neighbor_radius         = 2.0,
+    vision_angle            = pi,
+    step_length             = 5.0,
+    base_dispersal_rate     = 0.4,
+    base_birth_rate         = 0.6,
+    base_mortality_rate     = 0.2,
+    birth_density_slope     = 0.02,
+    mortality_density_slope = 0.02
+  ),
+  genetic_params = list(
+    genotype_means                 = initial_genotypes,
+    genotype_sds                   = rep(0.4,   initial_pop_size),
+    mutation_rates                 = rep(0.001, initial_pop_size),
+    plasticities                   = rep(0.001, initial_pop_size),
+    sampling_points                = rep(10,    initial_pop_size),
+    habitat_selection_temperatures = rep(0.1,   initial_pop_size)
+  ),
+  simulation_params = list(max_events = 100),
+  master_seed = 49
 )
 
-# Simple plot using S3 method
-plot(result)
+# Plot spatial and temporal trajectories
+plot(result_genetic)
 
-# With options
-plot(result, point_size = 3, color_by = "genotype")
-
-# Equivalent to:
-plot_simulation_on_landscape(result, point_size = 3, color_by = "genotype")
-
+# Customize plot
+plot(result_genetic, main = "Simulation Results", point_size = 2)
 }
 \seealso{
 \code{\link{plot_simulation_on_landscape}} for full documentation of plotting options

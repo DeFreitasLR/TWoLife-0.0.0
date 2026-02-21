@@ -9,6 +9,10 @@ using namespace std;
 // Initialize atomic counter
 atomic<uint64_t> Individual::MAX_ID{0};
 
+// Minimum niche width (sigma) to prevent negative mortality in raw fitness approach
+// When sigma < 1/sqrt(2*pi) ≈ 0.3989, raw fitness W > 1.0 which causes negative mortality
+const double SIGMA_MIN = 1.0 / std::sqrt(2.0 * M_PI);
+
 /** \brief Individual exception
  Displays warning messages for impossible values
  (\ref TBI). */
@@ -41,8 +45,7 @@ Individual::Individual(double x_coordinate,
                        const vector<double>& genotype_means,
                        const vector<double>& genotype_sds,
                        int sampling_points,
-                       double habitat_selection_temperature,
-                       double generalism_cost_scale):
+                       double habitat_selection_temperature):
   // Thread-safe ID assignment with overflow check - This section is similar to regular attribution and is run before brackets
   id(++MAX_ID),
   x_coordinate(x_coordinate),
@@ -60,7 +63,6 @@ Individual::Individual(double x_coordinate,
   mortality_density_slope(mortality_density_slope),
   matrix_mortality_multiplier(matrix_mortality_multiplier),
   matrix_dispersal_multiplier(matrix_dispersal_multiplier),
-  generalism_cost_scale(generalism_cost_scale),
   density_type(density_type),
   mutation_rate(mutation_rate),
   plasticity(plasticity),
@@ -96,9 +98,6 @@ Individual::Individual(double x_coordinate,
   }
   if (habitat_selection_temperature <= 0) {
     throw invalid_argument("Habitat selection temperature must be positive");
-  }
-  if (generalism_cost_scale <= 0) {
-    throw invalid_argument("generalism_cost_scale must be positive");
   }
   if (genotype_means.empty()) {
     throw invalid_argument("Genotype means vector cannot be empty");
@@ -177,7 +176,6 @@ Individual::Individual(const Individual& rhs)
   mortality_density_slope(rhs.mortality_density_slope),
   matrix_mortality_multiplier(rhs.matrix_mortality_multiplier),
   matrix_dispersal_multiplier(rhs.matrix_dispersal_multiplier),
-  generalism_cost_scale(rhs.generalism_cost_scale),
   density_type(rhs.density_type),
   mutation_rate(rhs.mutation_rate),
   plasticity(rhs.plasticity),
@@ -269,19 +267,24 @@ void Individual::update_rates(double local_density)
       current_dispersal_rate = matrix_dispersal_multiplier * base_dispersal_rate; // Sets the higher/lower movement rates attributed to non-optimal habitat
     }
   }
-  else {
-    // Generalists (σ > 0) - saturation-based trade-off
+  else{
+    
     current_birth_rate = base_birth_rate - birth_density_slope * density; // Computes the actual birth rate on habitat patch (that is influenced by the density of neighbours)
     
-    // NEW: Use saturation-based mortality mechanism
-    current_death_rate = compute_death_rate(habitat_value, 
-                                            environmental_optimum, 
-                                            genotype_sds);
+    // Raw Fitness approach: mortality decreases with raw PDF value (no normalization)
+    // This creates specialist-generalist tradeoff: specialists (narrow σ) have lower mortality at optimum
+    // Formula: μ = μ_max - W_raw × (μ_max - μ_min)
+    double mu_max = matrix_mortality_multiplier * base_mortality_rate;
+    double mu_min = base_mortality_rate;
+    double fitness = sum_normal_densities(habitat_value, environmental_optimum, genotype_sds);
     
-    // NOTE: Intentionally NOT adding density-dependent mortality for σ > 0
-    // (different from σ = 0 baseline model by design)
+    current_death_rate = mu_max - fitness * (mu_max - mu_min);
     
-    current_dispersal_rate = base_dispersal_rate;
+    // Safety check: prevent negative mortality (shouldn't occur if sigma >= SIGMA_MIN ≈ 0.3989)
+    if (current_death_rate < 0) {
+      current_death_rate = 0;
+    }
+    
   }
   
   if(current_birth_rate < 0) // Checks if the birth rate is lower than possible
@@ -290,93 +293,6 @@ void Individual::update_rates(double local_density)
   }
   
   draw_next_event_time(); // Calls the function to draft the time needed to execute the next action
-}
-
-/** Compute death rate for individuals with niche width (genotype_sds > 0)
- * using saturation-based specialist-generalist trade-off */
-/** Compute death rate for individuals with niche width (genotype_sds > 0)
- * using saturation-based specialist-generalist trade-off.
- * 
- * Implements proper tradeoff where:
- * - Specialists have LOWEST mortality at optimum, but steep penalty off-optimum
- * - Generalists pay modest cost at optimum, but tolerate suboptimal habitat
- * 
- * The function separates two independent costs:
- * 1. Flat generalism cost: metabolic burden of versatility (at optimum)
- * 2. Mismatch cost: environmental stress from suboptimal habitat (gradient)
- * 
- * @param habitat_x Current habitat environmental value
- * @param env_optimum Vector of environmental optima (phenotype)
- * @param niche_widths Vector of niche widths (genotype standard deviations)
- * @return Death rate at current location
- */
-double Individual::compute_death_rate(double habitat_x,
-                                      const std::vector<double>& env_optimum,
-                                      const std::vector<double>& niche_widths) const {
-  
-  // Safety check for empty vectors
-  if (env_optimum.empty() || niche_widths.empty()) {
-    throw std::runtime_error("Empty genetic parameters in compute_death_rate");
-  }
-  
-  double current_death_rate_cumsum = 0.0;
-  
-  // Process each environmental dimension
-  for (size_t i = 0; i < niche_widths.size(); i++) {
-    
-    // ============================================================================
-    // STEP 1: Calculate relative fitness (habitat match quality)
-    // ============================================================================
-    // W measures how well current habitat matches the individual's optimum
-    // W = 1: perfect match (at optimum)
-    // W → 0: poor match (far from optimum)
-    // 
-    // For specialists (small σ): W drops rapidly away from optimum
-    // For generalists (large σ): W drops slowly away from optimum
-    double pdf_current = normal_density(habitat_x, env_optimum[i], niche_widths[i]);
-    double pdf_optimum = normal_density(env_optimum[i], env_optimum[i], niche_widths[i]);
-    double W = pdf_current / pdf_optimum;
-    
-    // ============================================================================
-    // STEP 2: Cost of generalism at optimum
-    // ============================================================================
-    // Even at their optimum habitat, generalists pay a physiological cost.
-    // This represents the metabolic burden of maintaining versatile traits.
-    //
-    // Saturation function: σ / (σ + generalism_cost_scale)
-    //   - When σ << generalism_cost_scale: penalty ≈ σ/generalism_cost_scale (linear growth)
-    //   - When σ = generalism_cost_scale: penalty = 0.5 (half-saturation)
-    //   - When σ >> generalism_cost_scale: penalty → 1 (saturates at 1)
-    double generalism_penalty = niche_widths[i] / (niche_widths[i] + generalism_cost_scale);
-    
-    // Universal mortality bounds (same for all individuals)
-    double max_mortality = base_mortality_rate * matrix_mortality_multiplier;
-    double min_mortality = base_mortality_rate;
-    
-    // Mortality at optimum interpolates from min (specialist) to max (extreme generalist)
-    // Specialists start at base_mortality_rate
-    // Extreme generalists approach max_mortality even at their optimum
-    double realized_minimum = min_mortality + generalism_penalty * (max_mortality - min_mortality);
-    
-    // ============================================================================
-    // STEP 3: Cost of being off-optimum (mismatch cost)
-    // ============================================================================
-    // When habitat doesn't match optimum, mortality increases linearly from
-    // the realized_minimum toward the universal maximum.
-    //
-    // Specialists (small σ): Start from low floor → big jump when off-optimum
-    // Generalists (large σ): Start from high floor → smaller additional jump
-    //
-    // At optimum (W=1):     mortality = realized_minimum
-    // Off optimum (W=0.5):  mortality = realized_minimum + 0.5×(max - realized_minimum)
-    // Worst habitat (W→0):  mortality → max_mortality (everyone converges to same ceiling)
-    double current_death_rate_i = realized_minimum + (1.0 - W) * (max_mortality - realized_minimum);
-    
-    current_death_rate_cumsum += current_death_rate_i;
-  }
-  
-  // Return average mortality across dimensions (for neutral scenario comparability)
-  return current_death_rate_cumsum / niche_widths.size();
 }
 
 // Function that drafts the time for the next event based on all rates
@@ -473,14 +389,11 @@ void Individual::select_habitat(const vector<vector<double>>& candidate_location
     double env_value = candidate_locations[i][2];
     
     try {
-      // Calculate potential death rates on environmental suitability
-      double potential_death_rate = compute_death_rate(env_value, 
-                                                       environmental_optimum, 
-                                                       genotype_sds);
-      
+      // Calculate raw fitness based on environmental suitability
+      double fitness = sum_normal_densities(env_value, environmental_optimum, genotype_sds);
       
       // Apply temperature to the fitness calculation
-      double fitness = exp( -potential_death_rate / habitat_selection_temperature);
+      fitness = exp(fitness / habitat_selection_temperature);
       
       // Handle potential numerical issues
       if (!isfinite(fitness)) {

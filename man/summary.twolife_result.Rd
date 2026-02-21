@@ -17,7 +17,7 @@ A list of class 'summary.twolife_result' containing:
     \item{status}{Simulation outcome ("surviving" or "extinct")}
     \item{n_survivors}{Final population size}
     \item{initial_pop}{Starting population size}
-    \item{events}{Total count of demographic/movement events executed (births, deaths, movements, emigrations)}
+    \item{events}{Total number of events simulated}
     \item{duration}{Simulation duration in time units}
     \item{extinction_time}{Time of extinction (NA if surviving)}
     \item{landscape_size}{Dimensions of landscape (rows x columns)}
@@ -29,25 +29,47 @@ Provides detailed statistical summary of simulation outcomes including
 population dynamics, spatial patterns, and genetic characteristics.
 }
 \examples{
-landscape <- create_fractal_landscape(
+set.seed(50)
+continuous_landscape <- create_fractal_landscape(
   cells_per_row = 5,
-  fractality = 0.7,
-  habitat_proportion = 0.4,
-  return_as_landscape_params = TRUE
+  fractality    = 0.5,
+  min_value     = 0.0,
+  max_value     = 100.0
+)
+initial_pop_size  <- 1000
+initial_genotypes <- seq(0, 100, length.out = initial_pop_size)
+result_genetic <- twolife_simulation(
+  landscape_params = list(
+    habitat                     = continuous_landscape,
+    cell_size                   = 1.0,
+    boundary_condition          = 1,
+    density_type                = 1,
+    matrix_mortality_multiplier = 2.0,
+    matrix_dispersal_multiplier = 0.5
+  ),
+  individual_params = list(
+    initial_population_size = initial_pop_size,
+    neighbor_radius         = 2.0,
+    vision_angle            = pi,
+    step_length             = 5.0,
+    base_dispersal_rate     = 0.4,
+    base_birth_rate         = 0.6,
+    base_mortality_rate     = 0.2,
+    birth_density_slope     = 0.02,
+    mortality_density_slope = 0.02
+  ),
+  genetic_params = list(
+    genotype_means                 = initial_genotypes,
+    genotype_sds                   = rep(0.4,   initial_pop_size),
+    mutation_rates                 = rep(0.001, initial_pop_size),
+    plasticities                   = rep(0.001, initial_pop_size),
+    sampling_points                = rep(10,    initial_pop_size),
+    habitat_selection_temperatures = rep(0.1,   initial_pop_size)
+  ),
+  simulation_params = list(max_events = 100),
+  master_seed = 49
 )
 
-result <- twolife_simulation(
-  landscape_params = landscape,
-  individual_params = list(initial_population_size = 10),
-  simulation_params = list(max_events = 150),
-  master_seed = 456
-)
-
-# Get detailed summary
-summary(result)
-
-# Store summary for further use
-sim_summary <- summary(result)
-sim_summary$n_survivors
-
+# Get summary statistics
+summary(result_genetic)
 }
