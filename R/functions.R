@@ -27,8 +27,8 @@ NULL
 #'       }}
 #'     \item{density_type}{Integer. Determines how population density is calculated for density-dependent demographic processes to be applied to each individual:
 #'       \itemize{
+#'         \item 0 = global: density calculated as total population size divided by total landscape area. Represents population-wide resource limitation.
 #'         \item 1 = local: density calculated as number of individuals within a neighbor_radius distance of the focal individual. Represents local, spatially-explicit local competition (territoriality, local resource depletion).
-#'         \item 2 = global: density calculated as total population size divided by total landscape area. Represents population-wide resource limitation.
 #'       }
 #'       
 #'       This density value is then used in birth and mortality rate calculations via birth_density_slope and mortality_density_slope parameters. See Details for mathematical formulas.}
@@ -174,11 +174,11 @@ NULL
 #'
 #'   Population density is calculated differently depending on density_type:
 #'   
+#'   For global density (density_type = 0):
+#'   \deqn{\rho_{global} = \frac{N_{total}}{\text{world\_width} \times \text{world\_height}}}
+#'   
 #'   For local density (density_type = 1):
 #'   \deqn{\rho_{local} = \frac{N_{neighbors}}{\pi r^2}}
-#'   
-#'   For global density (density_type = 2):
-#'   \deqn{\rho_{global} = \frac{N_{total}}{\text{world\_width} \times \text{world\_height}}}
 #'   
 #'   Where:
 #'   \itemize{

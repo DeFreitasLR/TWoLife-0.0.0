@@ -125,7 +125,7 @@ determine ecological and evolutionary outcomes:
     condition at which the individual achieves maximum fitness,
     representing the genetically-determined optimal niche position.
     Values ideally match in the landscape's environmental scale. For
-    example, an individual with genotype_mean=0.3 is genetically adapted
+    example, an individual with `genotype_mean = 0.3` is genetically adapted
     to environmental value 0.3 (e.g., cool temperatures if the gradient
     represents temperature). When an individual's phenotype
     (genotype_mean plus noise from plasticity) exactly matches the local
@@ -135,11 +135,11 @@ determine ecological and evolutionary outcomes:
     environmental conditions the individual can tolerate, represented
     mathematically as the standard deviation ($\sigma$) in the Gaussian
     fitness function. This parameter governs the specialist-generalist
-    tradeoff: values near $\sigma_{min}$ (e.g., genotype_sd=0.4) yield
+    tradeoff: values near $\sigma_{min}$ (e.g., `genotype_sd = 0.4`) yield
     near-maximum peak fitness with a very steep fitness decline away
     from the optimum — on a 0–100 landscape this niche width covers only
     $\approx 0.4$% of the environmental range, representing a true
-    narrow specialist. Larger values (e.g., genotype_sd=5.0) produce
+    narrow specialist. Larger values (e.g., `genotype_sd = 5.0`) produce
     broader tolerance but lower peak fitness, illustrating the “jack of
     all trades, master of none” pattern [@Levins1968; @Futuyma1988].
 
@@ -177,7 +177,7 @@ determine ecological and evolutionary outcomes:
 
 -   **`sampling_points`** (Habitat selection intensity): The number of
     potential dispersal locations an individual evaluates before
-    deciding where to move. When sampling_points is set to 0 or 1,
+    deciding where to move. When `sampling_points` is set to 0 or 1,
     individuals move to randomly chosen locations without evaluation,
     representing passive dispersal mechanisms. These two values are
     conceptually equivalent in producing passive dispersal but differ in
@@ -452,10 +452,10 @@ twolife_simulation(
 **Important note on genetic_params**: This list is optional. When
 `genetic_params` is omitted, TWoLife applies default values designed
 specifically for binary landscapes where habitat=1 and matrix=0. Under
-these defaults, all individuals have genotype_mean=1 (matching habitat
-value), genotype_sd=0 (zero tolerance, requiring exact environmental
-matches), mutation_rate=0 (no evolution), plasticity=0 (no phenotypic
-noise), and sampling_points=0 (random dispersal). These defaults work
+these defaults, all individuals have `genotype_mean = 1` (matching habitat
+value), `genotype_sd = 0` (zero tolerance, requiring exact environmental
+matches), `mutation_rate = 0` (no evolution), `plasticity = 0` (no phenotypic
+noise), and `sampling_points = 0` (random dispersal). These defaults work
 well for exploring habitat-matrix simulations without genetic
 complications, as they create genetically uniform populations that
 survive in habitat cells but not matrix cells. However, these same
@@ -495,18 +495,19 @@ records (events component), and reproducibility (parameters component):
     matching among survivors. When populations go extinct, this
     component may be NULL or an empty dataframe.
 
--   **`events`**: A data frame recording every demographic event that
-    occurred during the simulation. The level of detail depends on the
-    `history_detail` parameter (set in `simulation_params`). At minimum
-    (`history_detail="minimal"`), each row documents one event with
-    columns: `time` (when event occurred), `event_type` (0=death,
-    1=birth, 2=dispersal, 3=emigration, -1=initial state), and
-    `individual_id`. Standard detail (`history_detail="standard"`, the
-    default) additionally includes `patch_id`, `x` and `y` coordinates,
-    and `genotype`. Full detail (`history_detail="full"`) further adds
-    `phenotype` and `width` (genotype_sd). This complete history enables
-    analysis of population dynamics, demographic rates over time, and
-    lineage tracking.
+-   **`events`**: A named list recording every demographic event that
+    occurred during the simulation, with each element being a vector of
+    equal length (one entry per event). The level of detail depends on
+    the `history_detail` top-level argument. At minimum
+    (`history_detail="minimal"`), the list contains `times` (when each
+    event occurred), `types` (0=death, 1=birth, 2=dispersal,
+    3=emigration, -1=initial state), and `individual_ids`. Standard
+    detail (`history_detail="standard"`, the default) additionally
+    includes `patch_ids`, `x_coordinates`, `y_coordinates`, and
+    `genotypes`. Full detail (`history_detail="full"`) further adds
+    `phenotypes` and `widths` (genotype_sd). This complete history
+    enables analysis of population dynamics, demographic rates over time,
+    and lineage tracking.
 
 -   **`parameters`**: A list storing all input parameters
     (landscape_params, individual_params, genetic_params,
@@ -514,6 +515,14 @@ records (events component), and reproducibility (parameters component):
     reproducibility—simulations can be exactly replicated by re-running
     with stored parameters. It also enables systematic comparison across
     simulations with different parameter configurations.
+
+-   **`spatial`**: A named list with metadata describing the simulated
+    landscape: `world_width` and `world_height` (landscape dimensions in
+    world units), `world_size` (the larger of the two dimensions,
+    i.e., `max(world_width, world_height)`), and `num_patches` (total
+    number of grid cells). These fields support downstream calculations
+    such as global density normalization and landscape-scale spatial
+    statistics.
 
 # Main Analysis: Individual Variation in Heterogeneous Environments
 
@@ -639,8 +648,8 @@ shared_simulation_params <- list(max_events = 100)
 ## Scenario 1: Uniform Perfect Specialists
 
 This scenario demonstrates default behavior when `genetic_params` is
-omitted: all individuals are genetically identical with genotype_mean=1.0
-and genotype_sd=0.
+omitted: all individuals are genetically identical with `genotype_mean = 1.0`
+and `genotype_sd = 0`.
 
 ```{r scenario1}
 # Only genetic_params is omitted — every other argument comes from the
@@ -657,16 +666,17 @@ sim_s1 <- twolife_simulation(
 (pop_s1 <- sim_s1$summary$final_population_size)
 ```
 
-The simulation results in N = `r pop_s1` (extinction). Zero tolerance
-(`genotype_sd = 0`) means individuals require exact environmental
-matches that probably do not exist in the continuous landscape (range:
+The simulation results in N = `r pop_s1` (extinction). With
+`genotype_sd = 0`, reproduction requires an exact phenotype-environment
+match (`h = p`) and is suppressed everywhere else (`b = 0`). Because
+the landscape is continuous (range:
 `r sprintf("%.2f", min(continuous_landscape))` to
-`r sprintf("%.2f", max(continuous_landscape))`). Starting with
-genotype_mean = 1.0, only cells with exactly that environmental value
-produce minimum mortality—any other value produces maximum
-mortality—demonstrating that genetic uniformity combined with specialist
-strategies is incompatible with persistence in heterogeneous continuous
-environments.
+`r sprintf("%.2f", max(continuous_landscape))`), the probability that
+genotype_mean = 1.0 coincides exactly with any cell's environmental
+value is effectively zero. Every individual therefore has `b = 0`
+throughout the simulation, while mortality remains positive. The absence
+of births, not an excess of mortality over birth rate, drives the
+population collapse.
 
 ## Scenario 2: Variable Specialists
 
@@ -705,7 +715,7 @@ conditions.
 
 This example demonstrates the effect of adding tolerance (genotype_sd).
 Each individual has the same genotype_mean as Scenario 2 (maintaining
-identical genetic diversity), but now with genotype_sd=0.4, enabling
+identical genetic diversity), but now with `genotype_sd = 0.4`, enabling
 survival across a small range of conditions around their optima.
 
 ```{r scenario3}
@@ -732,7 +742,7 @@ The simulation results in N = `r pop_s3`
 (`r sprintf("%.1f%%", pop_s3/initial_pop_size*100)` survival), compared
 to N=0 in Scenarios 1-2. Adding tolerance enables population persistence
 by allowing individuals to survive in cells where their phenotype does
-not exactly match the local environment. With genotype_sd=0.4 (just
+not exactly match the local environment. With `genotype_sd = 0.4` (just
 above $\sigma_{min} \approx 0.3989$), individuals achieve near-maximum
 peak fitness at their optimum with a very steep fitness decline away
 from it — niche width covers only $\approx 0.4$% of the 0–100
@@ -760,8 +770,8 @@ if (pop_s3 > 0) {
 
 This example demonstrates adding evolutionary mechanisms (mutation and
 plasticity) to the diversity and tolerance from Scenario 3. Mutation
-(mutation_rate=0.001) enables heritable genetic change across
-generations, while plasticity (plasticity=0.001) enables non-heritable
+(`mutation_rate = 0.001`) enables heritable genetic change across
+generations, while plasticity (`plasticity = 0.001`) enables non-heritable
 phenotypic variation within lifetimes.
 
 ```{r scenario4}
@@ -805,7 +815,7 @@ simulation duration.
 ## Scenario 5: Habitat Selection (Behavioral Optimization)
 
 This example demonstrates adding habitat selection behavior
-(sampling_points=10) to all mechanisms from Scenario 4. Individuals
+(`sampling_points = 10`) to all mechanisms from Scenario 4. Individuals
 evaluate 10 potential dispersal locations and preferentially select
 high-fitness sites through softmax weighting with temperature=0.1. Lower
 temperature values sharpen the softmax preference toward the best
@@ -983,7 +993,7 @@ evolutionary adjustments.
 
 **Scenario 5 (Habitat selection added):** Active habitat selection
 produces the strongest matching. Individuals evaluate multiple locations
-(`sampling_points=10`) and preferentially settle where their phenotype
+(`sampling_points = 10`) and preferentially settle where their phenotype
 aligns with the local environment, guided by the softmax function with
 temperature=0.1.
 
@@ -1023,7 +1033,7 @@ simulation experiments:
     increases cost \~16-fold due to O(N²) scaling.
 
 -   **Habitat selection**: Cost scales linearly with `sampling_points`.
-    Use sampling_points=1 for exploration, 10-100 when habitat selection
+    Use `sampling_points = 1` for exploration, 10-100 when habitat selection
     mechanisms are scientifically important.
 
 -   **Simulation duration**: Cost scales linearly with `max_events`.

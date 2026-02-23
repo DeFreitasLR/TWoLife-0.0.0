@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Lucas Freitas" />
+
+<meta name="date" content="2026-02-25" />
+
+<title>TWoLife: Simulating Populations with Individual Variation in Heterogeneous Landscapes</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+<style type="text/css">
+
+div.csl-bib-body { }
+div.csl-entry {
+clear: both;
+margin-bottom: 0em;
+}
+.hanging div.csl-entry {
+margin-left:2em;
+text-indent:-2em;
+}
+div.csl-left-margin {
+min-width:2em;
+float:left;
+}
+div.csl-right-inline {
+margin-left:2em;
+padding-left:1em;
+}
+div.csl-indent {
+margin-left: 2em;
+}
+</style>
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">TWoLife: Simulating Populations with
+Individual Variation in Heterogeneous Landscapes</h1>
+<h4 class="author">Lucas Freitas</h4>
+<h4 class="date">2026-02-25</h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#introduction" id="toc-introduction"><span class="toc-section-number">1</span> Introduction</a></li>
+<li><a href="#key-concepts" id="toc-key-concepts"><span class="toc-section-number">2</span> Key Concepts</a>
+<ul>
+<li><a href="#landscapes" id="toc-landscapes"><span class="toc-section-number">2.1</span> Landscapes</a></li>
+<li><a href="#individuals" id="toc-individuals"><span class="toc-section-number">2.2</span> Individuals</a></li>
+<li><a href="#fitness-how-traits-determine-survival" id="toc-fitness-how-traits-determine-survival"><span class="toc-section-number">2.3</span> Fitness: How Traits Determine
+Survival</a></li>
+</ul></li>
+<li><a href="#package-overview" id="toc-package-overview"><span class="toc-section-number">3</span> Package Overview</a>
+<ul>
+<li><a href="#main-function" id="toc-main-function"><span class="toc-section-number">3.1</span> Main Function</a></li>
+<li><a href="#simulation-output" id="toc-simulation-output"><span class="toc-section-number">3.2</span> Simulation Output</a></li>
+</ul></li>
+<li><a href="#main-analysis-individual-variation-in-heterogeneous-environments" id="toc-main-analysis-individual-variation-in-heterogeneous-environments"><span class="toc-section-number">4</span> Main Analysis: Individual Variation
+in Heterogeneous Environments</a>
+<ul>
+<li><a href="#landscape-and-experimental-design" id="toc-landscape-and-experimental-design"><span class="toc-section-number">4.1</span> Landscape and Experimental
+Design</a></li>
+<li><a href="#scenario-1-uniform-perfect-specialists" id="toc-scenario-1-uniform-perfect-specialists"><span class="toc-section-number">4.2</span> Scenario 1: Uniform Perfect
+Specialists</a></li>
+<li><a href="#scenario-2-variable-specialists" id="toc-scenario-2-variable-specialists"><span class="toc-section-number">4.3</span> Scenario 2: Variable
+Specialists</a></li>
+<li><a href="#scenario-3-generalists-niche-width" id="toc-scenario-3-generalists-niche-width"><span class="toc-section-number">4.4</span> Scenario 3: Generalists (Niche
+Width)</a></li>
+<li><a href="#scenario-4-evolution-mutation-plasticity" id="toc-scenario-4-evolution-mutation-plasticity"><span class="toc-section-number">4.5</span> Scenario 4: Evolution (Mutation +
+Plasticity)</a></li>
+<li><a href="#scenario-5-habitat-selection-behavioral-optimization" id="toc-scenario-5-habitat-selection-behavioral-optimization"><span class="toc-section-number">4.6</span> Scenario 5: Habitat Selection
+(Behavioral Optimization)</a></li>
+<li><a href="#comparative-analysis" id="toc-comparative-analysis"><span class="toc-section-number">4.7</span> Comparative Analysis</a></li>
+<li><a href="#verifying-phenotype-environment-matching" id="toc-verifying-phenotype-environment-matching"><span class="toc-section-number">4.8</span> Verifying Phenotype-Environment
+Matching</a></li>
+</ul></li>
+<li><a href="#computational-considerations" id="toc-computational-considerations"><span class="toc-section-number">5</span> Computational Considerations</a>
+<ul>
+<li><a href="#performance-scaling" id="toc-performance-scaling"><span class="toc-section-number">5.1</span> Performance Scaling</a></li>
+<li><a href="#memory-usage" id="toc-memory-usage"><span class="toc-section-number">5.2</span> Memory Usage</a></li>
+</ul></li>
+<li><a href="#references" id="toc-references"><span class="toc-section-number">6</span> References</a></li>
+</ul>
+</div>
+
+<div id="introduction" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> Introduction</h1>
+<p>The <strong>TWoLife</strong> package implements individual-based
+simulations of populations inhabiting spatially heterogeneous
+landscapes. Unlike traditional models that assume genetic uniformity
+within populations, TWoLife explicitly represents individual variation
+in traits that determine ecological outcomes. As a consequence, the
+package allows researchers to investigate how preexisting genetic
+diversity interacts with landscape structure to influence population
+persistence <span class="citation">(Bolnick et al. 2003; Barrett and
+Schluter 2008)</span>.</p>
+<p>The package addresses a fundamental limitation of ecological theory:
+the assumption that individuals within a population perceive and exploit
+environments in identical ways. This assumption, while simplifying
+mathematical analysis, may not depict biologically realistic scenarios
+<span class="citation">(Bolnick et al. 2011)</span>. In reality,
+individuals differ in their optimal environmental conditions, tolerance
+ranges, and behavioral strategies. This in turn means that environmental
+changes may favor some individuals to the detriment of others, with
+consequences for population-level outcomes that cannot be predicted from
+species-level averages alone <span class="citation">(Violle et al.
+2012)</span>.</p>
+<p>TWoLife enables researchers to:</p>
+<ol style="list-style-type: decimal">
+<li>Generate landscapes with <strong>continuous environmental
+gradients</strong> representing variation in conditions across space, or
+<strong>discrete habitat patches</strong> embedded in unsuitable
+matrix</li>
+<li>Model <strong>individual genetic variation</strong> in optimal
+environmental values, tolerance ranges (niche width), and behavioral
+strategies</li>
+<li>Implement <strong>evolutionary and adaptive mechanisms</strong>
+including mutation (heritable genetic changes), phenotypic plasticity
+(non-heritable developmental noise), and natural selection</li>
+<li>Track <strong>phenotype-environment interactions</strong> where
+fitness emerges dynamically from the match between individual traits and
+local conditions, rather than being pre-assigned by habitat type</li>
+<li>Analyze <strong>emergent population dynamics</strong> arising from
+individual-level processes of birth, death, dispersal, and trait
+evolution</li>
+</ol>
+<p>This vignette first introduces the package’s key concepts, function
+structure, and output format, then demonstrates TWoLife’s core
+capability through a worked analysis: modeling populations where fitness
+emerges dynamically from phenotype–environment matching along continuous
+gradients. Through a progressive five-scenario comparison, we isolate
+the contributions of genetic diversity, tolerance, evolutionary
+processes, and habitat selection behavior to population persistence.
+This design directly addresses a question that habitat-quality models
+cannot: which individual-level mechanisms are necessary for populations
+to persist across heterogeneous environments?</p>
+</div>
+<div id="key-concepts" class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Key Concepts</h1>
+<div id="landscapes" class="section level2" number="2.1">
+<h2><span class="header-section-number">2.1</span> Landscapes</h2>
+<p>Spatial environments in TWoLife are represented as rectangular
+numeric matrices where each cell contains an environmental value. The
+package supports two fundamentally different landscape types that
+determine how environmental variation structures individual fitness:</p>
+<ul>
+<li><p><strong>Continuous landscapes</strong>: Environmental values vary
+along gradients, typically rescaled to a user-defined range (e.g., 0.0
+to 100.0 as used throughout this vignette). These values represent
+continuous variation in conditions such as temperature, soil moisture,
+or resource availability. In continuous landscapes, no locations are
+inherently unsuitable. Rather, suitability emerges dynamically from the
+interaction between individual phenotypes and local environmental values
+through Gaussian matching (explained in the Fitness section below). This
+means that a cell with value 3 is not intrinsically “better” or “worse”
+than a cell with value 10 — suitability depends on whether individuals
+in the population possess phenotypes adapted to those particular
+values.</p></li>
+<li><p><strong>Discrete landscapes</strong>: Space is divided into
+binary categories where cells are classified as either suitable habitat
+(value=1) or unsuitable matrix (value=0). Individuals can persist only
+in habitat cells; matrix cells are immediately lethal regardless of
+individual traits. This paradigm corresponds to traditional patch-matrix
+landscape ecology <span class="citation">(Fahrig 2003)</span>.</p></li>
+</ul>
+<p>Landscapes are generated using
+<code>create_fractal_landscape()</code>, which produces realistic
+spatial patterns with self-similar structure across scales <span class="citation">(Justeau-Allaire et al. 2022)</span>. The fractal
+algorithm ensures that pattern complexity — the degree of patchiness
+versus smoothness — remains similar whether the landscape is viewed at
+fine resolution (individual cells) or coarse resolution (blocks of
+cells). This property mimics natural spatial processes where
+environmental structure often exhibits scale-invariant patterns <span class="citation">(Milne 1992; Wiens 1976)</span>.</p>
+</div>
+<div id="individuals" class="section level2" number="2.2">
+<h2><span class="header-section-number">2.2</span> Individuals</h2>
+<p>Individuals are characterized by five genetic attributes that
+together determine ecological and evolutionary outcomes:</p>
+<ul>
+<li><p><strong><code>genotype_mean</code></strong> (Optimal
+environmental value): The environmental condition at which the
+individual achieves maximum fitness, representing the
+genetically-determined optimal niche position. Values ideally match in
+the landscape’s environmental scale. For example, an individual with
+genotype_mean=0.3 is genetically adapted to environmental value 0.3
+(e.g., cool temperatures if the gradient represents temperature). When
+an individual’s phenotype (genotype_mean plus noise from plasticity)
+exactly matches the local environmental value, fitness equals to its
+maximum.</p></li>
+<li><p><strong><code>genotype_sd</code></strong> (Niche
+width/tolerance): The breadth of environmental conditions the individual
+can tolerate, represented mathematically as the standard deviation
+(<span class="math inline">\(\sigma\)</span>) in the Gaussian fitness
+function. This parameter governs the specialist-generalist tradeoff:
+values near <span class="math inline">\(\sigma_{min}\)</span> (e.g.,
+genotype_sd=0.4) yield near-maximum peak fitness with a very steep
+fitness decline away from the optimum — on a 0–100 landscape this niche
+width covers only <span class="math inline">\(\approx 0.4\)</span>% of
+the environmental range, representing a true narrow specialist. Larger
+values (e.g., genotype_sd=5.0) produce broader tolerance but lower peak
+fitness, illustrating the “jack of all trades, master of none” pattern
+<span class="citation">(Levins 1968; Futuyma and Moreno
+1988)</span>.</p></li>
+<li><p><strong><code>mutation_rate</code></strong> (Mutation rate):
+Controls heritable genetic variation transmitted across generations.
+This parameter determines the standard deviation (μ_r) of mutations
+added to the offspring’s genotype at each birth event. Unlike
+plasticity, which affects phenotype but not inheritance, mutations
+modify the genotype itself and these modifications are passed to future
+generations. This enables evolutionary adaptation—populations can shift
+their genetic composition in response to selection pressures <span class="citation">(Lynch and Walsh 1998)</span>. The underlying
+mathematical model is:</p>
+<p><span class="math inline">\(g_{\text{offspring}} = g_{\text{parent}}
++
+\varepsilon_{\text{mutation}}\)</span></p>
+<p>where <span class="math inline">\(\varepsilon_{\text{mutation}}
+\sim N(0, \mu_r)\)</span> and <span class="math inline">\(\mu_r\)</span>
+= mutation_rate parameter.</p></li>
+<li><p><strong><code>plasticity</code></strong> (Phenotypic plasticity):
+Controls non-heritable phenotypic variation arising from developmental
+or environmental noise. This parameter determines the standard deviation
+(ψ) of random variation added to an individual’s genotype at birth to
+produce its phenotype, which then remains fixed for the individual’s
+lifetime. Importantly, the phenotype (not genotype) determines fitness
+and habitat selection, while only the genotype is transmitted to
+offspring. This distinction allows modeling of developmental variation
+that affects individual ecology but is not inherited <span class="citation">(Pigliucci 2001; DeWitt and Scheiner 2004)</span>.
+Mathematically, the relationship can be expressed as:</p>
+<p><span class="math inline">\(p = g +
+\varepsilon_{\text{plasticity}}\)</span></p>
+<p>where <span class="math inline">\(\varepsilon_{\text{plasticity}}
+\sim N(0, \psi)\)</span> and <span class="math inline">\(\psi\)</span> =
+plasticity parameter (same principle as mutation).</p></li>
+<li><p><strong><code>sampling_points</code></strong> (Habitat selection
+intensity): The number of potential dispersal locations an individual
+evaluates before deciding where to move. When sampling_points is set to
+0 or 1, individuals move to randomly chosen locations without
+evaluation, representing passive dispersal mechanisms. These two values
+are conceptually equivalent in producing passive dispersal but differ in
+implementation—0 triggers a random walk algorithm while 1 samples a
+single random location. As sampling_points increases, individuals gain
+the capacity to assess and compare multiple locations before settling,
+selecting among them using a softmax function weighted by expected
+fitness. Unlike the ideal free distribution <span class="citation">(Fretwell and Lucas 1970)</span>, which assumes perfect
+information, the softmax implements probabilistic choice under limited
+sampling — a bounded-rationality decision rule in which the temperature
+parameter controls the sharpness of preference <span class="citation">(McNamara and Houston 1987)</span>. Higher values
+enable increasingly sophisticated habitat selection and increase
+computation time linearly, but the softmax process retains some
+randomness to prevent unrealistic determinism where all individuals
+always select the single best available cell.</p></li>
+</ul>
+<p>All five attributes are heritable, enabling evolutionary dynamics and
+potential local adaptation over multiple generations <span class="citation">(Kawecki and Ebert 2004)</span>. Fitness emerges from
+the interaction between these traits and local conditions, as defined in
+the Fitness section below.</p>
+</div>
+<div id="fitness-how-traits-determine-survival" class="section level2" number="2.3">
+<h2><span class="header-section-number">2.3</span> Fitness: How Traits
+Determine Survival</h2>
+<p>Survival-related processes in TWoLife are determined by Gaussian
+matching—a mathematical function that quantifies how well an
+individual’s phenotype matches local environmental conditions. This
+fitness framework differs fundamentally from models where habitat
+quality is pre-assigned by location type (e.g., habitat cells support
+survival, matrix cells do not). Instead, fitness emerges dynamically
+from trait-environment interactions:</p>
+<p><span class="math display">\[W = \frac{1}{\sigma\sqrt{2\pi}}
+\exp\left(-\frac{(h - p)^2}{2\sigma^2}\right)\]</span></p>
+<p>where:</p>
+<ul>
+<li><span class="math inline">\(W\)</span> is the individual’s fitness
+(a probability density value)</li>
+<li><span class="math inline">\(p\)</span> (phenotype) is the
+individual’s expressed trait value (genotype_mean plus developmental
+noise from the plasticity parameter, sampled once at birth; see
+Individuals section above)</li>
+<li><span class="math inline">\(h\)</span> (environment) is the
+environmental value at the cell where the individual currently resides
+(ranging from 0 to 100 in the continuous landscape used throughout this
+vignette, though any numeric range is valid; or 0/1 in binary
+landscapes)</li>
+<li><span class="math inline">\(\sigma\)</span> (genotype_sd) is the
+individual’s tolerance parameter (niche width; see Individuals section
+above)</li>
+</ul>
+<p>This function uses the <strong>probability density form</strong> of
+the Gaussian, which introduces a critical tradeoff. At a perfect
+phenotype-environment match (<span class="math inline">\(h =
+p\)</span>), fitness equals <span class="math inline">\(1/(\sigma\sqrt{2\pi})\)</span>. Peak fitness
+therefore <em>declines</em> as <span class="math inline">\(\sigma\)</span> increases. The constraint</p>
+<p><span class="math inline">\(\sigma \geq \sigma_{min} =
+1/\sqrt{2\pi} \approx 0.3989\)</span></p>
+<p>prevents fitness from exceeding 1.0: at <span class="math inline">\(\sigma = \sigma_{min}\)</span>, peak fitness
+equals exactly 1.0; for all larger <span class="math inline">\(\sigma\)</span>, peak fitness falls below 1.0.</p>
+<p>This creates an explicit <strong>specialist-generalist
+tradeoff</strong>: narrow niche width (small <span class="math inline">\(\sigma\)</span>, near <span class="math inline">\(\sigma_{min}\)</span>) yields near-maximum peak
+fitness but steep fitness decline away from the optimum, while broad
+niche width (large <span class="math inline">\(\sigma\)</span>) yields
+moderate fitness across a wide range of conditions but never achieves
+peak performance — the “jack of all trades, master of none” pattern
+<span class="citation">(Levins 1968)</span>. Note that <span class="math inline">\(\sigma = 0\)</span> is a separate special case
+handled by discrete logic (perfect specialists; see below), so valid
+values for Gaussian fitness individuals are either exactly 0 or at least
+<span class="math inline">\(\approx 0.3989\)</span>.</p>
+<p>Rather than acting directly as a survival probability, fitness <span class="math inline">\(W\)</span> in TWoLife modulates mortality rate.
+Mortality is bounded between a minimum rate in optimal habitat (<span class="math inline">\(\mu_{min}\)</span> = base_mortality_rate) and a
+maximum rate in highly unsuitable habitat (<span class="math inline">\(\mu_{max}\)</span> = base_mortality_rate <span class="math inline">\(\times\)</span> matrix_mortality_multiplier).
+Fitness determines where within this range an individual’s mortality
+falls:</p>
+<p><span class="math display">\[
+\mu = \mu_{max} - W\left(\mu_{max} - \mu_{min}\right)
+\]</span></p>
+<p>Under this formulation, individuals with fitness near 1.0 experience
+near-minimum mortality, while individuals with very low fitness approach
+maximum mortality. Because the PDF fitness formulation means peak <span class="math inline">\(W &lt; 1\)</span> for most <span class="math inline">\(\sigma\)</span> values, even well-matched
+individuals experience mortality slightly above <span class="math inline">\(\mu_{min}\)</span>; only individuals with <span class="math inline">\(\sigma =
+\sigma_{min}\)</span> achieve <span class="math inline">\(\mu_{min}\)</span> in perfect habitat. This
+smoothly implements stabilizing selection through environment-dependent
+survival <span class="citation">(Lande 1976)</span> while keeping
+mortality rates biologically interpretable and bounded.</p>
+<p>The figure below makes this tradeoff concrete using the parameter
+values from the Main Analysis: <code>base_mortality_rate = 0.2</code>
+(<span class="math inline">\(\mu_{min}\)</span>) and
+<code>matrix_mortality_multiplier = 2.0</code>, which together give
+<span class="math inline">\(\mu_{max} = 0.2 \times 2.0 = 0.4\)</span>.
+The display window spans <span class="math inline">\(h \in
+[0, 10]\)</span> with the individual’s phenotype at <span class="math inline">\(p = 5.0\)</span> (midpoint). Four <span class="math inline">\(\sigma\)</span> values are shown: the critical
+threshold <span class="math inline">\(\sigma_{min}\)</span>; <span class="math inline">\(\sigma = 0.5\)</span>; <span class="math inline">\(\sigma = 0.8\)</span>; and <span class="math inline">\(\sigma = 1.0\)</span>. All four values are
+deliberately close together to highlight how even small increases in
+niche width carry a measurable mortality cost at the optimum. Filled
+circles mark each curve’s lowest point (<span class="math inline">\(h =
+p = 5.0\)</span>); colored tick marks on the right axis give the exact
+<span class="math inline">\(\mu_{opt}\)</span> for each curve:</p>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt style="display: block; margin: auto;" /></p>
+<p>Three features stand out. First, <span class="math inline">\(\mu_{opt}\)</span> increases monotonically with
+<span class="math inline">\(\sigma\)</span>: only <span class="math inline">\(\sigma_{min}\)</span> achieves the true minimum
+mortality <span class="math inline">\(\mu_{min} = 0.2\)</span>; <span class="math inline">\(\sigma = 0.5\)</span> raises <span class="math inline">\(\mu_{opt}\)</span> to <span class="math inline">\(0.240\)</span>; and <span class="math inline">\(\sigma = 1.0\)</span> raises it further to <span class="math inline">\(0.320\)</span> — still below <span class="math inline">\(\mu_{max} = 0.4\)</span>, so all strategies remain
+viable. Read off these values directly from the colored right-axis
+ticks. Second, note that the curves look nearly identical everywhere
+except very close to <span class="math inline">\(h = p = 5.0\)</span>:
+at <span class="math inline">\(h = 3\)</span> (two units from the
+optimum), all four curves are already pressed against <span class="math inline">\(\mu_{max}\)</span>, illustrating that even
+moderate habitat mismatch is effectively lethal for these narrow-niche
+values. The entire fitness benefit of a wider niche is compressed into a
+very small window around the optimum. Third, the survival cost of
+generalism is not binary — there is no threshold beyond which
+individuals suddenly go extinct — but a smooth, monotonic elevation of
+<span class="math inline">\(\mu_{opt}\)</span> with <span class="math inline">\(\sigma\)</span>. With
+<code>matrix_mortality_multiplier = 2.0</code> (Scenarios 3–5), even
+<span class="math inline">\(\sigma = 1.0\)</span> survives at its
+optimum, but pays a 60% higher mortality rate there than <span class="math inline">\(\sigma_{min}\)</span> does (<span class="math inline">\(0.320\)</span> vs <span class="math inline">\(0.200\)</span>).</p>
+</div>
+</div>
+<div id="package-overview" class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Package Overview</h1>
+<p>We begin by loading the package:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(TWoLife)</span></code></pre></div>
+<div id="main-function" class="section level2" number="3.1">
+<h2><span class="header-section-number">3.1</span> Main Function</h2>
+<p>TWoLife simulations are executed through a single main function that
+accepts five components organized to separate spatial, demographic,
+genetic, temporal, and stochastic aspects of the model. Demographic
+events are scheduled using the Gillespie algorithm, which generates
+exact stochastic trajectories from continuous-time event rates <span class="citation">(Gillespie 1976, 1977)</span>. This organization
+reflects the structure of individual-based models more generally, where
+populations are defined by their environment (landscape), initial
+configuration (individuals), heritable variation (genetics), and
+temporal dynamics (simulation parameters), with stochasticity controlled
+through seeding <span class="citation">(Grimm and Railsback 2005;
+DeAngelis and Mooij 2005)</span>.</p>
+<p>The four parameter lists are:</p>
+<ul>
+<li><strong>landscape_params</strong>: A list containing spatial
+environment configuration, specifically the habitat matrix and
+optionally environmental values</li>
+<li><strong>individual_params</strong>: A list containing population
+initialization settings (starting population size and positions)</li>
+<li><strong>genetic_params</strong>: An optional list specifying
+individual variation in genetic traits (optimal values, tolerance,
+mutation rates, plasticity, and behavior)</li>
+<li><strong>simulation_params</strong>: A list containing simulation
+control and stopping conditions (duration limits)</li>
+</ul>
+<p>The fifth component is <strong>master_seed</strong>, an integer value
+that ensures complete reproducibility by controlling all random
+processes in the simulation, from initial individual placement to
+demographic event ordering to mutation directions.</p>
+<p>The function structure is:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">twolife_simulation</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  landscape_params,</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  individual_params,</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  genetic_params,</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  simulation_params,</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  master_seed</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>)</span></code></pre></div>
+<p><strong>Important note on genetic_params</strong>: This list is
+optional. When <code>genetic_params</code> is omitted, TWoLife applies
+default values designed specifically for binary landscapes where
+habitat=1 and matrix=0. Under these defaults, all individuals have
+genotype_mean=1 (matching habitat value), genotype_sd=0 (zero tolerance,
+requiring exact environmental matches), mutation_rate=0 (no evolution),
+plasticity=0 (no phenotypic noise), and sampling_points=0 (random
+dispersal). These defaults work well for exploring habitat-matrix
+simulations without genetic complications, as they create genetically
+uniform populations that survive in habitat cells but not matrix cells.
+However, these same defaults typically produce extinction in continuous
+landscapes where exact environmental matches are rare. As a consequence,
+explicit genetic_params specification is essential when working with
+continuous environmental gradients (demonstrated in the Main Analysis
+below).</p>
+<p>The <code>simulation_params</code> list controls simulation duration
+through <code>max_events</code> (maximum number of demographic events).
+The <code>master_seed</code> ensures reproducibility: identical
+parameters and seed produce identical results, while different seeds
+produce independent stochastic iterations. Note that exact
+reproducibility also requires the same TWoLife and R versions.</p>
+</div>
+<div id="simulation-output" class="section level2" number="3.2">
+<h2><span class="header-section-number">3.2</span> Simulation
+Output</h2>
+<p>Simulations return a list object containing four components that
+provide different levels of detail about population outcomes. This
+structure balances the need for quick summaries (summary component),
+detailed individual-level data (survivors component), complete
+demographic records (events component), and reproducibility (parameters
+component):</p>
+<ul>
+<li><p><strong><code>summary</code></strong>: A list of final population
+statistics including <code>final_population_size</code> (number
+surviving at simulation end), <code>total_births</code> (cumulative
+birth events), <code>total_deaths</code> (cumulative death events),
+<code>total_dispersals</code> (cumulative dispersal events), and
+<code>final_time</code> (simulation duration). This component provides
+quick assessment of population outcomes without requiring data
+processing.</p></li>
+<li><p><strong><code>survivors</code></strong>: A data frame where each
+row represents one surviving individual at simulation end. Columns
+include <code>individual_id</code>, <code>genotype</code> (genotype_mean
+value), <code>genotype_sd</code> (niche width), <code>phenotype</code>
+(expressed environmental optimum), <code>x</code> and <code>y</code>
+(spatial coordinates). This component enables analysis of trait
+distributions, spatial patterns, and phenotype-environment matching
+among survivors. When populations go extinct, this component may be NULL
+or an empty dataframe.</p></li>
+<li><p><strong><code>events</code></strong>: A data frame recording
+every demographic event that occurred during the simulation. The level
+of detail depends on the <code>history_detail</code> parameter (set in
+<code>simulation_params</code>). At minimum
+(<code>history_detail=&quot;minimal&quot;</code>), each row documents one event
+with columns: <code>time</code> (when event occurred),
+<code>event_type</code> (0=death, 1=birth, 2=dispersal, 3=emigration,
+-1=initial state), and <code>individual_id</code>. Standard detail
+(<code>history_detail=&quot;standard&quot;</code>, the default) additionally
+includes <code>patch_id</code>, <code>x</code> and <code>y</code>
+coordinates, and <code>genotype</code>. Full detail
+(<code>history_detail=&quot;full&quot;</code>) further adds <code>phenotype</code>
+and <code>width</code> (genotype_sd). This complete history enables
+analysis of population dynamics, demographic rates over time, and
+lineage tracking.</p></li>
+<li><p><strong><code>parameters</code></strong>: A list storing all
+input parameters (landscape_params, individual_params, genetic_params,
+simulation_params, master_seed). This ensures complete
+reproducibility—simulations can be exactly replicated by re-running with
+stored parameters. It also enables systematic comparison across
+simulations with different parameter configurations.</p></li>
+</ul>
+</div>
+</div>
+<div id="main-analysis-individual-variation-in-heterogeneous-environments" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Main Analysis:
+Individual Variation in Heterogeneous Environments</h1>
+<p>TWoLife’s distinguishing capability is modeling populations where
+individual fitness emerges from phenotype–environment matching along
+continuous environmental gradients, rather than being pre-assigned by
+habitat type. This section demonstrates that capability through a
+controlled comparison of five scenarios that differ only in which
+individual-level mechanisms are active, holding all other conditions
+constant (landscape structure, initial population size, simulation
+duration, and random seeds).</p>
+<p>The scenarios progressively add mechanisms: genetic diversity in
+optimal trait values, tolerance (niche width), evolutionary processes
+(mutation and plasticity), and habitat selection behavior. This
+progression allows each mechanism’s contribution to be read off directly
+from the change in population outcome between adjacent scenarios, and
+tests whether mechanisms interact additively or synergistically.</p>
+<div id="landscape-and-experimental-design" class="section level2" number="4.1">
+<h2><span class="header-section-number">4.1</span> Landscape and
+Experimental Design</h2>
+<p>We generate the continuous landscape shared by all five
+scenarios:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">50</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>continuous_landscape <span class="ot">&lt;-</span> <span class="fu">create_fractal_landscape</span>(</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="at">cells_per_row =</span> <span class="dv">5</span>,             <span class="co"># 5×5 = 25 total cells</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="at">fractality =</span> <span class="fl">0.5</span>,              <span class="co"># Balanced spatial autocorrelation</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="at">min_value =</span> <span class="fl">0.0</span>,               <span class="co"># Minimum environmental value</span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="at">max_value =</span> <span class="fl">100.0</span>              <span class="co"># Maximum environmental value</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>)</span></code></pre></div>
+<p>The resulting 25-cell (5×5) landscape spans values from 0.0 to 100.0
+with intermediate-scale spatial structure (fractality=0.5). No cell is
+inherently suitable or unsuitable—suitability depends entirely on
+phenotype–environment matching, as established in Key Concepts.</p>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt style="display: block; margin: auto;" /></p>
+<p>The visualization uses a terrain color scheme where cooler colors
+(blues, greens) represent low environmental values and warmer colors
+(yellows, reds) represent high values. Observe the intermediate-scale
+patchiness created by fractality=0.5—some clustering of similar values
+occurs (e.g., contiguous blue regions in lower-left, yellow regions in
+upper-right), but substantial variation exists throughout the
+landscape.</p>
+<p>We implement five scenarios that differ only in genetic parameters,
+with all other conditions held constant. This factorial design allows us
+to isolate each mechanism’s contribution to population outcomes. The
+order of mechanism addition follows a biological hierarchy from
+fundamental to facultative: (1) genetic diversity in optimal values is
+the most basic requirement—populations need variation to span
+environmental gradients; (2) tolerance (niche width) enables each
+genotype to survive across a range of conditions rather than requiring
+exact matches; (3) evolution (mutation + plasticity) allows populations
+to generate new variation and fine-tune existing variation through
+natural selection; (4) behavior (habitat selection) enables individuals
+to actively locate suitable habitats rather than dispersing
+randomly:</p>
+<table style="width:100%;">
+<colgroup>
+<col width="16%" />
+<col width="16%" />
+<col width="16%" />
+<col width="16%" />
+<col width="16%" />
+<col width="16%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Scenario</th>
+<th>Genetic Diversity</th>
+<th>Niche Width</th>
+<th>Evolution</th>
+<th>Behavior</th>
+<th>Configuration</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1. Uniform specialists</td>
+<td>No (all genotype=1.0)</td>
+<td>No (sds=0)</td>
+<td>No</td>
+<td>No</td>
+<td>Default parameters</td>
+</tr>
+<tr class="even">
+<td>2. Variable specialists</td>
+<td>Yes (genotypes 0–100)</td>
+<td>No (sds=0)</td>
+<td>No</td>
+<td>No</td>
+<td>genotype_means only</td>
+</tr>
+<tr class="odd">
+<td>3. Generalists</td>
+<td>Yes</td>
+<td><strong>Yes (sds=0.4)</strong></td>
+<td>No</td>
+<td>No</td>
+<td>Add genotype_sds</td>
+</tr>
+<tr class="even">
+<td>4. Evolution</td>
+<td>Yes</td>
+<td>Yes</td>
+<td><strong>Yes</strong> (mutation + plasticity)</td>
+<td>No</td>
+<td>Add mutation, plasticity</td>
+</tr>
+<tr class="odd">
+<td>5. Habitat selection</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td><strong>Yes</strong> (sampling=10)</td>
+<td>Add sampling_points, temperature</td>
+</tr>
+</tbody>
+</table>
+<p>All scenarios use identical conditions except genetic parameters:
+same landscape (continuous_landscape generated above), same initial
+population size (N=1000, supersaturated relative to landscape carrying
+capacity), and same simulation duration (100 demographic events, chosen
+to be computationally lightweight while still revealing which mechanisms
+enable persistence).</p>
+<p>Before running the scenarios we define all shared parameters exactly
+once:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># ── Population size and initial genotypes ────────────────────────────────────</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co"># Uniformly-spaced genotypes span the full environmental gradient (0–100)</span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co"># so that each of the 1 000 individuals begins with a distinct optimum.</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co"># Using a deterministic sequence (rather than random draws) ensures that</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co"># genetic composition is identical across scenarios 2–5.</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>initial_pop_size  <span class="ot">&lt;-</span> <span class="dv">1000</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>initial_genotypes <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">100</span>, <span class="at">length.out =</span> initial_pop_size)</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co"># ── Shared landscape parameters ──────────────────────────────────────────────</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co"># All five scenarios run on the same landscape with the same configuration.</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>shared_landscape_params <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>  <span class="at">habitat                     =</span> continuous_landscape,</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>  <span class="at">cell_size                   =</span> <span class="fl">1.0</span>,</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>  <span class="at">boundary_condition          =</span> <span class="dv">1</span>,     <span class="co"># reflective: individuals bounce off borders</span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>  <span class="at">density_type                =</span> <span class="dv">1</span>,     <span class="co"># local density within neighbor_radius</span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>  <span class="at">matrix_mortality_multiplier =</span> <span class="fl">2.0</span>,   <span class="co"># μ_max = 2 × μ_min = 0.4</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>  <span class="at">matrix_dispersal_multiplier =</span> <span class="fl">0.5</span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a>)</span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co"># ── Shared individual parameters ─────────────────────────────────────────────</span></span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co"># Demographic rates and movement geometry are identical across scenarios.</span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a>shared_individual_params <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a>  <span class="at">initial_population_size =</span> initial_pop_size,</span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a>  <span class="at">neighbor_radius         =</span> <span class="fl">2.0</span>,</span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a>  <span class="at">vision_angle            =</span> pi,</span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a>  <span class="at">step_length             =</span> <span class="fl">5.0</span>,</span>
+<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a>  <span class="at">base_dispersal_rate     =</span> <span class="fl">0.4</span>,</span>
+<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a>  <span class="at">base_birth_rate         =</span> <span class="fl">0.6</span>,</span>
+<span id="cb4-29"><a href="#cb4-29" tabindex="-1"></a>  <span class="at">base_mortality_rate     =</span> <span class="fl">0.2</span>,</span>
+<span id="cb4-30"><a href="#cb4-30" tabindex="-1"></a>  <span class="at">birth_density_slope     =</span> <span class="fl">0.02</span>,</span>
+<span id="cb4-31"><a href="#cb4-31" tabindex="-1"></a>  <span class="at">mortality_density_slope =</span> <span class="fl">0.02</span></span>
+<span id="cb4-32"><a href="#cb4-32" tabindex="-1"></a>)</span>
+<span id="cb4-33"><a href="#cb4-33" tabindex="-1"></a></span>
+<span id="cb4-34"><a href="#cb4-34" tabindex="-1"></a><span class="co"># ── Shared simulation parameters ─────────────────────────────────────────────</span></span>
+<span id="cb4-35"><a href="#cb4-35" tabindex="-1"></a><span class="co"># 100 demographic events per scenario — the smaller 5×5 landscape keeps</span></span>
+<span id="cb4-36"><a href="#cb4-36" tabindex="-1"></a><span class="co"># runtimes short while providing enough time to distinguish the five</span></span>
+<span id="cb4-37"><a href="#cb4-37" tabindex="-1"></a><span class="co"># ecological strategies.</span></span>
+<span id="cb4-38"><a href="#cb4-38" tabindex="-1"></a>shared_simulation_params <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">max_events =</span> <span class="dv">100</span>)</span></code></pre></div>
+</div>
+<div id="scenario-1-uniform-perfect-specialists" class="section level2" number="4.2">
+<h2><span class="header-section-number">4.2</span> Scenario 1: Uniform
+Perfect Specialists</h2>
+<p>This scenario demonstrates default behavior when
+<code>genetic_params</code> is omitted: all individuals are genetically
+identical with genotype_mean=1.0 and genotype_sd=0.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># Only genetic_params is omitted — every other argument comes from the</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co"># shared lists defined above.  This makes the scenario&#39;s distinctive</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co"># choice (no genetic variation) immediately visible.</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>sim_s1 <span class="ot">&lt;-</span> <span class="fu">twolife_simulation</span>(</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="at">landscape_params  =</span> shared_landscape_params,</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="at">individual_params =</span> shared_individual_params,</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  <span class="co"># genetic_params omitted → defaults: all genotype_mean = 1.0, genotype_sd = 0</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  <span class="at">simulation_params =</span> shared_simulation_params,</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>  <span class="at">master_seed =</span> <span class="dv">45</span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>)</span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>(pop_s1 <span class="ot">&lt;-</span> sim_s1<span class="sc">$</span>summary<span class="sc">$</span>final_population_size)</span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt; [1] 0</span></span></code></pre></div>
+<p>The simulation results in N = 0 (extinction). Zero tolerance
+(<code>genotype_sd = 0</code>) means individuals require exact
+environmental matches that probably do not exist in the continuous
+landscape (range: 0.00 to 100.00). Starting with genotype_mean = 1.0,
+only cells with exactly that environmental value produce minimum
+mortality—any other value produces maximum mortality—demonstrating that
+genetic uniformity combined with specialist strategies is incompatible
+with persistence in heterogeneous continuous environments.</p>
+</div>
+<div id="scenario-2-variable-specialists" class="section level2" number="4.3">
+<h2><span class="header-section-number">4.3</span> Scenario 2: Variable
+Specialists</h2>
+<p>This scenario adds genetic diversity: each of the 1000 individuals
+has a distinct genotype_mean spanning 0 to 100, but genotype_sd remains
+0 (perfect specialists still requiring exact environmental matches).</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># Adding genotype_means is the only change from Scenario 1.</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co"># genotype_sds still defaults to 0 (perfect specialists).</span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>sim_s2 <span class="ot">&lt;-</span> <span class="fu">twolife_simulation</span>(</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  <span class="at">landscape_params  =</span> shared_landscape_params,</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>  <span class="at">individual_params =</span> shared_individual_params,</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>  <span class="at">genetic_params =</span> <span class="fu">list</span>(</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>    <span class="at">genotype_means =</span> initial_genotypes   <span class="co"># 1 000 distinct optima spanning 0–100</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>    <span class="co"># genotype_sds defaults to 0 → perfect specialists, no tolerance</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>  ),</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>  <span class="at">simulation_params =</span> shared_simulation_params,</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>  <span class="at">master_seed =</span> <span class="dv">46</span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>)</span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>(pop_s2 <span class="ot">&lt;-</span> sim_s2<span class="sc">$</span>summary<span class="sc">$</span>final_population_size)</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co">#&gt; [1] 0</span></span></code></pre></div>
+<p>The simulation results in N = 0 (extinction). Despite having 1000
+different genotypes spanning the full environmental range (0–100), zero
+tolerance means individuals still require exact environmental matches.
+In continuous space, exact matches rarely occur—even if an individual
+has <code>genotype_mean = 5.0</code> and a cell has
+<code>environment = 5.0</code>, any slight mismatch produces effectively
+zero fitness when <code>genotype_sd = 0</code>. This demonstrates that
+genetic diversity alone is insufficient without tolerance enabling
+survival across a range of conditions.</p>
+</div>
+<div id="scenario-3-generalists-niche-width" class="section level2" number="4.4">
+<h2><span class="header-section-number">4.4</span> Scenario 3:
+Generalists (Niche Width)</h2>
+<p>This example demonstrates the effect of adding tolerance
+(genotype_sd). Each individual has the same genotype_mean as Scenario 2
+(maintaining identical genetic diversity), but now with genotype_sd=0.4,
+enabling survival across a small range of conditions around their
+optima.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="co"># Only genetic_params changes from S2: genotype_sds is now 0.4.</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co"># landscape, individual, and simulation arguments are inherited unchanged.</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>sim_s3 <span class="ot">&lt;-</span> <span class="fu">twolife_simulation</span>(</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="at">landscape_params  =</span> shared_landscape_params,</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>  <span class="at">individual_params =</span> shared_individual_params,</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>  <span class="at">genetic_params =</span> <span class="fu">list</span>(</span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>    <span class="at">genotype_means =</span> initial_genotypes,</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>    <span class="at">genotype_sds   =</span> <span class="fu">rep</span>(<span class="fl">0.4</span>, initial_pop_size)   <span class="co"># key change: add niche width</span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>    <span class="co"># mutation_rates  defaults to 0 → no evolution</span></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>    <span class="co"># plasticities    defaults to 0 → no phenotypic noise</span></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>    <span class="co"># sampling_points defaults to 0 → random walk dispersal</span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>  ),</span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a>  <span class="at">simulation_params =</span> shared_simulation_params,</span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a>  <span class="at">master_seed =</span> <span class="dv">47</span></span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a>)</span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a></span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a>(pop_s3 <span class="ot">&lt;-</span> sim_s3<span class="sc">$</span>summary<span class="sc">$</span>final_population_size)</span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a><span class="co">#&gt; [1] 148</span></span></code></pre></div>
+<p>The simulation results in N = 148 (14.8% survival), compared to N=0
+in Scenarios 1-2. Adding tolerance enables population persistence by
+allowing individuals to survive in cells where their phenotype does not
+exactly match the local environment. With genotype_sd=0.4 (just above
+<span class="math inline">\(\sigma_{min} \approx 0.3989\)</span>),
+individuals achieve near-maximum peak fitness at their optimum with a
+very steep fitness decline away from it — niche width covers only <span class="math inline">\(\approx 0.4\)</span>% of the 0–100 environmental
+range, so individuals are genuinely narrow specialists. This tolerance
+interacts with genetic diversity: because different individuals have
+different optima spanning 0 to 100, collectively they can utilize the
+full environmental gradient.</p>
+<p>Survivor genotype distribution reveals which individuals
+persisted:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># Examine survivor trait distribution</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="cf">if</span> (pop_s3 <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  survivor_summary <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>    <span class="at">Mean_genotype =</span> <span class="fu">mean</span>(sim_s3<span class="sc">$</span>survivors<span class="sc">$</span>genotype),</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>    <span class="at">SD_genotype =</span> <span class="fu">sd</span>(sim_s3<span class="sc">$</span>survivors<span class="sc">$</span>genotype),</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>    <span class="at">Range =</span> <span class="fu">paste0</span>(<span class="st">&quot;[&quot;</span>, <span class="fu">sprintf</span>(<span class="st">&quot;%.2f&quot;</span>, <span class="fu">min</span>(sim_s3<span class="sc">$</span>survivors<span class="sc">$</span>genotype)),</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>                   <span class="st">&quot;, &quot;</span>, <span class="fu">sprintf</span>(<span class="st">&quot;%.2f&quot;</span>, <span class="fu">max</span>(sim_s3<span class="sc">$</span>survivors<span class="sc">$</span>genotype)), <span class="st">&quot;]&quot;</span>)</span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>  )</span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>  survivor_summary</span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>}</span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt;      Mean_genotype        SD_genotype              Range </span></span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt; &quot;44.9605010415821&quot;  &quot;23.211652101043&quot;    &quot;[6.31, 83.28]&quot;</span></span></code></pre></div>
+</div>
+<div id="scenario-4-evolution-mutation-plasticity" class="section level2" number="4.5">
+<h2><span class="header-section-number">4.5</span> Scenario 4: Evolution
+(Mutation + Plasticity)</h2>
+<p>This example demonstrates adding evolutionary mechanisms (mutation
+and plasticity) to the diversity and tolerance from Scenario 3. Mutation
+(mutation_rate=0.001) enables heritable genetic change across
+generations, while plasticity (plasticity=0.001) enables non-heritable
+phenotypic variation within lifetimes.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># Two parameters added to S3&#39;s genetic_params: mutation_rates and plasticities.</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="co"># All other arguments are unchanged.</span></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>sim_s4 <span class="ot">&lt;-</span> <span class="fu">twolife_simulation</span>(</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>  <span class="at">landscape_params  =</span> shared_landscape_params,</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>  <span class="at">individual_params =</span> shared_individual_params,</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>  <span class="at">genetic_params =</span> <span class="fu">list</span>(</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>    <span class="at">genotype_means =</span> initial_genotypes,</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>    <span class="at">genotype_sds   =</span> <span class="fu">rep</span>(<span class="fl">0.4</span>,   initial_pop_size),</span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>    <span class="at">mutation_rates =</span> <span class="fu">rep</span>(<span class="fl">0.001</span>, initial_pop_size),   <span class="co"># heritable variation across generations</span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>    <span class="at">plasticities   =</span> <span class="fu">rep</span>(<span class="fl">0.001</span>, initial_pop_size)    <span class="co"># non-heritable phenotypic noise</span></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>    <span class="co"># sampling_points defaults to 0 → random walk dispersal still</span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a>  ),</span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a>  <span class="at">simulation_params =</span> shared_simulation_params,</span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a>  <span class="at">master_seed =</span> <span class="dv">48</span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a>)</span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a>(pop_s4 <span class="ot">&lt;-</span> sim_s4<span class="sc">$</span>summary<span class="sc">$</span>final_population_size)</span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="co">#&gt; [1] 201</span></span>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a>(delta_evolution <span class="ot">&lt;-</span> pop_s4 <span class="sc">-</span> pop_s3)</span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="co">#&gt; [1] 53</span></span></code></pre></div>
+<p>The simulation results in N = 201 (change: 53 from Scenario 3). This
+scenario instantiates eco-evolutionary dynamics: mutation and plasticity
+operate on the same timescale as demographic events, so evolutionary
+change and population persistence are inseparable processes <span class="citation">(Hairston et al. 2005; Schoener 2011)</span>. Whether
+this rapid evolution prevents extinction — an instance of evolutionary
+rescue — depends on whether genetic variation can be generated and
+selected fast enough to track the heterogeneous environment <span class="citation">(Bell and Gonzalez 2009)</span>. Mutation allows the
+population to explore genetic space beyond the initial genotype
+distribution (0–100), potentially adapting to local environmental
+conditions if selection favors particular genotypes. Plasticity allows
+phenotypes to deviate from genotypes, which can be beneficial if it
+increases variance in trait-environment matching, though it can also be
+detrimental if it moves phenotypes away from local optima. The net
+effect depends on the balance between these processes over the
+simulation duration.</p>
+</div>
+<div id="scenario-5-habitat-selection-behavioral-optimization" class="section level2" number="4.6">
+<h2><span class="header-section-number">4.6</span> Scenario 5: Habitat
+Selection (Behavioral Optimization)</h2>
+<p>This example demonstrates adding habitat selection behavior
+(sampling_points=10) to all mechanisms from Scenario 4. Individuals
+evaluate 10 potential dispersal locations and preferentially select
+high-fitness sites through softmax weighting with temperature=0.1. Lower
+temperature values sharpen the softmax preference toward the best
+available location; at 0.1, selection is fairly strong while retaining
+some stochasticity.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># Two parameters added to S4&#39;s genetic_params: sampling_points and temperatures.</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="co"># The pattern is now clear: each scenario extends the previous genetic_params</span></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="co"># by adding one new mechanism, while shared parameters remain untouched.</span></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>sim_s5 <span class="ot">&lt;-</span> <span class="fu">twolife_simulation</span>(</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>  <span class="at">landscape_params  =</span> shared_landscape_params,</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>  <span class="at">individual_params =</span> shared_individual_params,</span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>  <span class="at">genetic_params =</span> <span class="fu">list</span>(</span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>    <span class="at">genotype_means                 =</span> initial_genotypes,</span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>    <span class="at">genotype_sds                   =</span> <span class="fu">rep</span>(<span class="fl">0.4</span>,   initial_pop_size),</span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>    <span class="at">mutation_rates                 =</span> <span class="fu">rep</span>(<span class="fl">0.001</span>, initial_pop_size),</span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a>    <span class="at">plasticities                   =</span> <span class="fu">rep</span>(<span class="fl">0.001</span>, initial_pop_size),</span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a>    <span class="at">sampling_points                =</span> <span class="fu">rep</span>(<span class="dv">10</span>,    initial_pop_size),   <span class="co"># evaluate 10 candidate sites</span></span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a>    <span class="at">habitat_selection_temperatures =</span> <span class="fu">rep</span>(<span class="fl">0.1</span>,   initial_pop_size)    <span class="co"># strong softmax preference</span></span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a>  ),</span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a>  <span class="at">simulation_params =</span> shared_simulation_params,</span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a>  <span class="at">master_seed =</span> <span class="dv">49</span></span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a>)</span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a></span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a>(pop_s5 <span class="ot">&lt;-</span> sim_s5<span class="sc">$</span>summary<span class="sc">$</span>final_population_size)</span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a><span class="co">#&gt; [1] 357</span></span>
+<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a>(delta_behavior <span class="ot">&lt;-</span> pop_s5 <span class="sc">-</span> pop_s4)</span>
+<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a><span class="co">#&gt; [1] 156</span></span>
+<span id="cb10-23"><a href="#cb10-23" tabindex="-1"></a>(cumulative_gain <span class="ot">&lt;-</span> pop_s5 <span class="sc">-</span> pop_s2)</span>
+<span id="cb10-24"><a href="#cb10-24" tabindex="-1"></a><span class="co">#&gt; [1] 357</span></span></code></pre></div>
+<p>The simulation results in N = 357 (change: 156 from Scenario 4).
+Habitat selection added complexity beyond the effects of evolution and
+tolerance. Cumulatively, tolerance was the critical transition that
+enabled population persistence, while evolution introduced sources of
+variation that alone could be detrimental. Habitat selection allows
+individuals to actively seek favorable environmental conditions, thereby
+decoupling where an individual lands from where it ultimately survives
+<span class="citation">(Ravigné, Dieckmann, and Olivieri
+2009)</span>.</p>
+</div>
+<div id="comparative-analysis" class="section level2" number="4.7">
+<h2><span class="header-section-number">4.7</span> Comparative
+Analysis</h2>
+<p>The table below summarizes population outcomes across all five
+scenarios. The “Change” column shows each mechanism’s incremental
+contribution, revealing relative importance and potential interaction
+effects:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># Summary table showing progressive mechanism effects</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>results_summary <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>  <span class="at">Scenario =</span> <span class="fu">c</span>(<span class="st">&quot;S1: Uniform&quot;</span>, <span class="st">&quot;S2: Diversity&quot;</span>, <span class="st">&quot;S3: Tolerance&quot;</span>,</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>               <span class="st">&quot;S4: Evolution&quot;</span>, <span class="st">&quot;S5: Behavior&quot;</span>),</span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>  <span class="at">Final_N =</span> <span class="fu">c</span>(pop_s1, pop_s2, pop_s3, pop_s4, pop_s5),</span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a>  <span class="at">Change =</span> <span class="fu">c</span>(<span class="st">&quot;—&quot;</span>,</span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>             <span class="fu">sprintf</span>(<span class="st">&quot;%+d&quot;</span>, pop_s2 <span class="sc">-</span> pop_s1),</span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a>             <span class="fu">sprintf</span>(<span class="st">&quot;%+d&quot;</span>, pop_s3 <span class="sc">-</span> pop_s2),</span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a>             <span class="fu">sprintf</span>(<span class="st">&quot;%+d&quot;</span>, pop_s4 <span class="sc">-</span> pop_s3),</span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a>             <span class="fu">sprintf</span>(<span class="st">&quot;%+d&quot;</span>, pop_s5 <span class="sc">-</span> pop_s4)),</span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a>  <span class="at">Mechanism_Added =</span> <span class="fu">c</span>(<span class="st">&quot;None (baseline)&quot;</span>,</span>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a>                      <span class="st">&quot;Genetic diversity in optima&quot;</span>,</span>
+<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a>                      <span class="st">&quot;Tolerance (niche width)&quot;</span>,</span>
+<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a>                      <span class="st">&quot;Mutation + plasticity&quot;</span>,</span>
+<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a>                      <span class="st">&quot;Habitat selection&quot;</span>)</span>
+<span id="cb11-16"><a href="#cb11-16" tabindex="-1"></a>)</span>
+<span id="cb11-17"><a href="#cb11-17" tabindex="-1"></a>results_summary</span>
+<span id="cb11-18"><a href="#cb11-18" tabindex="-1"></a><span class="co">#&gt;        Scenario Final_N Change             Mechanism_Added</span></span>
+<span id="cb11-19"><a href="#cb11-19" tabindex="-1"></a><span class="co">#&gt; 1   S1: Uniform       0      —             None (baseline)</span></span>
+<span id="cb11-20"><a href="#cb11-20" tabindex="-1"></a><span class="co">#&gt; 2 S2: Diversity       0     +0 Genetic diversity in optima</span></span>
+<span id="cb11-21"><a href="#cb11-21" tabindex="-1"></a><span class="co">#&gt; 3 S3: Tolerance     148   +148     Tolerance (niche width)</span></span>
+<span id="cb11-22"><a href="#cb11-22" tabindex="-1"></a><span class="co">#&gt; 4 S4: Evolution     201    +53       Mutation + plasticity</span></span>
+<span id="cb11-23"><a href="#cb11-23" tabindex="-1"></a><span class="co">#&gt; 5  S5: Behavior     357   +156           Habitat selection</span></span></code></pre></div>
+<p>The figure below shows population trajectories over time (left panel)
+and final population sizes (right panel) across scenarios. Note that
+Scenarios 1-2 (red bars, extinct) differ fundamentally from Scenarios
+3-5 (green bars, viable), suggesting tolerance is a critical threshold
+parameter. The trajectory panel reveals temporal dynamics: Scenario 3
+shows initial decline then stabilization (demographic adjustment to
+carrying capacity), while Scenarios 4-5 show enhanced dynamics from
+evolutionary and behavioral mechanisms. All scenarios started with
+N=1000 (black horizontal line in left panel):</p>
+<p><img role="img" aria-label src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA2AAAAGwCAMAAAD47faQAAAA51BMVEUAAAAAADoAAGYAAP8AOjoAOmYAOpAAZAAAZpAAZrY6AAA6ADo6AGY6OgA6Ojo6OmY6OpA6ZmY6ZpA6ZrY6kLY6kNtmAABmADpmAGZmOgBmOjpmZmZmkJBmkLZmkNtmtrZmtttmtv+QOgCQOjqQZgCQZjqQZmaQkDqQkGaQkLaQtpCQttuQtv+Q29uQ2/+gIPC2ZgC2Zjq2ZpC2kDq2kGa2ttu227a229u22/+2/7a2/9u2///bkDrbkGbbtmbbtpDb25Db27bb29vb2//b/7bb/9vb////tmb/25D/27b//7b//9v///88eDbWAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAgAElEQVR4nO2dC5vctnWGuRpL211bdmpnJ1WaOJq1naRWox03aaxYrNKkyXK0w///e0rcD8DLECQA3r7vsbVzIQAODl7ifpCVEARFUzb1DUDQmgXAICiiABgERRQAg6CIAmAQFFEADIIiCoBBUEQBMAiKKAAGQREFwCAooqYGLM+EvnjX7/rzffbi0f7kv943fFrTMdO66RWvk0S/m9mIlNWyZ++78oB8l8zO5flPL7Ps6st3jZGk11wAy67e9rq+lmcfXz2LDRhPotfNbEXDAYtu5+oSkc5hHvaZDWA9s6KWZ8espfQ7ugBYd9B+SWxHBLCuy5oAi23nnreWTNMDxjPi41482v76yyz75NcsZ6sM/XP15vm7UmXu0z67Uxn/11esufFWcvPsJ2kOEzzPrv7wQxXcel5WgW9kqlffv8qevTPxyHjPVZirr4RlP1RNjU9eqyTeO7Gz8D/WAv2Pbp6sWrmpiETGWdntZqoIkcjOx+yqstnHqh47iEiq6HTVOYGlZgKYNFluHnKqxrl625Dxhf7OyngSPCfBtQhg4joTj4hXGuM5uyV5A3casFrsL/7pBspn9fCMpwbATHa7mSpDJLKzrOlOtyoSAtgUlpoJYH/bs79Vrghj3fGMr2qYD7xB52Z89c+/PIo8FN8Jc9DgOX8oitdaFLAX78q/k3hEDEeWpoi3su3PHz/y2xLJO7HL8Fag6g5vHtk93zX+1vVIt8MOBjCV3bVMlSES2bl6efXrH8Vrk/4xm8pS0wOmJDJA1B28VFfW06/dpkNlKjZYdGNlPA2e8+BVZtIOFwXsID+T8aiH3V0pC4OILP/yR2X3euy1QFVyz39MlXNTqgkwmt00U50Qse0sBzmev3kkgOWqAktvqdkARloUuWgT8Fwkr0nGn78TgayMt4KLpgh7UJHEaB+MNylMPDxwle3qZmgnm9jWir0pUKY6B6tWA2Amu51MdULEtzPrO4uGoLqSmUhgmN5SMwGMdzdVNhUsO2TGk9em1cGy5/l//G1vZ7wVvBdgJB4eQ5FRC+iQPImG2GuByo+vxKv/TJN5k6lpkENlt5upKkRKO//t97cEcBbNTak7h2ktNT1gpp954clmMl60yp/2Y2swEo+K9+DcC9PFGuxgkvj4+5dZ36Ho5aoLMDdTVYg0dhZBSnG9vPKY6YGP9JaaE2CtbfNcjU7d6UrjUNY7v3bbvAdgJB7r2WjupfjiTXMfzADmpFF9+u3qhxG7AHMzVYVIY+fq1dXXbHz/VgNWqDHGSSw1K8DaRpf4J2xqwzzZXjx+vJff6Va9PbrUrwZT8SjTXb1mczXCLF/xNopqhtRjrwXiI4+s9bHxGszOVBkikZ3NaIoZuVJjhVNYalaANc2PyEaDEGmbq84va1g3zo/07INZ/XE5UcK/PNpJvK/HXg/0Q2bCr1mX+mBNgxyJ7KzDqApP97xuJrHUvAATU/Rfs1dVA+Cn77JMzLWfqi7pl3+2R5eev+Fh2eT88x/pDP/XIt6+o4giHlkWPn53q9IUKzlYZDyJd/XYy3ogPoLVd0HrctUFWD1TRYhUdj5zG/ABQhewKSw1NWCtSrwAkI4aQgm19oWeAEzoo9sBhtIIgE2ktBl/zNa/vmmeAmATKWnGs57xV8lSg4gAGARBgwXAICiiABgERRQAg6CIAmAQFFHTA/a0v/rDvVoZwJaZ/bPD38nZ/U5+/KdxHhZaorWv+fA5m/t/417nhj3dLn1YrLLIW7Xi6KplsYM7+Nfq1Oayt7WaU7xz8yqLPkZqvr3z4PI13pjTA5ZXP0lv+WYvahl5EbAzcdU1SD1s9/RKFqDnbnFwwlbvFz6jltNlgC3L9foCdtnbWs0pns5pJxuHA1YOLl/jjTk5YPwnPO3F76reNDwxLgKWwFWXKXC1R7R7S/nCF9Nzi5Df27jCpS9gl6e53CtIyvbzcgRgw8vXaGNODlgh/Qmp/SN6Dbb22KU8e7EWoNqjSryrlbarrtL4W6PXNfsVK23/a8QdmOvWi3l1eC32GcldEio6dkv/vCebbO19fctTQbf1i60hNMPPP9xmz98chWMLXcnRxbynW7kF/Nl76gzK9rBWc4qnxNzYvBHWtG1yrhlJe9+7eHuDy9doY04OmLBMkUl/JNrLg/HYRXc0WBtEdGONuuoi/tYa3HQ5fsVKy/+avQ3CqhLtVrzlpozfUk72AErfKotVTjdwVz/JznCyHaQNMNEiy4UTAAqYyfe6UzwlXcmcv/nq/0pqk3OLkbRnto7bG1y+RhtzasDkKnb+uJOZq7YCEY9dzEnaB7ovUntX46Kuuhx/a+q6Zr9ipeV/jWzkc916kf0QypkRiU75DZBXHRfdRhQWsWsw253dzSN7wruAKQmX1Vff38rtXrrYUg9rNad4Ws4OI2KTpt2W3Ho9bm94+RprzKkBU/l5lI2rO9IONh675ENP7jCi3tW4zsRVF/G3Rq9r9itWUv9rdCu669bLolmUpwNtcYhSWZDt74uV3NRlekJ3VkZqz09tfTCWA7xsa6MZwLQJak7xtEhOl2VJbdLkL4Cn1uP2hpevscacGjCVn+zJI3+p2WvHpK3BS7aqLkhjg6vuqqu03HTVdgTKqOnOSepM5ey49aoDRnfw8tLDrWu8sSxWuhRK3Tw6/s7kA7ELMLM7wQLMyTOhTsAcmzR6vOlze8PL11hjzgUw9sz5ixjr0bvFjccuO5Op+y0t4qpLNTHodc1+xRq91/B6yHHrZTURmwBjbUTVXl8TYGy8gWakaXF09MGqELcyD1oBc7wLadlNRGqTupGM76JLtze8fK0FMPYI/Hfx1FNPEdtjl/2EOTTGQVx1yc/1dc1+xVprsNJx61Uf5HAAY0VG2WIlgFU58keRAQ3u7LoB43jq67xqMDLI8eW73jXYpdsbXr5WA5hptqunCPHYpbs21lNMyXLVRfyt0eua/YrZzjVo856LuPWSw/TnD7euMyM9uHX1Upaa1QDGf/aNXauQTk47YFWwl5kcI2gCrO4UzwpLhukv9MF4Rve4veHla+mA6R/DH3o38pXtsYt49lKZrL2rcVFXXdTfGrmu2a+YDRgZoKq59SKdft49rwHGDWgq0uQZGUx6kENWBazw2e7sbh7PR3dSP6fZwzLyH3vTwqoD5jrFI1WaPdF8YRRRtUMv3d7w8rX0QQ7TGs9VB1m3kU0nVJvOmqegno1M2Sf+1sh1zX7FbMDoFEvNrZdZKvWubAKMxSpNsbJhejG1p3OD+lkzooCJ9nTheluzHEA5TvF+Im1GndNfkYhb5sG0R9ELt1cOLl9LH6Y3a1GEKUs6yiM9dtVn2ql3NR7EuOoqib81cl2zXzEHMOIOrO7W68y+zD5/TVqBVn+iyExdvPCJZlOaeemz/Z2d/3ibffK6fRTx2ftCtQ7ZrK7xtmZ7WLOd4v1IAFOLfeU0ibZJ3Ui6+Xbx9sqh5Wu0MScHrFh0h4WoUGvnTrfL/kXTWOQ4T6deo405OWDVI2LRK/eUqv6afGgWi24hTmSR0+08S8FoY04OWFXPz/PZ5SXeatce0BfdQpzEIufvvk6dZD+NNub0gD3tlzzmJsVmCn4uXq5hw+XSf0EwrWHDJQStWAAMgiIKgEFQRAEwCIooAAZBERUUsAwaoZCWgOaisICFjGxrQuatUgBsLkLmrVIAbC4Kl3lHtfhYLKMrsrUs91yiIgCmFgI87YWHIWcvOVuGw5YyM7dz7t8tK5glxPK5gu0Y4U7q1AtoCvmYVe2haV09UgOM77ChTu9+yMxuoJv63y0rFGDCi+35nu8YuTEvoEnkYdZcrXss2hZAZtxvKwGM70N99l5uFmJuSz5nHJ1un737uGebuu2/Y3/MohUKsPzFt3zjL1udnrO8lS8CRQ/5qb9ZxaOQK29Zws8oYi4NDGDMjQgB7LdvCrGJldVaV2/dv2N/zKIVCLDTp29ZH6z6U70pKsDUC5ISZgbSqX8eP+31jp2i5XmYlacKLgPYs98xr9R2H0wAxl2NHNy/A3/DOhSmtLPHIANM9Lqqf/WLaElCXQpbg/32ZWYB9tN99prUYCUAa1eY0s5MA8BmJK8+mCSgvQ/23/+wa7CqB3D1sgkwNBFrClLaeYPwUhMxbJJQp3zyWDrbad9EnZUfbm3AmDOUehMRgxwNClLale+ZQ69BDgAWX8HXIjqAuW74CwzTtyjsRHOvYXoAFl9hAbv6Omcu2glgFVENgC10ovkoHwPne+txoKsN9cHTLwa0dgOv5Ogz0QzA4ivCRPNqdeQOOW9IxaAlejpKcwCMO/uWrvLblkqt3F6zUNiJ5vH3M5F2bSLXCGzUuAEfrtP5IAE7C4fq7Er58vzN76vizf1qH6rPvxenjqiDWe9Jh3aCzFuuvZajsMP04+9nGrXyRQHjlZd501CDiertxWMFGP8+Zy6auStm5t9d9k7Z9/sD+15dI6IAYKtU4InmVYuNogoc6PE7XAKw02f8ZI9DBRjPovP9wYBYMMAO/K/MP3WN+B6ArVKowbxkTraxHzJytkm0++4qwOTAx53kh7FpAMvVMUfiGhEFAFulwk40j7+f2UsNZ+iah3xKAdMn9x3kIcJFHTDrOQXAVqnAE81rlqizKkgKccZbHTC3iVhKwDh4LU1ELQC2SmFHc2/x8Qq2JsJAo9UwyCEWBIpr+aF07AThgwYtvynVNSIKALZKhcjjQT6UIFcBLOFruPRJbk6xJpofHsbc1RYFwFapWBPNAMxXAGxKnV6pIzLFgbL8mHSuZAfw+Q3TAzBfAbAJxZfaZGJecirA/CaaAZivANiEOmbP3lWQ3blnxpp5z6FCDTYXAbDpdP7hJVu5JjYD09qj4TB1T8WaaAZgjv5+6QIANrE+8A1HeXZ1m129Fh8V2Wg/FrEmmlcJmNoPVtr7U2S+1J51ZNcKq/4vbGIBYNPqmF19XaoxDlGF1JacDlCsieY1Aqb3g7E/VxSw5secA9gFAbBJxQY3nr8vn77Jfv5YveZPy6pXNtoREwDrLb0frPo3/1fuXUZQowHjG/P5bky1LUyu3fiJbYEmu8T0xjAiADaxSH0lyRrfAwNgUtdtIteQ/WCnn/3vpw01WMGdkBzIiim1OEo2EfU3cmMYvQUANrUK/cwTgIlRj5ECYEytfFHAzH6w8zdvG/pgN5w0tuPZrPl1ANPfyI9p7ABsOp1+yXxvGcAKte98vKtOn3kws2xus/NgYl4kv3MGOZQdquZh9R/ZteIApr8BYLMSPzDjI2sinvaiD8b3P4Q49skjj52DiLojWylgfPjw9LPHFsCKZ39hlRgAW5rEso2rgxpF5GTlAbpgnot9LzRJLcCu269bpvR+MOKomMsA9rT/VdUIRBNxGUqy48ErSHGhTWoBtroqTO8HY2+aa7DqoXfjbAu74TV/bZADgE2v7MFXsQHziGyFgInmgxz6O1nD9LpKE46qife26rur7z9jLsStYXoANgMtGrDdGgGLKgCWWgBsUwJgqbVowNY7jBhLACy1ANimBMBSC4BtSgAstQDYpgTAUguAbUoALLUA2NykNlxyFylmLbyYByOzWi0bxLp3XAKw1AJgM5PecFnYS8YET0dK3IBV2AAstQBYOrVmKbnGbLg8qg2WdMMl+0Iv1PiVPmiPLfCQGzFr5/JZtwDAUguAJVN7lpKL9Frn8zcvLccksgY76BP1yEF7/OA9uRGTLEYU6xotAbDUAmAzk9pw+bRn/vN+5vTBxAlF/DwVa6mhPOyB/THL6Rt8dACw1AJg85NxREn6WeJlfqVP3TOAiYP35EZMsiHMPl2MC4ClFgCboxoO4BOAsY1ist1njimS1ZrYiAnA5iUANi85B/CZMXcNmGoV6oP25MF7ciOm1UQEYJMLgM1LrQfwySaiHLoozEF76uA9uRHTGuQAYJMLgM1NasOlGu2wNlyqozmu3pr9lFUA3jgUGzHpMD0Am14AbFMCYKkFwDYlAJZaAGxTAmCpBcA2JQCWWgBsUwJgqQXANiUAlloAbFMCYKk1O8DkAeztHrsB2AgBsNSaG2C5Opq5zxnNAMxXACy1ZgYY2WGRt5xcC8BGCICl1swAI/szisvngwEwXwGw1JoZYKjB4gqApdbMAKv6YOoo4n59MBDmJQCWWnMDTB/T01J/AbBRAmCpNTvAvCK7BmB+AmCplRSwInPORR10x+Q1zi/ylJ/xWu2VywOG2RXOi5FJrk7pADOuXM73HQc/e000AzBPeRivw17shNuC8cT+sV+MSnKNSgbY079RG9nviPwmmgGYpzwmTNrtxT3KiYOhmY2O5MWoJFepmfXBPIfpAZinwpV2Bpg4LLqqz/SLqEkuUjMDrH2iOdOinwIwP4Ur7XnVIBTe5SpD6RckpUZ7bU/pmoh7k+VdPTCvGgyAecrnUddlr4L5GJa9rupf/WJUkqvUBDXYsa13xeQ30QzAPDWktDfbi3mPA2CXlRyw6snYOUrvNdEMwDzlb7xWe1U4dTURRyS5KqUGrOhoH3pHBsB85W28dnudbg8Y5LisxIDl7TWTf2QlAPOVr/Ea7SVwKpj3YQzTX1JSwM73Xd0voWOW3fDJ5raGJAAbIT/jtdnryN0G32GiuYdSAnap+8XExg6P3Mf6HoMc4eVlvHZ7HdUDUK+ZyrFUqlkJAevT/dLPRQzTR5GP8cZ3l72TXKHSAZZnjU10W+TYxj47mgGYp7x25vWwV9gk16g5TjSjBoumUBPNUZJcpWa2VMr0wRoOGG6IDID5CfvBUmtugGEUMaoAWGrNbbtKv8i0AJifgmxXiZXkKjW7DZf9IlMCYH4Ks+EyVpJr1LJdBgAwTwVyGRAvydVpdn0wv8gAmJ/QB0stALYpAbDUAmCbEgBLLQC2KQGw1AJgmxIASy0AtikBsNRKC9jTPnvxeLy4J6xfZEwPD9ejItuaPI0X3F7bU9p5sKu3+YvH1p1efpFxPaAK85LnPFhwe21PKQFj63fZYt5m3w2ekQkBMD95GS+CvbantDuaD9xgbTu9vCITgmtfP3nuaA5ur+1pihrsOMrxDQAboUE1WEB7bU8T9MHygGvbAJifhvTBQtpre0o+itjqHMU7MiYA5if/UcSw9tqeFj4PBsD8hHmw1AJgmxIAS620o4hiB1/IUSkA5iXPUcTw9tqcEjse7XTI5hWZFADzkq/j0eD22pzSAvabPfezDMCmkidg4e21OSWeaObezgHYZPKdaA5ur80p9UoOdl7HBwA2lbxXcoS21+aUHLDydBvSUywA85I/YIHttTmlB6z6A8Cm0gDAwtprc1r4PBgA8xPmwVILgG1KACy1Ep6ucqcP7EATcSr1N14ke21OqME2JdRgqTU7wPjJKl1PTQA2QgAstRICdrq94+7OO7c/5OrY7aLtvHQANkI+xutlr7BJrlDpADvdstNhs4N40SJy7F6vEy4BmJ88jNfLXmGTXKPSAXZkS7OPrOV3bD/8V069MPU6oxmA+cnDeL3sFTbJNSrlKCKroJitOta2oQaLK69RxB72CprkKpUQsIO0WqfBtAMI9MFiyAewXvYKmeQqlRYw0Zxvq5u41ORL6zUuYCDMQ56A9bBXwCRXqbR9sJyNSIl2x/A7tt4BMC959sHC22tzSgdYcfX2ac+ehcdRLQ7HYNcAzEcexotjr80p4TxYwdt9p9vuBofnRDO83njJx3j97BU0yRVqbis5fCeaAZiXsJIjtWYGmPcwPQDzEgBLrZkB1j7RnGlZAQCYlwBYas0MMO8aDBNhXgJgI/XhZZZ98pq9+vgqy754Jz493bYu2JwZYN4TzQDMSwBsnHLRiLrjrkr0UFzF2mIA851oBmBeAmCjVBXOm8fzt4yrY/b83cc9Q+384bZjy0FSwC4OwftEJgXAfORnvBj2WrROn2d8iwGbImRs5awe4LXaPAAbOWVpRyYFwHzkZ7wY9lqB8gqnqoXIUatyKM+++jAPwHqdps2Meuqsc+23AMxHnm7bRp1+PiTJJaiqvF48KsCqYvo/r8XfZk3gF7FTnK9P33ZcDMBGaIhfxJRJLkBPrzK+C1UDVpZzAazHqlH+0BQb/DBMH0Fexhu5yndIkvPXx70aRJwfYHwDerfYQ1POhfXb0QzAvORnvDZ78cEPYaRMF7G2MrYuwCRfJemDlbMBrI+fPb5Jwq8GA2H95dlEbLbX+b4qTnl2w1fc8//Ni5FJzl1Pkq+SjCKWswGs3y949p5XYS3mAmCjFKS0y22Y0lDsmahfxEpyLjpmav2DmQcrFwUYb2wwtTb/nciwIcxHAUt7wcaqJWn6RdwkJ5dYvsFbw3Qlx3wA43cV1s8eAPORp/G67HWsuGLDvayzrF+MT3KGygbIBE4JmFhfmF8c6ugVmRQA85HvIEe7vdh3ohlf/atfkJSadz8sUdm1t6YBTC2VD+pEBYD5yHOYvt1ehRrjaANsWJKz1GIAUxOXYd2AATAPDZpobrCXqNu20kRcCmBRajAA5qNANZh07LCRQY7FABalDwbAfBSmD6Y+2cgw/XIAizGKCMB8FGQUkR+7wrWNieYFARZCAGyEglgi15NB7KXAKl/xUikABvUVdjQP0OYBA2G9BcAGaBmARTtUG4B5yMeBHg5Bl1oGYMHkRoaZZg+hBhugxQD29AvRDQ470QzAPOQ30RzFXsvT4gBrnpD0jEwLgHloEGBh7bU8LQSwo1n+OcqXCgAbIQ/jxbLX8rQQwMwTceTPdd4DMA8NqsESJjlLLQawMAJgI4RBjgFaDmBq3Bd9sKnkZ7wo9lqelgPY8cVjfiPXYA//ue4HAKy//IwXx16L02IAY04PC+bMO+yp9QCsvzz3g0Wx1+K0IMAO5emz9/z/ET/X/QCA9Zf3hssI9lqcFgMY2zXERqYA2GTy3nAZwV6L02IA4zOWxzs0EaeTn/Hi2GtxWg5gbM/r037coBQAGyNP40Wx1+K0IMBCqAEwENZXmAfjImcqH8Xzg529/PxN89UADID1FQBjImcqF2KWT27Sbp6P2DpgmGnuLwBmn6nMptIrwM732YvHCrvmzuYyANO794KvDABg/eWz4TKWvaYWPVP5KH6dOCvl2PJDlwFYX108eBuAjRBqsJKeqVxkz35Ha7DmE0dWBViu9kYUbZskANgIAbCSnKlcVVyHnD/KK7gqtZ1ItxTAevh4UM5ky94H8JUYp/eQ50qOVTYRS33c0LGqsgRg5+/Y7/xy4YCpX9dhL3Luds8jZEsA5qEhpX2cx4AZA8YPgM11E5H/03T10gBrcbHMhRosrgaV9g57xUoysgRges/2nX2kuavFAdb1SNSO0Pv3wTAR1l+DSvv6nN6sHLBOJyqq4d+6/q2ePkY5emtQaV+f0xuCUi6H6XkTcR3D9E/7wE0OANZbQ0p7cHtNLxcwtZKjudG0GMAuVk4+kREBsN4aNIoY2l4TKBsgE3gpgPWS/0QzAOuvrc6DZTtvrRSwARPNAKy/ANi6AeONjq4Wx6BhegDWW57Gu2iv8EnG0UYAE2cg5h1HXLZPNDe0jZV2AKyv/Ix32V7Bk4ykbQB2vhf0HNufiYNqMMw095anT46L9gqdZCxtA7A+p3UMmWiOCtjDquj1G0Vcz+kq2wBMPRE7nagMmGiOCAH/xZHinkKDarAVOL3ZBmBVrcQslrfszPaMjCgWBPIXR4l7Gnn2wSLZK722AViYTbIN6ccaRtw4YNHslV7bAMxDHf7Q0wO2IsIwD7ZxwHo8NAHYCAGwdQN2us2ylj0BUnLw0K8GizMRptjif/qm0PtGIo98tsTuabzL9rosAJYOMEFPd6f5ac/GrLwBC19cdd1Fq7EL6XjcR8yKkTwZnER8Bzku2+uiAFgywNQs8oVh32P1yJweMFI6JWDq/+4wHvF7fts7cn279NEg5DlM38teFwTAkgGm1kFdmrjM2RZTH8BYJyw0YaRkkqLqFthakOYvGz7tvOPGiKwPWwKzK+itjgKsr726BcCSAdb7icia/tMCZhVMU2prBdYCpeFb9XFzCm0J03ge7K9qidYjrVmMXIAabM2A9W/Tn++nBayRox6AiXdNQe23jbUd7fA9mO6ffQdt92fdJHk1BjD0wWTgxQAWbVTqOuxAfVPxJSXW/Zy+Im00K6AbjxsTRcoQRoPSL0icbiTuBfbtYhRx3YCFUBrA2r5oqp/oC9JEMxfUeXMBMx+RV22AOSrVPekY2odbMA8GwIZElhqwBlw0YHbRrxX7RsAamXkwbNp/azJp63tv+QkAbMWAMc89o1rzNDJHFWC78VFLtRRO820bGe4HpdXjeijppxYPdhh9Ey5H1tqSmmFKE3WrfIwX016ptQXA8u7pLb/IXKUGjJRxWouRwA8GLRrKBsy8dxuWVgTWV1ZSLmOXpsI9jBfVXqm1AcDEmO+4EV8dWU1BhxG7ozKF2UVAfW0uJH0h9yonppZ0agFrSbiAdau/8eLaK7U2AJiYtRx5kICKrKagazkuRGW33dRn9liH+ozclsMIuaIFDfXxw8ODvRbSitRcEBawuPZKLQDmF1ldIUc5LkdVJ4O+sq+i71qjaUmkNfX6DQOwLgEwv8jqCgZYv4LaUD81X9P6Tn/UN8HOewFg3QJgfpHVdT2+mAr1jScAFySuQBFdFAADYH0iqysUYCG5maGCAXb6jH9RZPq047YVHwAsFWAhHDyUrQYLQ9jK+Qq2t/xpzz9jnkm5d1L9YkySEbUBwIKpDTBG2PXYyFfOVyhLFAI6MZR/vDEv4iU5TgBsfGQcsKF0mEH2gREsRGEsUWR3vO0o5qHzZ+/1i2hJjhQAGx8Zr8IG1mEPdOHfmhXMEgKwT9+Kl/pFzCTHCICNj2wwYNavG3Vr81dYwESvq/pXvyAptR/WMYEA2PjI2O+qAPMmzP51I29u7koHWPgkxwiAjY9MAOZfhQmuAJif0ETcHGAVYbshiFCuAFhfYZBje4BVmbWRLG4AAAviSURBVDKgFtpExaUVFjAM028KMLGm/gItjQtuA9zVQhQWMEw0bw2w3SVe6t9uCa/ggLFdzwKrHEulNgHYrm3F1APZgux8EfLm5q4JSjsAWxVgu8a9zfLWGzpc3RXe6gTAANiIyDhgmjDCjrn7+h4tALa6JOsCYEEi04A9qIUd1YfX1lSy00rcGF8ADICNiWy3Y/9bgLFfawFmubiwYNuCANjmATvfX9gzdikyWYdJrK7lC1NzObB53NoKBMC2DlguTrjUR136R7azqywClrrCfLw1vgDY1gFTJ+aU7S75+gPW4FKQy0VvQwJgGwdMnflWtruDuAjYTgF2LVFzV9gDsJUnWRcAkwpQgzHCZDdMA2YTJsHaIF8AbOuAmdPeBvfBOGAcn2tB1rULmBTha7Qvj6UIgG0dMO3NqNUp+uXIdvwcCDFWz161AKaGOESWeNziDLQbeNQFANs8YAEic0tfNz4yS/rXYkMLdzCJAjAoKAADYOMjq5W+LsBMpjR91xz9xTuIK1UEBgQFYJsHbPREswDMKn4dgNFcsaq667a+24WiHR8/8fMAmI8AmNL4ieayVMVPl8FuwOQfqx6TuNUCso/ayrYu+IOKft9Q5rcNSQaAbRywEMP0TYCJ0UTnsmtSS9UBo29JEAFYvXCLD70B0ylobHr8tJ0O0CcB+hsA2MYBa59o9vGztzOlnb8XqIiiRsqljZBGis+jmSDXZe2a6gLKL//rmKfPTcoYyS33BEy9KusDONd04PTaafYCsM0DFrAG08W1+of8dFOEFUWl/X6nACvrFRkBjMZvqq7egKmLVOQmyl7B5GvajDVzfhor9xcCsM0DFmKiuQEwQpgpofXi54x50Pc759sGwLjjOJ6c+KTHHZpKlAF2vavdT0M467UIbkhVt07e+WZeaAGwWQEWYqJZF3LCGUHDpsUJp/kRH5BgsgPmEsaD6CR0623nVEWmOWk1KEmEhN3a71G3YH+n7tb5gY68My+wANi8AAsWmR5rE2X6Wo0LEloawriF3ARRXxAS5BbqhuLsIrbbmbqNA3bdCVhrvWqxJyq8S7YelHkBBcBWDBjtH9FeiXjiNwRRjTSbDlL2rfZmE2CyS9UM2E7dikB4t9OsaxpcLK5dhsgX1xbwJfnXicQ78wIKgM0LsLxqHvJuWLMjZk+D7UjJLjVBTvGzhg3cV1YoGY2JwsLLdHokezwwK/M7ArqmWMCwEwCXbi+q1GMXrkr6BRnyNF2u6+u2aXIAtnXA8qu3VTeM+WAOBJj8o0GrFVRFQmlhpeaa1KeaLzLwT3jQYJEPJVPitRkVsesc9WlJhtbp/Zm39M51IppXOpTYMDw/KPPCCIDNCTAxTH++f/EYBjApk22lbkTR8YhdrVFnGpgaMPo1ZcmuOggRpvRfXxPALFBIsk2AmQuvd1ZrVLKkflPj0EigzBspADYnwNRE8/HFY0jA6GgHky6Qpti3ASY/vXYGGGQsCgTnI82U/c6MrBtQdg4Z9Csz+a37kVZYMy+2c6NpEQDbOGB6ovl4ExQwZ/Ge5kbRVVvbR6BrLbp1vtSnDmgUCfFHXVM2rQ7WJJGOFL0NE1lJG8F9cgGAbRww3TB82retpx9sMHuO1qh5/4esby4C1vRxaVdEO3eor6uXpO6PQunwYwFGgnT/fC4AtnXA9FKO831owKgoXs1L09VnXQW3GTD6rWzduYMhfW7PXKwWithx14P0aCgCsM0DliwyAlhTyWyCrqZuXCycfPgqFWLkRnuFuHglAANgqSJzAGv8/lIc3bi43/oAVmrEe2BjLpdX0hBWUAAGwFJFttuRfc8DAfNUVMAaVvXLj8k1AAyAJY1MqakAhwfMUzYova63x2/K2mMCgAGwpJHNWp58OaFEUADGBcAmimzWGsSXaimSF0QADIAljWzW2jWMz/cJZYLX+ARgACxpZOtWvf4DYAAsaWQrFwCTAmATRbY1ATAAljSyrQmAAbCkkW1NAAyAJY1sawJgACxpZFsTAANgSSPbmgAYAEsa2dYEwABY0si2JgAGwJJGtjUBMACWNLKtaZaAfXyVZV+8Gxh9v8AAbKLItqY5Ana67TwyOEhgADZRZFvTHAE7Zs/ffdy3nVYVJjAAmyiyrWmGgD1xPPL286pCBAZgE0W2Nc0QsKqRd2DnLQ5qI/YNDMAmimxrmjFgV28HRN43MACbKLKtCYABsKSRbU0ADIAljWxripZ5RdZWyNEHA2DbUazMKyq6imbCMIoIwLajSJknTp063gxKEvNgAGw1ipR5p1t2JE7ziW5YybE0wKARCmkJo9OnrHVY0HI+9Q9difrlf7RKZ0TEw4NOkug099tXovvV0gmDoguATRkUgK1eAGzKoAkAa2giQgkFwKYMmgKwjkEOKL4A2JRBEwDWNUwPxRcAmzJoinmNjolmKL4A2JRBk0wc5q1LpaD4AmBTBsXM/OoFwKYMCsBWLwA2ZVAAtnrBxBAUUQAMgiIKgEFQRAEwCIooAAZBEQXAICiiABgERRQAg6CIAmAQFFEADIIiCoBBUEQBMAiKKAAGQREVB7B2d+hdOt9nmXAEOyT8kfto9g/J/GPeDEs0r+734B/09Nl7K9Cw3Iqtp31m3IbKWx4Q2Bh1SMrem0Wtu5ZlYkBg/ioL4WchCmDDdqmf76sgOftVQ8IX3Am6f8iiCva0H5RozkLwEw68gj7tuQ11oHnu6ec/rDyK+5K3PCCwMeqQlJmvHq+sse5alokhgYUvrhCKAdhAPyva/9GQ8NUjp8pM/5AixKBEz/c3IoRf0EI8JHWgmXqlETckfmPh6z7bBB7g1MoEftrfqVvwDluqMjEocDg3dzEAG+UprHpgDQmfv/i2ykz/kPpR5R9UA+YVtMjuuPV0oHn6VaPFWt3yoMAiBo9ayA3sA5h9rSgTgwLnwZ53UQAb4+vyWBU5//BVENbe9g9ZPPvLnvcRBiSqmoi+QQVgKtBMPYMWVrPO8/YKp0149AnuBM79mogmrCwTgwIfP/fuObYoBmBjvDVXT8sB4Vkzi2Wmf8icNX7Ys2vITcvRCd+gvLTqQHP1bc0GfzQXvvxbgblRBwYuPMu5CavKxJDAT3sW8BiCsJkBVqgxDk9MqvwYCNiVrD8G3DR7Lp9u/R8IywCs5COAarjAv4Ilgf2H40zg6qXn+X8yrCoTgxMO06qYVxNRPOq8w/MAw5qIou9T9YP8g5pe1BqbiFKycTfs9kRgz/rLSXnQs0f1M/wBowkLA4/UrAY5cmEK7/C5PLHp4J+yKDmVNQYEVVWPb9AlDHKowiVLtx9gVuDcky8nZa9yTsLqMjEi4RBj9TMapq9McRgR/jhomP5pz9IshgzTC4MMCFosYJheDakVQ2owGjj3KOJuYJ3DQxJm8qrBxiTcrhlNNLPuzIjwx2ETzbni0j+o6oP5Bi2WMdHM81NWP96jiCqwMeqQlM1D0z8sk+8ookmYz8DMdZBjoDt0WamLZsXQpVL+IQs1IOsf9DgsaOEsA5qn83i+Wkjdl+/DXAcmRh2S8tGrkVc6dz1oqdTAhNuExb4QFFEADIIiCoBBUEQBMAiKKAAGQREFwCAoogAYBEUUAIOgiAJgEBRRAAyCIgqAQVBEATAIiigABkERBcAgKKIAGARFFACDoIgCYBAUUQAMgiIKgEFQRAEwCIooAAZBEQXAICiiABgERRQAg6CIAmAQFFEADIIiarWAiXPi2anxf9kH8YEMQQO0WsCYwp0VD0HDBMAgKKI2ABg7Aux0+xt21jk7hJcfdxfqiGsI6tZmALt6Kw48Z0dJsoOZBxxcBUHe2gxgd6X65/C0Z2zN9VRkaFXaDGCHUv8jjpMMcsQ1BHVrk4B5n48NQQO1ScBmeGArtFJtEbAnzDxDqbRFwPgoYnlEPQbF1yYB4/NgGESEEmjVgEHQ1AJgEBRRAAyCIgqAQVBEATAIiigABkERBcAgKKIAGARFFACDoIgCYBAUUQAMgiIKgEFQRAEwCIooAAZBEQXAICiiABgERRQAg6CIAmAQFFEADIIiCoBBUEQBMAiKKAAGQREFwCAoov4friKpCABRSwMAAAAASUVORK5CYII=" alt style="display: block; margin: auto;" /></p>
+</div>
+<div id="verifying-phenotype-environment-matching" class="section level2" number="4.8">
+<h2><span class="header-section-number">4.8</span> Verifying
+Phenotype-Environment Matching</h2>
+<p>The check_habitat_match() function visualizes phenotype–environment
+alignment by comparing survivor trait values with their occupied
+locations. It produces two panels: the landscape colored by
+environmental values (left) and survivor positions colored by phenotype
+or genotype values (right). Both panels share the same color scale.
+Effective matching is indicated when survivor dots visually “blend” with
+the underlying landscape gradient.</p>
+<p>Scenario 3 (Tolerance only): Without evolution or active habitat
+selection, matching arises solely through differential survival. Poorly
+matched individuals die, leaving survivors in locations where their
+traits happen to fit. This passive filtering produces moderate spatial
+structure.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">2</span>))</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a><span class="cf">if</span> (pop_s3 <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>  <span class="fu">check_habitat_match</span>(sim_s3,</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>                           <span class="at">color_by =</span> <span class="st">&quot;phenotype&quot;</span>,</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>                           <span class="at">landscape_colors =</span> <span class="st">&quot;terrain&quot;</span>,</span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a>                           <span class="at">point_size =</span> <span class="fl">1.5</span>,</span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a>                           <span class="at">show_legend =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a>}</span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a><span class="co">#&gt; Habitat Matching Statistics (colored by Phenotype ):</span></span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a><span class="co">#&gt; ----------------------------</span></span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a><span class="co">#&gt; Number of survivors: 148 </span></span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a><span class="co">#&gt; Phenotype distribution:</span></span>
+<span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a><span class="co">#&gt;   Mean: 44.961 </span></span>
+<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a><span class="co">#&gt;   Range: 6.306 to 83.283 </span></span>
+<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a><span class="co">#&gt; Habitat value at survivor locations:</span></span>
+<span id="cb12-19"><a href="#cb12-19" tabindex="-1"></a><span class="co">#&gt;   Mean: 39.87 </span></span>
+<span id="cb12-20"><a href="#cb12-20" tabindex="-1"></a><span class="co">#&gt;   Range: 0 to 100 </span></span>
+<span id="cb12-21"><a href="#cb12-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb12-22"><a href="#cb12-22" tabindex="-1"></a><span class="co">#&gt; Phenotype-Habitat correlation:0.062</span></span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt style="display: block; margin: auto;" /></p>
+<p>Plots show survivors generally occupying regions matching their
+phenotypes, demonstrating that differential survival alone can produce
+reasonable phenotype–environment alignment.</p>
+<p><strong>Scenario 4 (Evolution added):</strong> Mutation allows
+gradual shifts in genotype toward better local adaptation. Over the
+short simulation (100 events), changes are subtle, so the primary
+mechanism remains differential survival. Any improvement is seen as
+slightly tighter alignment between survivor traits and local
+environmental values.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>))</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="cf">if</span> (pop_s4 <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>  <span class="fu">check_habitat_match</span>(sim_s4,</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>                           <span class="at">color_by =</span> <span class="st">&quot;phenotype&quot;</span>,</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>                           <span class="at">landscape_colors =</span> <span class="st">&quot;terrain&quot;</span>,</span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>                           <span class="at">point_size =</span> <span class="fl">1.5</span>,</span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a>                           <span class="at">show_legend =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a>}</span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a><span class="co">#&gt; Habitat Matching Statistics (colored by Phenotype ):</span></span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a><span class="co">#&gt; ----------------------------</span></span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a><span class="co">#&gt; Number of survivors: 201 </span></span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a><span class="co">#&gt; Phenotype distribution:</span></span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a><span class="co">#&gt;   Mean: 31.085 </span></span>
+<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a><span class="co">#&gt;   Range: 6.808 to 77.884 </span></span>
+<span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a><span class="co">#&gt; Habitat value at survivor locations:</span></span>
+<span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a><span class="co">#&gt;   Mean: 43.538 </span></span>
+<span id="cb13-18"><a href="#cb13-18" tabindex="-1"></a><span class="co">#&gt;   Range: 0 to 100 </span></span>
+<span id="cb13-19"><a href="#cb13-19" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb13-20"><a href="#cb13-20" tabindex="-1"></a><span class="co">#&gt; Phenotype-Habitat correlation:0.109</span></span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt style="display: block; margin: auto;" /></p>
+<p>Plots resemble Scenario 3, with enhancements indicating subtle
+evolutionary adjustments.</p>
+<p><strong>Scenario 5 (Habitat selection added):</strong> Active habitat
+selection produces the strongest matching. Individuals evaluate multiple
+locations (<code>sampling_points=10</code>) and preferentially settle
+where their phenotype aligns with the local environment, guided by the
+softmax function with temperature=0.1.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>))</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a><span class="cf">if</span> (pop_s5 <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>  <span class="fu">check_habitat_match</span>(sim_s5,</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>                           <span class="at">color_by =</span> <span class="st">&quot;phenotype&quot;</span>,</span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>                           <span class="at">landscape_colors =</span> <span class="st">&quot;terrain&quot;</span>,</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a>                           <span class="at">point_size =</span> <span class="fl">1.5</span>,</span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a>                           <span class="at">show_legend =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a>}</span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a><span class="co">#&gt; Habitat Matching Statistics (colored by Phenotype ):</span></span>
+<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a><span class="co">#&gt; ----------------------------</span></span>
+<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a><span class="co">#&gt; Number of survivors: 357 </span></span>
+<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a><span class="co">#&gt; Phenotype distribution:</span></span>
+<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a><span class="co">#&gt;   Mean: 56.822 </span></span>
+<span id="cb14-15"><a href="#cb14-15" tabindex="-1"></a><span class="co">#&gt;   Range: 17.411 to 92.396 </span></span>
+<span id="cb14-16"><a href="#cb14-16" tabindex="-1"></a><span class="co">#&gt; Habitat value at survivor locations:</span></span>
+<span id="cb14-17"><a href="#cb14-17" tabindex="-1"></a><span class="co">#&gt;   Mean: 39.885 </span></span>
+<span id="cb14-18"><a href="#cb14-18" tabindex="-1"></a><span class="co">#&gt;   Range: 0 to 92.64 </span></span>
+<span id="cb14-19"><a href="#cb14-19" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb14-20"><a href="#cb14-20" tabindex="-1"></a><span class="co">#&gt; Phenotype-Habitat correlation:0.602</span></span>
+<span id="cb14-21"><a href="#cb14-21" tabindex="-1"></a><span class="co">#&gt;   -&gt; Positive match: individuals in habitat matching their phenotype</span></span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt style="display: block; margin: auto;" /></p>
+<p>Plots show clear spatial segregation, with survivor dots closely
+aligned to the landscape gradient, demonstrating successful
+selection.</p>
+</div>
+</div>
+<div id="computational-considerations" class="section level1" number="5">
+<h1><span class="header-section-number">5</span> Computational
+Considerations</h1>
+<div id="performance-scaling" class="section level2" number="5.1">
+<h2><span class="header-section-number">5.1</span> Performance
+Scaling</h2>
+<p>TWoLife’s computational cost is dominated by neighbor calculations
+that occur during each demographic event (birth, death, dispersal).
+Understanding these scaling relationships helps in designing feasible
+simulation experiments:</p>
+<ul>
+<li><p><strong>Population size</strong>: Cost scales
+<strong>quadratically</strong> (O(N²)) with population size because each
+event requires updating neighbor lists (O(N) operation), and larger
+populations generate proportionally more events. Doubling population
+size increases runtime approximately 4-fold.</p></li>
+<li><p><strong>Landscape size</strong>: Indirectly affects cost through
+carrying capacity. Larger landscapes support proportionally more
+individuals at equilibrium (density = N/area). Doubling landscape
+dimensions increases area 4-fold, supporting ~4× more individuals, which
+increases cost ~16-fold due to O(N²) scaling.</p></li>
+<li><p><strong>Habitat selection</strong>: Cost scales linearly with
+<code>sampling_points</code>. Use sampling_points=1 for exploration,
+10-100 when habitat selection mechanisms are scientifically
+important.</p></li>
+<li><p><strong>Simulation duration</strong>: Cost scales linearly with
+<code>max_events</code>.</p></li>
+</ul>
+<p><strong>Recommendation:</strong> Start with smaller simulations
+(15-30 cell landscapes, N = 40-100, sampling_points = 1) for parameter
+exploration. Scale up cautiously, recognizing that doubling landscape
+dimensions costs ~16× more computation.</p>
+</div>
+<div id="memory-usage" class="section level2" number="5.2">
+<h2><span class="header-section-number">5.2</span> Memory Usage</h2>
+<p>Memory usage scales linearly with simulation duration because TWoLife
+stores complete event histories. Each event requires approximately
+200-500 bytes depending on genetic architecture, so a simulation with
+10,000 events requires roughly 2-5 MB. Memory is not a limiting factor
+for most applications, but for extremely long simulations (&gt;1 million
+events), monitor memory usage.</p>
+</div>
+</div>
+<div id="references" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> References</h1>
+<div id="refs" class="references csl-bib-body hanging-indent" entry-spacing="0">
+<div id="ref-Barrett2008" class="csl-entry">
+Barrett, Rowan D. H., and Dolph Schluter. 2008. <span>“Adaptation from
+Standing Genetic Variation.”</span> <em>Trends in Ecology &amp;
+Evolution</em> 23 (1): 38–44. <a href="https://doi.org/10.1016/j.tree.2007.09.008">https://doi.org/10.1016/j.tree.2007.09.008</a>.
+</div>
+<div id="ref-Bell2009" class="csl-entry">
+Bell, Graham, and Andrew Gonzalez. 2009. <span>“Evolutionary Rescue Can
+Prevent Extinction Following Environmental Change.”</span> <em>Ecology
+Letters</em> 12 (9): 942–48. <a href="https://doi.org/10.1111/j.1461-0248.2009.01350.x">https://doi.org/10.1111/j.1461-0248.2009.01350.x</a>.
+</div>
+<div id="ref-Bolnick2011" class="csl-entry">
+Bolnick, Daniel I., Priyanga Amarasekare, Márcio S. Araújo, Reinhard
+Bürger, Jonathan M. Levine, Mark Novak, Volker H. W. Rudolf, Sebastian
+J. Schreiber, Mark C. Urban, and David A. Vasseur. 2011. <span>“Why
+Intraspecific Trait Variation Matters in Community Ecology.”</span>
+<em>Trends in Ecology &amp; Evolution</em> 26 (4): 183–92. <a href="https://doi.org/10.1016/j.tree.2011.01.009">https://doi.org/10.1016/j.tree.2011.01.009</a>.
+</div>
+<div id="ref-Bolnick2003" class="csl-entry">
+Bolnick, Daniel I., Richard Svanbäck, James A. Fordyce, Louie H. Yang,
+Jeremy M. Davis, C. Darrin Hulsey, and Matthew L. Forister. 2003.
+<span>“The Ecology of Individuals: Incidence and Implications of
+Individual Specialization.”</span> <em>The American Naturalist</em> 161
+(1): 1–28. <a href="https://doi.org/10.1086/343878">https://doi.org/10.1086/343878</a>.
+</div>
+<div id="ref-DeAngelis2005" class="csl-entry">
+DeAngelis, Donald L., and Wolf M. Mooij. 2005. <span>“Individual-Based
+Modeling of Ecological and Evolutionary Processes.”</span> <em>Annual
+Review of Ecology, Evolution, and Systematics</em> 36: 147–68. <a href="https://doi.org/10.1146/annurev.ecolsys.36.102003.152644">https://doi.org/10.1146/annurev.ecolsys.36.102003.152644</a>.
+</div>
+<div id="ref-DeWitt2004" class="csl-entry">
+DeWitt, Thomas J., and Samuel M. Scheiner. 2004. <span>“Phenotypic
+Variation from Single Genotypes.”</span> In <em>Phenotypic Plasticity:
+Functional and Conceptual Approaches</em>, edited by Thomas J. DeWitt
+and Samuel M. Scheiner, 1–9. New York: Oxford University Press.
+</div>
+<div id="ref-Fahrig2003" class="csl-entry">
+Fahrig, Lenore. 2003. <span>“Effects of Habitat Fragmentation on
+Biodiversity.”</span> <em>Annual Review of Ecology, Evolution, and
+Systematics</em> 34: 487–515. <a href="https://doi.org/10.1146/annurev.ecolsys.34.011802.132419">https://doi.org/10.1146/annurev.ecolsys.34.011802.132419</a>.
+</div>
+<div id="ref-Fretwell1970" class="csl-entry">
+Fretwell, Stephen D., and Henry L. Lucas. 1970. <span>“On Territorial
+Behavior and Other Factors Influencing Habitat Distribution in
+Birds.”</span> <em>Acta Biotheoretica</em> 19 (1): 16–36. <a href="https://doi.org/10.1007/BF01601953">https://doi.org/10.1007/BF01601953</a>.
+</div>
+<div id="ref-Futuyma1988" class="csl-entry">
+Futuyma, Douglas J., and Gabriel Moreno. 1988. <span>“The Evolution of
+Ecological Specialization.”</span> <em>Annual Review of Ecology and
+Systematics</em> 19: 207–33. <a href="https://doi.org/10.1146/annurev.es.19.110188.001231">https://doi.org/10.1146/annurev.es.19.110188.001231</a>.
+</div>
+<div id="ref-Gillespie1976" class="csl-entry">
+Gillespie, Daniel T. 1976. <span>“A General Method for Numerically
+Simulating the Stochastic Time Evolution of Coupled Chemical
+Reactions.”</span> <em>Journal of Computational Physics</em> 22 (4):
+403–34. <a href="https://doi.org/10.1016/0021-9991(76)90041-3">https://doi.org/10.1016/0021-9991(76)90041-3</a>.
+</div>
+<div id="ref-Gillespie1977" class="csl-entry">
+———. 1977. <span>“Exact Stochastic Simulation of Coupled Chemical
+Reactions.”</span> <em>The Journal of Physical Chemistry</em> 81 (25):
+2340–61. <a href="https://doi.org/10.1021/j100540a008">https://doi.org/10.1021/j100540a008</a>.
+</div>
+<div id="ref-Grimm2005" class="csl-entry">
+Grimm, Volker, and Steven F. Railsback. 2005. <em>Individual-Based
+Modeling and Ecology</em>. Princeton, NJ: Princeton University Press.
+</div>
+<div id="ref-Hairston2005" class="csl-entry">
+Hairston, Nelson G., Stephen P. Ellner, Monica A. Geber, Takehito
+Yoshida, and Jennifer A. Fox. 2005. <span>“Rapid Evolution and the
+Convergence of Ecological and Evolutionary Time Scales.”</span>
+<em>Proceedings of the Royal Society B</em> 272 (1573): 1405–12. <a href="https://doi.org/10.1098/rspb.2004.2977">https://doi.org/10.1098/rspb.2004.2977</a>.
+</div>
+<div id="ref-Justeau-Allaire2022" class="csl-entry">
+Justeau-Allaire, Dimitri, Ghislain Vieilledent, Nicolas Rinck, Philippe
+Vismara, Xavier Lorca, and Philippe Birnbaum. 2022. <span>“Unifying
+Niche and Connectivity: <span>NMR</span>-Based Fragmented Landscape
+Generation with Spatial Structure Objectives.”</span> <em>Methods in
+Ecology and Evolution</em> 13 (3): 717–26. <a href="https://doi.org/10.1111/2041-210X.13773">https://doi.org/10.1111/2041-210X.13773</a>.
+</div>
+<div id="ref-Kawecki2004" class="csl-entry">
+Kawecki, Tadeusz J., and Dieter Ebert. 2004. <span>“Conceptual Issues in
+Local Adaptation.”</span> <em>Ecology Letters</em> 7 (12): 1225–41. <a href="https://doi.org/10.1111/j.1461-0248.2004.00684.x">https://doi.org/10.1111/j.1461-0248.2004.00684.x</a>.
+</div>
+<div id="ref-Lande1976" class="csl-entry">
+Lande, Russell. 1976. <span>“Natural Selection and Random Genetic Drift
+in Phenotypic Evolution.”</span> <em>Evolution</em> 30 (2): 314–34. <a href="https://doi.org/10.2307/2407703">https://doi.org/10.2307/2407703</a>.
+</div>
+<div id="ref-Levins1968" class="csl-entry">
+Levins, Richard. 1968. <em>Evolution in Changing Environments: Some
+Theoretical Explorations</em>. Princeton, NJ: Princeton University
+Press.
+</div>
+<div id="ref-Lynch1998" class="csl-entry">
+Lynch, Michael, and Bruce Walsh. 1998. <em>Genetics and Analysis of
+Quantitative Traits</em>. Sunderland, MA: Sinauer Associates.
+</div>
+<div id="ref-McNamara1987" class="csl-entry">
+McNamara, John M., and Alasdair I. Houston. 1987. <span>“Stochastic
+Dynamic Programming and the Evolution of Behaviour.”</span> <em>The
+American Naturalist</em> 130 (2): 220–36. <a href="https://doi.org/10.1086/284707">https://doi.org/10.1086/284707</a>.
+</div>
+<div id="ref-Milne1992" class="csl-entry">
+Milne, Bruce T. 1992. <span>“Spatial Aggregation and Neutral Models in
+Fractal Landscapes.”</span> <em>The American Naturalist</em> 139 (1):
+32–57. <a href="https://doi.org/10.1086/285312">https://doi.org/10.1086/285312</a>.
+</div>
+<div id="ref-Pigliucci2001" class="csl-entry">
+Pigliucci, Massimo. 2001. <em>Phenotypic Plasticity: Beyond Nature and
+Nurture</em>. Baltimore, MD: Johns Hopkins University Press.
+</div>
+<div id="ref-Ravigne2009" class="csl-entry">
+Ravigné, Virginie, Ulf Dieckmann, and Isabelle Olivieri. 2009.
+<span>“Live Where You Thrive: Joint Evolution of Habitat Choice and
+Local Adaptation Facilitates Specialization and Promotes
+Diversity.”</span> <em>The American Naturalist</em> 174 (4): E141–69. <a href="https://doi.org/10.1086/605369">https://doi.org/10.1086/605369</a>.
+</div>
+<div id="ref-Schoener2011" class="csl-entry">
+Schoener, Thomas W. 2011. <span>“The Newest Synthesis: Understanding the
+Interplay of Evolutionary and Ecological Dynamics.”</span>
+<em>Science</em> 331 (6016): 426–29. <a href="https://doi.org/10.1126/science.1193954">https://doi.org/10.1126/science.1193954</a>.
+</div>
+<div id="ref-Violle2012" class="csl-entry">
+Violle, Cyrille, Brian J. Enquist, Brian J. McGill, Lin Jiang, Cécile H.
+Albert, Catherine Hulshof, Vincent Jung, and Julie Messier. 2012.
+<span>“The Return of the Variance: Intraspecific Variability in
+Community Ecology.”</span> <em>Trends in Ecology &amp; Evolution</em> 27
+(4): 244–52. <a href="https://doi.org/10.1016/j.tree.2011.11.014">https://doi.org/10.1016/j.tree.2011.11.014</a>.
+</div>
+<div id="ref-Wiens1976" class="csl-entry">
+Wiens, John A. 1976. <span>“Population Responses to Patchy
+Environments.”</span> <em>Annual Review of Ecology and Systematics</em>
+7: 81–120. <a href="https://doi.org/10.1146/annurev.es.07.110176.000501">https://doi.org/10.1146/annurev.es.07.110176.000501</a>.
+</div>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
