@@ -1354,11 +1354,13 @@ snapshot_at_time <- function(simulation_result,
 
 #' Create Fractal Landscape with Spatial Autocorrelation
 #'
-#' Generates spatially autocorrelated landscapes using iterative neighbor averaging,
-#' a simplified fractal-like algorithm. Creates realistic habitat patterns with
-#' controllable fragmentation and clustering. Supports both square and rectangular
-#' landscapes, and can generate either continuous environmental gradients or
-#' binary habitat/matrix patterns.
+#' Generates spatially autocorrelated landscapes using iterative neighbor averaging.
+#' Produces realistic habitat patterns with controllable spatial clustering by
+#' progressively blending each cell toward its neighbors. Supports both square and
+#' rectangular landscapes, and can generate either continuous environmental gradients
+#' or binary habitat/matrix patterns. Note: the algorithm produces spatially
+#' autocorrelated patterns rather than strict fractals in the mathematical sense;
+#' the \code{fractality} parameter controls the degree of spatial smoothing.
 #'
 #' @param cells_per_row Integer. Number of cells per row (matrix rows). Must be positive.
 #'   Typical values: 10-100 for most simulations. Larger values increase resolution
@@ -1414,69 +1416,76 @@ snapshot_at_time <- function(simulation_result,
 #'   }
 #'
 #' @details
-#' ## Fractal Generation Algorithm
+#' ## Landscape Generation Algorithm
 #' 
-#' The function uses iterative neighbor averaging to create spatial autocorrelation:
+#' The function generates spatially autocorrelated landscapes through iterative
+#' neighbor averaging applied to an initial random grid:
 #' 
 #' **Step 1: Initialization**
 #' 
-#' Each cell \eqn{(i,j)} starts with random value:
+#' Each cell \eqn{(i,j)} is assigned an independent random value:
 #' \deqn{v_0(i,j) \sim \text{Uniform}(0, 1)}
 #' 
 #' **Step 2: Iterative Smoothing**
 #' 
 #' The algorithm performs \eqn{n_{\text{iter}}} smoothing iterations:
 #' 
-#' \deqn{n_{\text{iter}} = \text{round}(10 \times \text{fractality})}
+#' \deqn{n_{\text{iter}} = \max\!\left(1,\; \text{round}(10 \times \beta)\right)}
 #' 
-#' At each iteration \eqn{t}, cell values are updated:
+#' where \eqn{\beta} = \code{fractality}. At each iteration \eqn{t}, every cell
+#' value is updated as a weighted blend of its current value and the mean of its
+#' 8-connected (Moore) neighbors:
 #' 
-#' \deqn{v_{t+1}(i,j) = \alpha \cdot \bar{v}_t(i,j) + (1-\alpha) \cdot \varepsilon_{i,j}}
+#' \deqn{v_{t+1}(i,j) = (1 - \beta)\, v_t(i,j) + \beta\, \bar{v}_t(i,j)}
 #' 
 #' Where:
 #' \itemize{
-#'   \item \eqn{v_t(i,j)} = value at cell \eqn{(i,j)} at iteration \eqn{t}
-#'   \item \eqn{\bar{v}_t(i,j)} = mean of 8-connected neighbors (Moore neighborhood):
-#'     \deqn{\bar{v}_t(i,j) = \frac{1}{N_{\text{neighbors}}}\sum_{(i',j') \in N(i,j)} v_t(i',j')}
-#'   \item \eqn{\alpha = 0.9} = smoothing weight (high value preserves spatial structure)
-#'   \item \eqn{\varepsilon_{i,j} \sim \text{Uniform}(0,1)} = random noise (maintains variability)
-#'   \item Edge cells use only available neighbors (\eqn{N_{\text{neighbors}} < 8})
+#'   \item \eqn{\beta} = \code{fractality} controls the blend weight toward neighbors
+#'   \item \eqn{\bar{v}_t(i,j) = \frac{1}{N_{\text{neighbors}}}\sum_{(i',j') \in \mathcal{N}(i,j)} v_t(i',j')}
+#'     is the mean of all available 8-connected neighbors
+#'   \item Edge and corner cells use only their available neighbors
+#'     (\eqn{N_{\text{neighbors}} < 8})
+#'   \item No random noise is re-injected between iterations; all spatial
+#'     variability is inherited from the initial random values
 #' }
 #' 
 #' **Step 3: Finalization**
 #' 
-#' After all iterations:
+#' After all iterations, the smoothed matrix is first range-normalized to \eqn{[0, 1]}:
 #' 
-#' For **continuous landscapes** (habitat_proportion = NULL):
-#' \deqn{v_{\text{final}}(i,j) = \text{min\_value} + v_n(i,j) \times (\text{max\_value} - \text{min\_value})}
+#' \deqn{\tilde{v}(i,j) = \frac{v_n(i,j) - \min(v_n)}{\max(v_n) - \min(v_n)}}
 #' 
-#' For **binary landscapes** (habitat_proportion specified):
+#' For **continuous landscapes** (\code{habitat_proportion = NULL}), values are then
+#' linearly rescaled to \eqn{[\text{min\_value},\, \text{max\_value}]}:
+#' 
+#' \deqn{v_{\text{final}}(i,j) = \text{min\_value} + \tilde{v}(i,j) \times (\text{max\_value} - \text{min\_value})}
+#' 
+#' For **binary landscapes** (\code{habitat_proportion} specified), cells are
+#' thresholded on the normalized values:
 #' \itemize{
-#'   \item Sort all cell values
-#'   \item Set top \code{habitat_proportion} quantile to 1 (habitat)
-#'   \item Set remaining cells to 0 (matrix)
-#'   \item Result: spatially clustered binary pattern
+#'   \item Compute threshold \eqn{\tau} = \code{(1 - habitat_proportion)} quantile of \eqn{\tilde{v}}
+#'   \item Cells with \eqn{\tilde{v}(i,j) \geq \tau} are set to 1 (habitat)
+#'   \item Remaining cells are set to 0 (matrix)
 #' }
 #' 
 #' ## Spatial Autocorrelation
 #' 
-#' The iterative averaging creates spatial autocorrelation described by:
-#' 
-#' \deqn{\text{Cor}(v(i,j), v(i',j')) \approx \exp\left(-\frac{d}{\lambda}\right)}
-#' 
-#' Where:
-#' \itemize{
-#'   \item \eqn{d = \sqrt{(i-i')^2 + (j-j')^2}} = distance between cells
-#'   \item \eqn{\lambda \propto \text{fractality}} = correlation length scale
-#'   \item Higher fractality → larger \eqn{\lambda} → longer-range correlations → bigger patches
-#' }
+#' Each smoothing iteration spreads the influence of each cell's initial random
+#' value to its neighbors, creating positive spatial autocorrelation: nearby cells
+#' end up with more similar values than distant cells. The strength and range of
+#' this autocorrelation increase with \code{fractality}, because higher values
+#' produce both a stronger blend per iteration and more iterations. Low
+#' \code{fractality} yields fine-grained, weakly correlated patterns; high
+#' \code{fractality} yields broad, strongly correlated gradients. The exact
+#' functional form of the spatial correlation decay depends on landscape size and
+#' \code{fractality} and is not analytically prescribed by this algorithm.
 #' 
 #' ## Comparison to Other Methods
 #' 
 #' \tabular{llll}{
 #'   \strong{Method} \tab \strong{Spatial Structure} \tab \strong{Computation} \tab \strong{Parameters} \cr
-#'   This function \tab Moderate \tab Fast \tab Simple (fractality) \cr
-#'   Midpoint displacement \tab Strong fractal \tab Medium \tab Hurst exponent \cr
+#'   This function \tab Spatially autocorrelated \tab Fast \tab Simple (fractality) \cr
+#'   Diamond-Square \tab True fractal (self-similar) \tab Medium \tab Hurst exponent \cr
 #'   Random fields (NLMR) \tab Tunable \tab Slow \tab Multiple parameters \cr
 #'   Percolation \tab Binary only \tab Fast \tab Threshold only \cr
 #' }
@@ -1484,9 +1493,11 @@ snapshot_at_time <- function(simulation_result,
 #' Advantages of this method:
 #' \itemize{
 #'   \item Fast computation (suitable for parameter sweeps)
-#'   \item Intuitive fractality parameter (0-1 scale)
+#'   \item Intuitive \code{fractality} parameter (0--1 scale)
 #'   \item Supports both continuous and binary landscapes
 #'   \item No external dependencies
+#'   \item Users requiring strict fractal structure or multi-scale self-similarity
+#'     can supply any custom matrix to \code{twolife_simulation()} directly
 #' }
 #' 
 #' ## Parameter Selection Guidelines
