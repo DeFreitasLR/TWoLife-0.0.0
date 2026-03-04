@@ -102,19 +102,22 @@ environmental variation structures individual fitness:
 
 -   **Discrete landscapes**: Space is divided into binary categories
     where cells are classified as either suitable habitat (value=1) or
-    unsuitable matrix (value=0). Individuals can persist only in habitat
-    cells; matrix cells are immediately lethal regardless of individual
-    traits. This paradigm corresponds to traditional patch-matrix
-    landscape ecology [@Fahrig2003].
+    unsuitable matrix (value=0). In matrix cells, individuals experience
+    maximum mortality ($\mu_{\max} = m \cdot \mu_0$) and, for perfect
+    specialists ($\sigma_g = 0$), zero birth rate, making long-term
+    persistence effectively impossible. This paradigm corresponds to
+    traditional patch-matrix landscape ecology [@Fahrig2003].
 
 Landscapes are generated using `create_fractal_landscape()`, which
-produces realistic spatial patterns with self-similar structure across
-scales [@Justeau-Allaire2022]. The fractal algorithm ensures that
-pattern complexity — the degree of patchiness versus smoothness —
-remains similar whether the landscape is viewed at fine resolution
-(individual cells) or coarse resolution (blocks of cells). This property
-mimics natural spatial processes where environmental structure often
-exhibits scale-invariant patterns [@Milne1992; @Wiens1976].
+produces spatially autocorrelated patterns through iterative neighbor
+averaging. At each iteration, every cell value is
+updated as a weighted blend of its current value and the mean of its
+8-connected neighbors: $v_{t+1} = (1-\beta)\,v_t + \beta\,\bar{v}_t$,
+where $\beta$ = `fractality`. Higher `fractality` increases both the
+blend weight and the number of iterations, producing broader spatial
+autocorrelation. The algorithm does not produce strict fractal
+(self-similar) structure; it generates spatially clustered patterns
+suitable for ecological simulation.
 
 ## Individuals
 
