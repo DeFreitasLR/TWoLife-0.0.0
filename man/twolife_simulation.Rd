@@ -20,19 +20,19 @@ twolife_simulation(
   \item{cell_size}{Numeric. Length of the side of a landscape cell in world units. Defines the spatial resolution of the landscape. If habitat is a 100x100 matrix and cell_size = 1.0, the simulated world dimensions are 100x100 world units (world_width = 100, world_height = 100). All spatial parameters (step_length, neighbor_radius, coordinates) use these same world units. The position of individuals have are in continuous (x,y) coordinates and are not restricted to pixel centers.}
   \item{boundary_condition}{Integer. Defines what happens to individuals that reach the edges of world borders:
     \itemize{
-      \item 1 = reflective: agent keeps its speed, but its path "bounces" off the border at the same angle it hit it (angle of incidence equals angle of reflection);
-      \item 2 = absorbing: individuals that cross borders permanently exit the simulation and are removed from the population, generating emigration events (recorded as event type = 3)
-      \item 3 = periodic: individuals moving beyond one edge wrap to the opposite edge, creating torus topology (infinite landscape approximation)
+      \item 0 = absorbing: individuals that cross borders permanently exit the simulation and are removed from the population, generating emigration events (recorded as event type = 3)
+      \item 1 = periodic: individuals moving beyond one edge wrap to the opposite edge, creating torus topology (infinite landscape approximation)
+      \item 2 = reflective: agent keeps its speed, but its path "bounces" off the border at the same angle it hit it (angle of incidence equals angle of reflection)
     }}
   \item{density_type}{Integer. Determines how population density is calculated for density-dependent demographic processes to be applied to each individual:
     \itemize{
+      \item 0 = global: density calculated as total population size divided by total landscape area. Represents population-wide resource limitation.
       \item 1 = local: density calculated as number of individuals within a neighbor_radius distance of the focal individual. Represents local, spatially-explicit local competition (territoriality, local resource depletion).
-      \item 2 = global: density calculated as total population size divided by total landscape area. Represents population-wide resource limitation.
     }
     
     This density value is then used in birth and mortality rate calculations via birth_density_slope and mortality_density_slope parameters. See Details for mathematical formulas.}
   \item{matrix_mortality_multiplier}{Numeric. Mortality rate multiplier applied based on habitat suitability. Controls how mortality scales from optimal to unsuitable habitat. Values > 1 increase mortality in poor-quality habitat, creating "hostile matrix" effects. For perfect specialists (genotype_sds = 0), the multiplier is applied directly in non-optimal habitat. For Gaussian fitness individuals (genotype_sds >= σ_min), mortality is interpolated based on fitness, creating a smooth gradient. See Details section 'Mortality Rate Calculations' for formulas.}
-  \item{matrix_dispersal_multiplier}{Numeric. Dispersal rate multiplier applied based on habitat suitability. Controls the frequency of dispersal events in unsuitable habitat. Values < 1 reduce dispersal frequency in matrix, while values > 1 increase it. For perfect specialists (genotype_sds = 0), the multiplier is applied in non-optimal habitat. For Gaussian fitness individuals (genotype_sds >= σ_min), dispersal rate remains at base_dispersal_rate regardless of habitat. Important: This affects the rate of dispersal events, NOT the distance (step_length). See Details for mathematical formulas.}
+  \item{matrix_dispersal_multiplier}{Numeric. Dispersal rate multiplier applied based on habitat suitability. Controls the frequency of dispersal events in unsuitable habitat. Values < 1 reduce dispersal frequency in matrix, while values > 1 increase it. For perfect specialists (genotype_sds = 0), the multiplier is applied in non-optimal habitat. For Gaussian fitness individuals (genotype_sds >= σ_min), dispersal rate remains at base_dispersal_rate regardless of habitat — this parameter is ignored entirely for Gaussian individuals and setting it to any value other than 1 has no effect. Important: This affects the rate of dispersal events, NOT the distance (step_length). See Details for mathematical formulas.}
 }}
 
 \item{individual_params}{List containing individual-level parameters:
@@ -48,6 +48,7 @@ twolife_simulation(
     \item{mortality_density_slope}{Numeric. Controls the strength of positive density-dependence on mortality rate. Higher values cause mortality rate to increase more rapidly as local density increases. See Details sections 'Matrix Mortality Multiplier' and 'Density Calculations' for formulas.}
     \item{initial_placement_mode}{Integer. Determines how individuals are positioned at simulation start:
       \itemize{
+        \item 0 = all individuals placed at the landscape center (coordinate origin, x = 0, y = 0)
         \item 1 = uniform random placement 
         \item 2 = random placement following bivariate normal distribution centered on landscape center, with \eqn{\sigma_{placement} = L \sqrt{d_0}}
         \item 3 = custom coordinates (requires initial_x_coordinates and initial_y_coordinates)
@@ -137,11 +138,11 @@ Simulation Architecture:
 
   Population density is calculated differently depending on density_type:
   
+  For global density (density_type = 0):
+  \deqn{\rho_{global} = \frac{N_{total}}{\text{world\_width} \times \text{world\_height}}}
+  
   For local density (density_type = 1):
   \deqn{\rho_{local} = \frac{N_{neighbors}}{\pi r^2}}
-  
-  For global density (density_type = 2):
-  \deqn{\rho_{global} = \frac{N_{total}}{\text{world\_width} \times \text{world\_height}}}
   
   Where:
   \itemize{
@@ -154,9 +155,9 @@ Simulation Architecture:
 
   When individuals move beyond landscape edges:
   \itemize{
-    \item Reflective (1): Individual bounces back, remains in simulation
-    \item Absorbing (2): Individual exits permanently (emigration event, type = 3)
-    \item Periodic (3): Individual wraps to opposite edge (torus topology)
+    \item Absorbing (0): Individual exits permanently (emigration event, type = 3)
+    \item Periodic (1): Individual wraps to opposite edge (torus topology)
+    \item Reflective (2): Individual bounces back, remains in simulation
   }
 
   Event history records these event types:
@@ -344,15 +345,16 @@ Habitat Selection (Movement Module):
 
 --------------------------------------------------------------------------
 
-Evolutionary Layer:
-  The model implements quantitative genetics with mutation and plasticity:
-  
-  Inheritance and Mutation:
+  Birth events are asexual: the offspring is placed at the parent's exact
+  spatial coordinates and inherits all parent parameters, then immediately
+  undergoes two sequential steps before entering the population:
+
+  Step 1 - Inheritance and Mutation:
   \deqn{g_{offspring} = g_{parent} + N(0, \mu)}
-  
-  Phenotype Expression:
-  \deqn{p = g + N(0, \phi)}
-  
+
+  Step 2 - Phenotype Expression:
+  \deqn{p = g_{offspring} + N(0, \phi)}
+
   Where:
   \itemize{
     \item \eqn{g} = genotype (environmental optimum, heritable)
@@ -361,7 +363,7 @@ Evolutionary Layer:
     \item \eqn{\phi} = plasticities (controls phenotypic variation)
     \item \eqn{N(0, \sigma)} = normal distribution with mean 0, SD \eqn{\sigma}
   }
-  
+
   Key Differences:
   \itemize{
     \item Mutation affects inheritance: offspring genotypes differ from parent
@@ -369,6 +371,7 @@ Evolutionary Layer:
     \item Mutations are heritable (passed to next generation)
     \item Plasticity is not heritable (resampled each birth)
     \item Phenotype (not genotype) determines fitness and habitat selection
+    \item Offspring spawns at parent location (dispersal is a separate event)
   }
 }
 \section{Default Values}{

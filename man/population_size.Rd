@@ -53,11 +53,11 @@ Each event type contributes differently to \eqn{\Delta N}:
 
 ## Boundary Condition Effects
 
-Emigration events (type 3) only occur with **boundary_condition = 2** (absorbing):
+Emigration events (type 3) only occur with **boundary_condition = 0** (absorbing):
 \itemize{
-  \item boundary_condition = 1 (reflective): Individuals bounce back, no emigration
-  \item boundary_condition = 2 (absorbing): Crossing boundary causes emigration (\eqn{\Delta N = -1})
-  \item boundary_condition = 3 (periodic): Individuals wrap around, no emigration
+  \item boundary_condition = 0 (absorbing): Crossing boundary causes emigration (\eqn{\Delta N = -1})
+  \item boundary_condition = 1 (periodic): Individuals wrap around, no emigration
+  \item boundary_condition = 2 (reflective): Individuals bounce back, no emigration
 }
 
 ## Time Scaling
@@ -114,7 +114,7 @@ pop_trajectory <- population_size(result)
 head(pop_trajectory)
 
 # Plot population over time
-plot(pop_trajectory$time, pop_trajectory$population,
+plot(pop_trajectory$time, pop_trajectory$population_size,
      type = "l",
      xlab = "Time",
      ylab = "Population Size",

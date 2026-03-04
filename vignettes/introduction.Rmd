@@ -121,69 +121,58 @@ exhibits scale-invariant patterns [@Milne1992; @Wiens1976].
 Individuals are characterized by five genetic attributes that together
 determine ecological and evolutionary outcomes:
 
--   **`genotype_mean`** (Optimal environmental value): The environmental
+-   **`genotype_means`** (Optimal environmental value): The environmental
     condition at which the individual achieves maximum fitness,
     representing the genetically-determined optimal niche position.
     Values ideally match in the landscape's environmental scale. For
-    example, an individual with `genotype_mean = 0.3` is genetically adapted
+    example, an individual with `genotype_means = 0.3` is genetically adapted
     to environmental value 0.3 (e.g., cool temperatures if the gradient
     represents temperature). When an individual's phenotype
-    (genotype_mean plus noise from plasticity) exactly matches the local
+    (genotype_means plus noise from plasticities) exactly matches the local
     environmental value, fitness equals to its maximum.
 
--   **`genotype_sd`** (Niche width/tolerance): The breadth of
+-   **`genotype_sds`** (Niche width/tolerance): The breadth of
     environmental conditions the individual can tolerate, represented
     mathematically as the standard deviation ($\sigma$) in the Gaussian
     fitness function. This parameter governs the specialist-generalist
-    tradeoff: values near $\sigma_{min}$ (e.g., `genotype_sd = 0.4`) yield
+    tradeoff: values near $\sigma_{min}$ (e.g., `genotype_sds = 0.4`) yield
     near-maximum peak fitness with a very steep fitness decline away
     from the optimum — on a 0–100 landscape this niche width covers only
     $\approx 0.4$% of the environmental range, representing a true
-    narrow specialist. Larger values (e.g., `genotype_sd = 5.0`) produce
+    narrow specialist. Larger values (e.g., `genotype_sds = 5.0`) produce
     broader tolerance but lower peak fitness, illustrating the “jack of
     all trades, master of none” pattern [@Levins1968; @Futuyma1988].
 
--   **`mutation_rate`** (Mutation rate): Controls heritable genetic
+-   **`mutation_rates`** (Mutation rate): Controls heritable genetic
     variation transmitted across generations. This parameter determines
-    the standard deviation (μ_r) of mutations added to the offspring's
+    the standard deviation ($\mu_r$) of mutations added to the offspring's
     genotype at each birth event. Unlike plasticity, which affects
     phenotype but not inheritance, mutations modify the genotype itself
     and these modifications are passed to future generations. This
     enables evolutionary adaptation—populations can shift their genetic
-    composition in response to selection pressures [@Lynch1998]. The underlying
-    mathematical model is:
+    composition in response to selection pressures [@Lynch1998].
 
-    $g_{\text{offspring}} = g_{\text{parent}} +
-    \varepsilon_{\text{mutation}}$
-
-    where $\varepsilon_{\text{mutation}}
-    \sim N(0, \mu_r)$ and $\mu_r$ = mutation_rate parameter.
-
--   **`plasticity`** (Phenotypic plasticity): Controls non-heritable
+-   **`plasticities`** (Phenotypic plasticity): Controls non-heritable
     phenotypic variation arising from developmental or environmental
-    noise. This parameter determines the standard deviation (ψ) of
+    noise. This parameter determines the standard deviation ($\psi$) of
     random variation added to an individual's genotype at birth to
     produce its phenotype, which then remains fixed for the individual's
     lifetime. Importantly, the phenotype (not genotype) determines
     fitness and habitat selection, while only the genotype is
     transmitted to offspring. This distinction allows modeling of
     developmental variation that affects individual ecology but is not
-    inherited [@Pigliucci2001; @DeWitt2004]. Mathematically, the relationship can be expressed as:
-
-    $p = g + \varepsilon_{\text{plasticity}}$
-
-    where $\varepsilon_{\text{plasticity}} \sim N(0, \psi)$ and $\psi$ =
-    plasticity parameter (same principle as mutation).
+    inherited [@Pigliucci2001; @DeWitt2004].
 
 -   **`sampling_points`** (Habitat selection intensity): The number of
     potential dispersal locations an individual evaluates before
-    deciding where to move. When `sampling_points` is set to 0 or 1,
-    individuals move to randomly chosen locations without evaluation,
-    representing passive dispersal mechanisms. These two values are
-    conceptually equivalent in producing passive dispersal but differ in
-    implementation—0 triggers a random walk algorithm while 1 samples a
-    single random location. As sampling_points increases, individuals
-    gain the capacity to assess and compare multiple locations before
+    deciding where to move. When `sampling_points = 0`, individuals
+    perform a vision-angle-constrained random walk without evaluating
+    candidate locations, representing purely passive dispersal. When
+    `sampling_points = 1`, a single candidate location is sampled and
+    selected without any comparison — functionally passive, but routed
+    through the softmax evaluation path internally. As sampling_points
+    increases beyond 1, individuals gain the capacity to assess and
+    compare multiple locations before
     settling, selecting among them using a softmax function weighted by
     expected fitness. Unlike the ideal free distribution [@Fretwell1970],
     which assumes perfect information, the softmax implements
@@ -195,10 +184,25 @@ determine ecological and evolutionary outcomes:
     prevent unrealistic determinism where all individuals always select
     the single best available cell.
 
-All five attributes are heritable, enabling evolutionary dynamics and
-potential local adaptation over multiple generations [@Kawecki2004]. Fitness emerges
-from the interaction between these traits and local conditions, as
-defined in the Fitness section below.
+**Birth events are asexual:** the offspring is placed at the parent's
+exact spatial coordinates and inherits all parent parameters, then
+immediately undergoes two sequential steps before entering the
+population:
+
+$$g_{\text{offspring}} = g_{\text{parent}} + \varepsilon_{\text{mutation}}, \quad \varepsilon_{\text{mutation}} \sim N(0,\, \mu_r)$$
+
+$$p = g_{\text{offspring}} + \varepsilon_{\text{plasticity}}, \quad \varepsilon_{\text{plasticity}} \sim N(0,\, \psi)$$
+
+where $\mu_r$ = `mutation_rates` and $\psi$ = `plasticities`. Key
+distinctions: mutation acts on the genotype (heritable — passed to the
+next generation); plasticity acts on the phenotype (non-heritable —
+resampled independently at every birth); the phenotype $p$, not the
+genotype $g$, determines fitness and habitat selection; and the newborn
+occupies the parent's location — dispersal is a separate Gillespie
+event. Together these mechanisms enable evolutionary dynamics and
+potential local adaptation over multiple generations [@Kawecki2004].
+Fitness emerges from the interaction between these traits and local
+conditions, as defined in the Fitness section below.
 
 ## Fitness: How Traits Determine Survival
 
@@ -216,13 +220,13 @@ where:
 
 -   $W$ is the individual's fitness (a probability density value)
 -   $p$ (phenotype) is the individual's expressed trait value
-    (genotype_mean plus developmental noise from the plasticity
+    (genotype_means plus developmental noise from the plasticities
     parameter, sampled once at birth; see Individuals section above)
 -   $h$ (environment) is the environmental value at the cell where the
     individual currently resides (ranging from 0 to 100 in the
     continuous landscape used throughout this vignette, though any
     numeric range is valid; or 0/1 in binary landscapes)
--   $\sigma$ (genotype_sd) is the individual's tolerance parameter
+-   $\sigma$ (genotype_sds) is the individual's tolerance parameter
     (niche width; see Individuals section above)
 
 This function uses the **probability density form** of the Gaussian,
@@ -452,9 +456,9 @@ twolife_simulation(
 **Important note on genetic_params**: This list is optional. When
 `genetic_params` is omitted, TWoLife applies default values designed
 specifically for binary landscapes where habitat=1 and matrix=0. Under
-these defaults, all individuals have `genotype_mean = 1` (matching habitat
-value), `genotype_sd = 0` (zero tolerance, requiring exact environmental
-matches), `mutation_rate = 0` (no evolution), `plasticity = 0` (no phenotypic
+these defaults, all individuals have `genotype_means = 1` (matching habitat
+value), `genotype_sds = 0` (zero tolerance, requiring exact environmental
+matches), `mutation_rates = 0` (no evolution), `plasticities = 0` (no phenotypic
 noise), and `sampling_points = 0` (random dispersal). These defaults work
 well for exploring habitat-matrix simulations without genetic
 complications, as they create genetically uniform populations that
@@ -473,39 +477,41 @@ versions.
 
 ## Simulation Output
 
-Simulations return a list object containing four components that provide
+Simulations return a list object containing five components that provide
 different levels of detail about population outcomes. This structure
 balances the need for quick summaries (summary component), detailed
 individual-level data (survivors component), complete demographic
-records (events component), and reproducibility (parameters component):
+records (events component), reproducibility (parameters component), and
+landscape metadata (spatial component):
 
 -   **`summary`**: A list of final population statistics including
-    `final_population_size` (number surviving at simulation end),
-    `total_births` (cumulative birth events), `total_deaths` (cumulative
-    death events), `total_dispersals` (cumulative dispersal events), and
-    `final_time` (simulation duration). This component provides quick
-    assessment of population outcomes without requiring data processing.
+    `status` ("surviving" or "extinct"), `final_population_size`
+    (number of individuals at simulation end), `total_events` (total
+    number of demographic events processed), and `duration` (simulation
+    duration in time units). This component provides quick assessment of
+    population outcomes without requiring data processing.
 
 -   **`survivors`**: A data frame where each row represents one
-    surviving individual at simulation end. Columns include
-    `individual_id`, `genotype` (genotype_mean value), `genotype_sd`
-    (niche width), `phenotype` (expressed environmental optimum), `x`
-    and `y` (spatial coordinates). This component enables analysis of
-    trait distributions, spatial patterns, and phenotype-environment
-    matching among survivors. When populations go extinct, this
-    component may be NULL or an empty dataframe.
+    surviving individual at simulation end. Columns include `id`
+    (integer individual ID), `genotype` (genotype_means value),
+    `width` (niche width, i.e. genotype_sds value), `phenotype`
+    (expressed environmental optimum), `x` and `y` (spatial
+    coordinates). This component enables analysis of trait
+    distributions, spatial patterns, and phenotype-environment matching
+    among survivors. When populations go extinct, this component is an
+    empty data frame (zero rows).
 
 -   **`events`**: A named list recording every demographic event that
     occurred during the simulation, with each element being a vector of
     equal length (one entry per event). The level of detail depends on
     the `history_detail` top-level argument. At minimum
     (`history_detail="minimal"`), the list contains `times` (when each
-    event occurred), `types` (0=death, 1=birth, 2=dispersal,
+    event occurred), `types` (0=death, 1=birth, 2=movement,
     3=emigration, -1=initial state), and `individual_ids`. Standard
     detail (`history_detail="standard"`, the default) additionally
     includes `patch_ids`, `x_coordinates`, `y_coordinates`, and
     `genotypes`. Full detail (`history_detail="full"`) further adds
-    `phenotypes` and `widths` (genotype_sd). This complete history
+    `phenotypes` and `widths` (individual niche width at event time). This complete history
     enables analysis of population dynamics, demographic rates over time,
     and lineage tracking.
 
@@ -618,7 +624,7 @@ initial_genotypes <- seq(0, 100, length.out = initial_pop_size)
 shared_landscape_params <- list(
   habitat                     = continuous_landscape,
   cell_size                   = 1.0,
-  boundary_condition          = 1,     # reflective: individuals bounce off borders
+  boundary_condition          = 1,     # periodic: individuals wrap around borders (torus topology)
   density_type                = 1,     # local density within neighbor_radius
   matrix_mortality_multiplier = 2.0,   # μ_max = 2 × μ_min = 0.4
   matrix_dispersal_multiplier = 0.5
@@ -648,8 +654,8 @@ shared_simulation_params <- list(max_events = 100)
 ## Scenario 1: Uniform Perfect Specialists
 
 This scenario demonstrates default behavior when `genetic_params` is
-omitted: all individuals are genetically identical with `genotype_mean = 1.0`
-and `genotype_sd = 0`.
+omitted: all individuals are genetically identical with `genotype_means = 1.0`
+and `genotype_sds = 0`.
 
 ```{r scenario1}
 # Only genetic_params is omitted — every other argument comes from the
@@ -658,7 +664,7 @@ and `genotype_sd = 0`.
 sim_s1 <- twolife_simulation(
   landscape_params  = shared_landscape_params,
   individual_params = shared_individual_params,
-  # genetic_params omitted → defaults: all genotype_mean = 1.0, genotype_sd = 0
+  # genetic_params omitted → defaults: all genotype_means = 1.0, genotype_sds = 0
   simulation_params = shared_simulation_params,
   master_seed = 45
 )
@@ -667,12 +673,12 @@ sim_s1 <- twolife_simulation(
 ```
 
 The simulation results in N = `r pop_s1` (extinction). With
-`genotype_sd = 0`, reproduction requires an exact phenotype-environment
+`genotype_sds = 0`, reproduction requires an exact phenotype-environment
 match (`h = p`) and is suppressed everywhere else (`b = 0`). Because
 the landscape is continuous (range:
 `r sprintf("%.2f", min(continuous_landscape))` to
 `r sprintf("%.2f", max(continuous_landscape))`), the probability that
-genotype_mean = 1.0 coincides exactly with any cell's environmental
+genotype_means = 1.0 coincides exactly with any cell's environmental
 value is effectively zero. Every individual therefore has `b = 0`
 throughout the simulation, while mortality remains positive. The absence
 of births, not an excess of mortality over birth rate, drives the
@@ -681,7 +687,7 @@ population collapse.
 ## Scenario 2: Variable Specialists
 
 This scenario adds genetic diversity: each of the 1000 individuals has a
-distinct genotype_mean spanning 0 to 100, but genotype_sd remains 0
+distinct genotype_means spanning 0 to 100, but genotype_sds remains 0
 (perfect specialists still requiring exact environmental matches).
 
 ```{r scenario2}
@@ -705,17 +711,17 @@ The simulation results in N = `r pop_s2` (extinction). Despite having
 1000 different genotypes spanning the full environmental range (0–100),
 zero tolerance means individuals still require exact environmental
 matches. In continuous space, exact matches rarely occur—even if an
-individual has `genotype_mean = 5.0` and a cell has `environment = 5.0`,
+individual has `genotype_means = 5.0` and a cell has `environment = 5.0`,
 any slight mismatch produces effectively zero fitness when
-`genotype_sd = 0`. This demonstrates that genetic diversity alone is
+`genotype_sds = 0`. This demonstrates that genetic diversity alone is
 insufficient without tolerance enabling survival across a range of
 conditions.
 
 ## Scenario 3: Generalists (Niche Width)
 
-This example demonstrates the effect of adding tolerance (genotype_sd).
-Each individual has the same genotype_mean as Scenario 2 (maintaining
-identical genetic diversity), but now with `genotype_sd = 0.4`, enabling
+This example demonstrates the effect of adding tolerance (genotype_sds).
+Each individual has the same genotype_means as Scenario 2 (maintaining
+identical genetic diversity), but now with `genotype_sds = 0.4`, enabling
 survival across a small range of conditions around their optima.
 
 ```{r scenario3}
@@ -742,7 +748,7 @@ The simulation results in N = `r pop_s3`
 (`r sprintf("%.1f%%", pop_s3/initial_pop_size*100)` survival), compared
 to N=0 in Scenarios 1-2. Adding tolerance enables population persistence
 by allowing individuals to survive in cells where their phenotype does
-not exactly match the local environment. With `genotype_sd = 0.4` (just
+not exactly match the local environment. With `genotype_sds = 0.4` (just
 above $\sigma_{min} \approx 0.3989$), individuals achieve near-maximum
 peak fitness at their optimum with a very steep fitness decline away
 from it — niche width covers only $\approx 0.4$% of the 0–100
@@ -770,8 +776,8 @@ if (pop_s3 > 0) {
 
 This example demonstrates adding evolutionary mechanisms (mutation and
 plasticity) to the diversity and tolerance from Scenario 3. Mutation
-(`mutation_rate = 0.001`) enables heritable genetic change across
-generations, while plasticity (`plasticity = 0.001`) enables non-heritable
+(`mutation_rates = 0.001`) enables heritable genetic change across
+generations, while plasticity (`plasticities = 0.001`) enables non-heritable
 phenotypic variation within lifetimes.
 
 ```{r scenario4}

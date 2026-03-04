@@ -15,14 +15,15 @@ habitat_mismatch(simulation_result, return_individuals = FALSE)
 A list of class 'genotype_habitat_mismatch' with components:
   \describe{
     \item{n_survivors}{Integer. Number of surviving individuals analyzed}
-    \item{mean_fitness}{Numeric. Mean fitness across all survivors (0-1 scale)}
-    \item{median_fitness}{Numeric. Median fitness}
+    \item{mean_fitness}{Numeric. Mean fitness (probability density value, W) across all survivors. Scale depends on niche width: maximum possible value is 1/(sigma*sqrt(2*pi))}
+    \item{median_fitness}{Numeric. Median fitness (probability density value)}
     \item{sd_fitness}{Numeric. Standard deviation of fitness}
     \item{min_fitness}{Numeric. Minimum fitness value}
     \item{max_fitness}{Numeric. Maximum fitness value}
-    \item{high_fitness_count}{Integer. Number with fitness > 0.8}
-    \item{medium_fitness_count}{Integer. Number with fitness 0.5-0.8}
-    \item{low_fitness_count}{Integer. Number with fitness < 0.5}
+    \item{mean_relative_fitness}{Numeric. Mean fitness relative to each individual's peak (W/W_max), always 0-1. Used for threshold classification.}
+    \item{high_fitness_count}{Integer. Number with relative fitness (W/W_max) > 0.8}
+    \item{medium_fitness_count}{Integer. Number with relative fitness 0.5-0.8}
+    \item{low_fitness_count}{Integer. Number with relative fitness < 0.5}
     \item{percent_high_fitness}{Numeric. Percentage with fitness > 0.8}
     \item{percent_medium_fitness}{Numeric. Percentage with fitness 0.5-0.8}
     \item{percent_low_fitness}{Numeric. Percentage with fitness < 0.5}
@@ -57,19 +58,19 @@ Fitness Calculation:
 
   For Gaussian fitness individuals (niche_width > 0):
 
-  \deqn{f = \exp\left(-\frac{(p - h)^2}{2\sigma^2}\right)}
+  \deqn{W = \frac{1}{\sigma\sqrt{2\pi}} \exp\left(-\frac{(h - p)^2}{2\sigma^2}\right)}
 
   Where:
   \itemize{
-    \item \eqn{f} = fitness (ranges 0 to 1)
+    \item \eqn{W} = fitness (probability density value; maximum = \eqn{1/(\sigma\sqrt{2\pi})})
     \item \eqn{p} = phenotype (individual's expressed trait value)
-    \item \eqn{h} = habitat value at individual's location (0 to 1)
+    \item \eqn{h} = habitat value at individual's location
     \item \eqn{\sigma} = niche_width (genotype_sds parameter, tolerance to mismatch)
   }
 
   For perfect specialists (niche_width = 0):
 
-  \deqn{f = \begin{cases} 
+  \deqn{f = \begin{cases}
   1 & \text{if } |p - h| < \epsilon \\
   0 & \text{otherwise}
   \end{cases}}
@@ -79,17 +80,18 @@ Fitness Calculation:
   This binary fitness function means specialists only survive in exactly matching habitat.
 
 Fitness Interpretation:
+  Thresholds are expressed as relative fitness (\eqn{W / W_{max}}), which ranges 0-1
+  regardless of niche width, where \eqn{W_{max} = 1/(\sigma\sqrt{2\pi})}:
   \itemize{
-    \item fitness = 1.0: Perfect match. Phenotype exactly equals habitat value.
-    \item fitness > 0.8: High fitness. Within ~1 niche width of optimum.
-    \item fitness = 0.5-0.8: Medium fitness. 1-2 niche widths from optimum.
-    \item fitness < 0.5: Low fitness. More than 2 niche widths from optimum.
-    \item fitness = 0.368 (1/e): Exactly 1 niche width from optimum (Gaussian inflection point).
+    \item relative fitness = 1.0: Perfect match. Phenotype exactly equals habitat value.
+    \item relative fitness > 0.8: High fitness. Within ~20\% of peak performance.
+    \item relative fitness = 0.5-0.8: Medium fitness. Moderate habitat mismatch.
+    \item relative fitness < 0.5: Low fitness. Substantial habitat mismatch.
+    \item relative fitness = 0.368 (1/e): Exactly 1 niche width from optimum (Gaussian inflection point).
   }
 
 Connection to Simulation Demography:
-  NOTE: This function reports normalized fitness (0-1 scale) for interpretability, but the
-  simulation uses the probability density function for mortality. During simulation, mortality for Gaussian fitness individuals is:
+  During simulation, mortality for Gaussian fitness individuals is:
 
   \deqn{\mu = \mu_{max} - W(\mu_{max} - \mu_{min})}
 

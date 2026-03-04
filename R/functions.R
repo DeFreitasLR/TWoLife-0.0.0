@@ -21,9 +21,9 @@ NULL
 #'     \item{cell_size}{Numeric. Length of the side of a landscape cell in world units. Defines the spatial resolution of the landscape. If habitat is a 100x100 matrix and cell_size = 1.0, the simulated world dimensions are 100x100 world units (world_width = 100, world_height = 100). All spatial parameters (step_length, neighbor_radius, coordinates) use these same world units. The position of individuals have are in continuous (x,y) coordinates and are not restricted to pixel centers.}
 #'     \item{boundary_condition}{Integer. Defines what happens to individuals that reach the edges of world borders:
 #'       \itemize{
-#'         \item 1 = reflective: agent keeps its speed, but its path "bounces" off the border at the same angle it hit it (angle of incidence equals angle of reflection);
-#'         \item 2 = absorbing: individuals that cross borders permanently exit the simulation and are removed from the population, generating emigration events (recorded as event type = 3)
-#'         \item 3 = periodic: individuals moving beyond one edge wrap to the opposite edge, creating torus topology (infinite landscape approximation)
+#'         \item 0 = absorbing: individuals that cross borders permanently exit the simulation and are removed from the population, generating emigration events (recorded as event type = 3)
+#'         \item 1 = periodic: individuals moving beyond one edge wrap to the opposite edge, creating torus topology (infinite landscape approximation)
+#'         \item 2 = reflective: agent keeps its speed, but its path "bounces" off the border at the same angle it hit it (angle of incidence equals angle of reflection)
 #'       }}
 #'     \item{density_type}{Integer. Determines how population density is calculated for density-dependent demographic processes to be applied to each individual:
 #'       \itemize{
@@ -33,7 +33,7 @@ NULL
 #'       
 #'       This density value is then used in birth and mortality rate calculations via birth_density_slope and mortality_density_slope parameters. See Details for mathematical formulas.}
 #'     \item{matrix_mortality_multiplier}{Numeric. Mortality rate multiplier applied based on habitat suitability. Controls how mortality scales from optimal to unsuitable habitat. Values > 1 increase mortality in poor-quality habitat, creating "hostile matrix" effects. For perfect specialists (genotype_sds = 0), the multiplier is applied directly in non-optimal habitat. For Gaussian fitness individuals (genotype_sds >= σ_min), mortality is interpolated based on fitness, creating a smooth gradient. See Details section 'Mortality Rate Calculations' for formulas.}
-#'     \item{matrix_dispersal_multiplier}{Numeric. Dispersal rate multiplier applied based on habitat suitability. Controls the frequency of dispersal events in unsuitable habitat. Values < 1 reduce dispersal frequency in matrix, while values > 1 increase it. For perfect specialists (genotype_sds = 0), the multiplier is applied in non-optimal habitat. For Gaussian fitness individuals (genotype_sds >= σ_min), dispersal rate remains at base_dispersal_rate regardless of habitat. Important: This affects the rate of dispersal events, NOT the distance (step_length). See Details for mathematical formulas.}
+#'     \item{matrix_dispersal_multiplier}{Numeric. Dispersal rate multiplier applied based on habitat suitability. Controls the frequency of dispersal events in unsuitable habitat. Values < 1 reduce dispersal frequency in matrix, while values > 1 increase it. For perfect specialists (genotype_sds = 0), the multiplier is applied in non-optimal habitat. For Gaussian fitness individuals (genotype_sds >= σ_min), dispersal rate remains at base_dispersal_rate regardless of habitat — this parameter is ignored entirely for Gaussian individuals and setting it to any value other than 1 has no effect. Important: This affects the rate of dispersal events, NOT the distance (step_length). See Details for mathematical formulas.}
 #'   }
 #' @param individual_params List containing individual-level parameters:
 #'   \describe{
@@ -48,6 +48,7 @@ NULL
 #'     \item{mortality_density_slope}{Numeric. Controls the strength of positive density-dependence on mortality rate. Higher values cause mortality rate to increase more rapidly as local density increases. See Details sections 'Matrix Mortality Multiplier' and 'Density Calculations' for formulas.}
 #'     \item{initial_placement_mode}{Integer. Determines how individuals are positioned at simulation start:
 #'       \itemize{
+#'         \item 0 = all individuals placed at the landscape center (coordinate origin, x = 0, y = 0)
 #'         \item 1 = uniform random placement 
 #'         \item 2 = random placement following bivariate normal distribution centered on landscape center, with \eqn{\sigma_{placement} = L \sqrt{d_0}}
 #'         \item 3 = custom coordinates (requires initial_x_coordinates and initial_y_coordinates)
@@ -191,9 +192,9 @@ NULL
 #'
 #'   When individuals move beyond landscape edges:
 #'   \itemize{
-#'     \item Reflective (1): Individual bounces back, remains in simulation
-#'     \item Absorbing (2): Individual exits permanently (emigration event, type = 3)
-#'     \item Periodic (3): Individual wraps to opposite edge (torus topology)
+#'     \item Absorbing (0): Individual exits permanently (emigration event, type = 3)
+#'     \item Periodic (1): Individual wraps to opposite edge (torus topology)
+#'     \item Reflective (2): Individual bounces back, remains in simulation
 #'   }
 #'
 #'   Event history records these event types:
@@ -381,15 +382,16 @@ NULL
 #'
 #' --------------------------------------------------------------------------
 #'
-#' Evolutionary Layer:
-#'   The model implements quantitative genetics with mutation and plasticity:
-#'   
-#'   Inheritance and Mutation:
+#'   Birth events are asexual: the offspring is placed at the parent's exact
+#'   spatial coordinates and inherits all parent parameters, then immediately
+#'   undergoes two sequential steps before entering the population:
+#'
+#'   Step 1 - Inheritance and Mutation:
 #'   \deqn{g_{offspring} = g_{parent} + N(0, \mu)}
-#'   
-#'   Phenotype Expression:
-#'   \deqn{p = g + N(0, \phi)}
-#'   
+#'
+#'   Step 2 - Phenotype Expression:
+#'   \deqn{p = g_{offspring} + N(0, \phi)}
+#'
 #'   Where:
 #'   \itemize{
 #'     \item \eqn{g} = genotype (environmental optimum, heritable)
@@ -398,7 +400,7 @@ NULL
 #'     \item \eqn{\phi} = plasticities (controls phenotypic variation)
 #'     \item \eqn{N(0, \sigma)} = normal distribution with mean 0, SD \eqn{\sigma}
 #'   }
-#'   
+#'
 #'   Key Differences:
 #'   \itemize{
 #'     \item Mutation affects inheritance: offspring genotypes differ from parent
@@ -406,6 +408,7 @@ NULL
 #'     \item Mutations are heritable (passed to next generation)
 #'     \item Plasticity is not heritable (resampled each birth)
 #'     \item Phenotype (not genotype) determines fitness and habitat selection
+#'     \item Offspring spawns at parent location (dispersal is a separate event)
 #'   }
 #'
 #' @examples
@@ -817,11 +820,11 @@ twolife_simulation <- function(landscape_params = list(),
 #' 
 #' ## Boundary Condition Effects
 #' 
-#' Emigration events (type 3) only occur with **boundary_condition = 2** (absorbing):
+#' Emigration events (type 3) only occur with **boundary_condition = 0** (absorbing):
 #' \itemize{
-#'   \item boundary_condition = 1 (reflective): Individuals bounce back, no emigration
-#'   \item boundary_condition = 2 (absorbing): Crossing boundary causes emigration (\eqn{\Delta N = -1})
-#'   \item boundary_condition = 3 (periodic): Individuals wrap around, no emigration
+#'   \item boundary_condition = 0 (absorbing): Crossing boundary causes emigration (\eqn{\Delta N = -1})
+#'   \item boundary_condition = 1 (periodic): Individuals wrap around, no emigration
+#'   \item boundary_condition = 2 (reflective): Individuals bounce back, no emigration
 #' }
 #' 
 #' ## Time Scaling
@@ -878,7 +881,7 @@ twolife_simulation <- function(landscape_params = list(),
 #' head(pop_trajectory)
 #' 
 #' # Plot population over time
-#' plot(pop_trajectory$time, pop_trajectory$population,
+#' plot(pop_trajectory$time, pop_trajectory$population_size,
 #'      type = "l",
 #'      xlab = "Time",
 #'      ylab = "Population Size",
@@ -2795,14 +2798,15 @@ check_habitat_match <- function(simulation_result,
 #' @return A list of class 'genotype_habitat_mismatch' with components:
 #'   \describe{
 #'     \item{n_survivors}{Integer. Number of surviving individuals analyzed}
-#'     \item{mean_fitness}{Numeric. Mean fitness across all survivors (0-1 scale)}
-#'     \item{median_fitness}{Numeric. Median fitness}
+#'     \item{mean_fitness}{Numeric. Mean fitness (probability density value, W) across all survivors. Scale depends on niche width: maximum possible value is 1/(sigma*sqrt(2*pi))}
+#'     \item{median_fitness}{Numeric. Median fitness (probability density value)}
 #'     \item{sd_fitness}{Numeric. Standard deviation of fitness}
 #'     \item{min_fitness}{Numeric. Minimum fitness value}
 #'     \item{max_fitness}{Numeric. Maximum fitness value}
-#'     \item{high_fitness_count}{Integer. Number with fitness > 0.8}
-#'     \item{medium_fitness_count}{Integer. Number with fitness 0.5-0.8}
-#'     \item{low_fitness_count}{Integer. Number with fitness < 0.5}
+#'     \item{mean_relative_fitness}{Numeric. Mean fitness relative to each individual's peak (W/W_max), always 0-1. Used for threshold classification.}
+#'     \item{high_fitness_count}{Integer. Number with relative fitness (W/W_max) > 0.8}
+#'     \item{medium_fitness_count}{Integer. Number with relative fitness 0.5-0.8}
+#'     \item{low_fitness_count}{Integer. Number with relative fitness < 0.5}
 #'     \item{percent_high_fitness}{Numeric. Percentage with fitness > 0.8}
 #'     \item{percent_medium_fitness}{Numeric. Percentage with fitness 0.5-0.8}
 #'     \item{percent_low_fitness}{Numeric. Percentage with fitness < 0.5}
@@ -2832,19 +2836,19 @@ check_habitat_match <- function(simulation_result,
 #'
 #'   For Gaussian fitness individuals (niche_width > 0):
 #'
-#'   \deqn{f = \exp\left(-\frac{(p - h)^2}{2\sigma^2}\right)}
+#'   \deqn{W = \frac{1}{\sigma\sqrt{2\pi}} \exp\left(-\frac{(h - p)^2}{2\sigma^2}\right)}
 #'
 #'   Where:
 #'   \itemize{
-#'     \item \eqn{f} = fitness (ranges 0 to 1)
+#'     \item \eqn{W} = fitness (probability density value; maximum = \eqn{1/(\sigma\sqrt{2\pi})})
 #'     \item \eqn{p} = phenotype (individual's expressed trait value)
-#'     \item \eqn{h} = habitat value at individual's location (0 to 1)
+#'     \item \eqn{h} = habitat value at individual's location
 #'     \item \eqn{\sigma} = niche_width (genotype_sds parameter, tolerance to mismatch)
 #'   }
 #'
 #'   For perfect specialists (niche_width = 0):
 #'
-#'   \deqn{f = \begin{cases} 
+#'   \deqn{f = \begin{cases}
 #'   1 & \text{if } |p - h| < \epsilon \\
 #'   0 & \text{otherwise}
 #'   \end{cases}}
@@ -2854,17 +2858,18 @@ check_habitat_match <- function(simulation_result,
 #'   This binary fitness function means specialists only survive in exactly matching habitat.
 #'
 #' Fitness Interpretation:
+#'   Thresholds are expressed as relative fitness (\eqn{W / W_{max}}), which ranges 0-1
+#'   regardless of niche width, where \eqn{W_{max} = 1/(\sigma\sqrt{2\pi})}:
 #'   \itemize{
-#'     \item fitness = 1.0: Perfect match. Phenotype exactly equals habitat value.
-#'     \item fitness > 0.8: High fitness. Within ~1 niche width of optimum.
-#'     \item fitness = 0.5-0.8: Medium fitness. 1-2 niche widths from optimum.
-#'     \item fitness < 0.5: Low fitness. More than 2 niche widths from optimum.
-#'     \item fitness = 0.368 (1/e): Exactly 1 niche width from optimum (Gaussian inflection point).
+#'     \item relative fitness = 1.0: Perfect match. Phenotype exactly equals habitat value.
+#'     \item relative fitness > 0.8: High fitness. Within ~20\% of peak performance.
+#'     \item relative fitness = 0.5-0.8: Medium fitness. Moderate habitat mismatch.
+#'     \item relative fitness < 0.5: Low fitness. Substantial habitat mismatch.
+#'     \item relative fitness = 0.368 (1/e): Exactly 1 niche width from optimum (Gaussian inflection point).
 #'   }
 #'
 #' Connection to Simulation Demography:
-#'   NOTE: This function reports normalized fitness (0-1 scale) for interpretability, but the
-#'   simulation uses the probability density function for mortality. During simulation, mortality for Gaussian fitness individuals is:
+#'   During simulation, mortality for Gaussian fitness individuals is:
 #'
 #'   \deqn{\mu = \mu_{max} - W(\mu_{max} - \mu_{min})}
 #'
@@ -2977,17 +2982,21 @@ habitat_mismatch <- function(simulation_result,
   survivor_widths <- survivors$width
   
   fitness_values <- numeric(n_survivors)
+  relative_fitness_values <- numeric(n_survivors) # W / W_max, always 0-1, used for threshold classification
   for (i in 1:n_survivors) {
     if (survivor_widths[i] > 0) {
       deviation <- habitat_at_survivors[i] - survivor_phenotypes[i]
-      variance <- survivor_widths[i]^2
-      fitness_values[i] <- exp(-(deviation^2) / (2 * variance))
+      sigma <- survivor_widths[i]
+      w_max <- 1 / (sigma * sqrt(2 * pi))
+      fitness_values[i] <- w_max * exp(-(deviation^2) / (2 * sigma^2))
+      relative_fitness_values[i] <- fitness_values[i] / w_max
     } else {
       fitness_values[i] <- ifelse(
         abs(habitat_at_survivors[i] - survivor_phenotypes[i]) < 0.001,
         1.0,
         0.0
       )
+      relative_fitness_values[i] <- fitness_values[i]
     }
   }
   
@@ -3000,9 +3009,9 @@ habitat_mismatch <- function(simulation_result,
     NA
   }
   
-  high_fitness <- sum(fitness_values > 0.8)
-  medium_fitness <- sum(fitness_values >= 0.5 & fitness_values <= 0.8)
-  low_fitness <- sum(fitness_values < 0.5)
+  high_fitness <- sum(relative_fitness_values > 0.8)
+  medium_fitness <- sum(relative_fitness_values >= 0.5 & relative_fitness_values <= 0.8)
+  low_fitness <- sum(relative_fitness_values < 0.5)
   
   results <- list(
     n_survivors = n_survivors,
@@ -3011,6 +3020,7 @@ habitat_mismatch <- function(simulation_result,
     sd_fitness = sd(fitness_values),
     min_fitness = min(fitness_values),
     max_fitness = max(fitness_values),
+    mean_relative_fitness = mean(relative_fitness_values),
     high_fitness_count = high_fitness,
     medium_fitness_count = medium_fitness,
     low_fitness_count = low_fitness,
@@ -3071,20 +3081,21 @@ print.genotype_habitat_mismatch <- function(x, ...) {
   
   cat("Sample size:", x$n_survivors, "individuals\n\n")
   
-  cat("Fitness Metrics (0-1 scale, based on PHENOTYPE-environment match):\n")
+  cat("Fitness Metrics (PDF scale W = 1/(sigma*sqrt(2*pi))*exp(...), based on PHENOTYPE-environment match):\n")
   cat("------------------------------------------------------------------\n")
-  cat("Mean fitness:", round(x$mean_fitness, 4), "\n")
-  cat("Median fitness:", round(x$median_fitness, 4), "\n")
+  cat("Mean fitness (W):", round(x$mean_fitness, 4), "\n")
+  cat("Median fitness (W):", round(x$median_fitness, 4), "\n")
   cat("SD of fitness:", round(x$sd_fitness, 4), "\n")
-  cat("Range:", round(x$min_fitness, 4), "to", round(x$max_fitness, 4), "\n\n")
+  cat("Range:", round(x$min_fitness, 4), "to", round(x$max_fitness, 4), "\n")
+  cat("Mean relative fitness (W/W_max):", round(x$mean_relative_fitness, 4), "\n\n")
   
-  cat("Fitness Quality Distribution:\n")
+  cat("Fitness Quality Distribution (relative fitness W/W_max, ranges 0-1):\n")
   cat("-----------------------------\n")
-  cat("High fitness (>0.8):", x$high_fitness_count,
+  cat("High relative fitness (>0.8):", x$high_fitness_count,
       paste0("(", round(x$percent_high_fitness, 1), "%)"), "\n")
-  cat("Medium fitness (0.5-0.8):", x$medium_fitness_count,
+  cat("Medium relative fitness (0.5-0.8):", x$medium_fitness_count,
       paste0("(", round(x$percent_medium_fitness, 1), "%)"), "\n")
-  cat("Low fitness (<0.5):", x$low_fitness_count,
+  cat("Low relative fitness (<0.5):", x$low_fitness_count,
       paste0("(", round(x$percent_low_fitness, 1), "%)"), "\n\n")
   
   cat("Phenotype-Habitat Relationship:\n")
@@ -3104,11 +3115,11 @@ print.genotype_habitat_mismatch <- function(x, ...) {
   cat("Interpretation:\n")
   cat("---------------\n")
   
-  if (x$mean_fitness > 0.8) {
+  if (x$mean_relative_fitness > 0.8) {
     cat("Excellent fitness: Individuals well-matched to their habitat\n")
-  } else if (x$mean_fitness > 0.6) {
+  } else if (x$mean_relative_fitness > 0.6) {
     cat("Good fitness: Most individuals reasonably well-matched\n")
-  } else if (x$mean_fitness > 0.4) {
+  } else if (x$mean_relative_fitness > 0.4) {
     cat("Moderate fitness: Individuals somewhat matched to habitat\n")
   } else {
     cat("Poor fitness: Individuals poorly matched to habitat\n")
